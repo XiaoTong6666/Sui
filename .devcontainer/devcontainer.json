@@ -1,0 +1,4 @@
+{adb shell sh /storage/emulated/0/Android/data/moe.shizuku.privileged.api/start.sh
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "features": "ghcr.io/wxw-matt/devcontainer-features/script_runner:0": {}
+RUN apk add --no-cache shadow}
