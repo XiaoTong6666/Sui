@@ -9,7 +9,7 @@ apply plugin: 'idea'
 
 idea.module {
     excludeDirs += file('out')
-    resourceDirs += file('template')
+    resourceDirs += file('')
     resourceDirs += file('scripts')
 }
 
