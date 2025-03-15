@@ -8,8 +8,7 @@ plugins {
 apply plugin: 'idea'
 
 idea.module {
-    excludeDirs += file('out')
-    resourceDirs += file('template')
+t')'template')
     resourceDirs += file('scripts')
 }
 
