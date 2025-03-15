@@ -5,8 +5,6 @@ plugins {
     alias libs.plugins.refine apply false
 }
 
-apply plugin: 'idea'
-
 idea.module {
     excludeDirs += file('out')
     resourceDirs += file('template')
