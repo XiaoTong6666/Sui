@@ -9,7 +9,7 @@ ext {
     moduleMinRiruVersionName = "v25.0.0"
     moduleRiruApiVersion = 25
 
-    riruModuleId = "riru-sui"
+   i"
     zygiskModuleId = "zygisk-sui"
 
     moduleName = "Sui"
