@@ -7,11 +7,8 @@ ext {
     moduleLibraryName = "sui"
     moduleMinRiruApiVersion = 25
     moduleMinRiruVersionName = "v25.0.0"
-    moduleRiruApiVersion = 25
-
-    riruModuleId = "riru-sui"
-    zygiskModuleId = "zygisk-sui"
-
+    moduleRiruApiVersion
+    riruModuleId = "riru-
     moduleName = "Sui"
     moduleAuthor = "Rikka"
     moduleDescription = "Modern superuser interface implementation."
