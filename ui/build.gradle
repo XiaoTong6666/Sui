@@ -13,8 +13,7 @@ android {
     namespace "rikka.sui"
     compileSdk rootProject.ext.targetSdkVersion
     defaultConfig {
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
+        minSdkVersion 
         versionCode gitCommitCount
         versionName moduleVersion.substring(1)
         resConfigs 'en', 'zh', 'zh-rCN', 'zh-rTW'
