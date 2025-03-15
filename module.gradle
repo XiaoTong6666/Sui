@@ -11,9 +11,6 @@ ext {
 
     riruModuleId = "riru-sui"
     zygiskModuleId = "zygisk-sui"
-
-    moduleName = "Sui"
-    moduleAuthor = "Rikka"
     moduleDescription = "Modern superuser interface implementation."
     moduleVersionMinor = 5
     moduleVersionPatch = 1
