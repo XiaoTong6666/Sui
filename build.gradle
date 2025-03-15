@@ -9,31 +9,12 @@ apply plugin: 'idea'
 
 idea.module {
     excludeDirs += file('out')
-    resourceDirs += file('template')
+    resourctemplate')
     resourceDirs += file('scripts')
 }
 
 subprojects {
-    plugins.withId("com.android.base") {
-        plugins.apply('dev.rikka.tools.refine')
-
-        android {
-            compileSdk = 33
-            defaultConfig {
-                minSdk = 23
-                targetSdk = 33
-            }
-            compileOptions {
-                sourceCompatibility = JavaVersion.VERSION_17
-                targetCompatibility = JavaVersion.VERSION_17
-            }
-            buildFeatures {
-                aidl true
-            }
-        }
-    }
-}
-
+    plugins.withId
 
 tasks.register('clean', Delete) {
     delete rootProject.buildDir
