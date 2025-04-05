@@ -1,6 +1,5 @@
 # Declare files that will always have LF line endings on checkout.
-META-INF/** text eol=lf
-*.prop text eol=lf
+META-INF/** text 
 *.sh text eol=lf
 *.md text eol=lf
 sepolicy.rule text eol=lf
