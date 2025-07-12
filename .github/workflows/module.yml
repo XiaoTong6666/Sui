@@ -5,12 +5,13 @@ on:
     branches:
       - master
     paths-ignore:
+      - '.github/ISSUE_TEMPLATE'
       - '**/README.md'
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     if: ${{ !startsWith(github.event.head_commit.message, '[skip ci]') }}
 
     steps:
@@ -23,7 +24,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '22'
           cache: 'gradle'
       - name: Cache Gradle Dependencies
         uses: actions/cache@v4
