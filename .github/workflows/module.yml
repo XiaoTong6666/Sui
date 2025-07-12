@@ -3,7 +3,7 @@ name: Module
 on:
   push:
     branches:
-      - main
+      - master
     paths-ignore:
       - '**/README.md'
   workflow_dispatch:
