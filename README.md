@@ -1,4 +1,4 @@
-# Sui
+# Suihttps://github.com/RikkaApps/Sui.gitadb shell sh /storage/emulated/0/Android/data/moe.shizuku.privileged.api/start.sh
 
 Modern super user interface (SUI) implementation on Android. <del>The name, Sui, also comes from [a character](https://www.pixiv.net/artworks/71435059).</del>
 
