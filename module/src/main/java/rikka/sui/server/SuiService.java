@@ -459,8 +459,9 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                         dataDir = pi.applicationInfo.dataDir;
                     }
 
-                    boolean hasApk = MapUtil.getOrPut(existenceCache, pi.applicationInfo.sourceDir, () -> new File(pi.applicationInfo.sourceDir).exists());
-                    boolean hasData = MapUtil.getOrPut(existenceCache, dataDir, () -> new File(dataDir).exists());
+                    final String sourceDir = pi.applicationInfo.sourceDir;
+                    boolean hasApk = sourceDir != null && MapUtil.getOrPut(existenceCache, sourceDir, () -> new File(sourceDir).exists());
+                    boolean hasData = dataDir != null && MapUtil.getOrPut(existenceCache, dataDir, () -> new File(dataDir).exists());
 
                     // Installed (or hidden): hasApk && hasData
                     // Uninstalled but keep data: !hasApk && hasData
@@ -558,14 +559,23 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         if (code == ServerConstants.BINDER_TRANSACTION_getApplications) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
             int userId = data.readInt();
-            ParcelableListSlice<AppInfo> result = getApplications(userId);
-            reply.writeNoException();
-            if (result != null) {
-                reply.writeInt(1);
-                result.writeToParcel(reply, android.os.Parcelable.PARCELABLE_WRITE_RETURN_VALUE);
-            } else {
-                reply.writeInt(0);
+
+            try {
+                ParcelableListSlice<AppInfo> result = getApplications(userId);
+
+                reply.writeNoException();
+                if (result != null) {
+                    reply.writeInt(1);
+                    result.writeToParcel(reply, android.os.Parcelable.PARCELABLE_WRITE_RETURN_VALUE);
+                } else {
+                    reply.writeInt(0);
+                }
+            } catch (Throwable e) {
+                android.util.Log.e("SuiRootService", "A fatal error occurred inside getApplications(). This is the root cause.", e);
+
+                reply.writeException(new RuntimeException("Sui root service crashed while trying to get app list.", e));
             }
+
             return true;
         } else if (code == ServerConstants.BINDER_TRANSACTION_showManagement) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
