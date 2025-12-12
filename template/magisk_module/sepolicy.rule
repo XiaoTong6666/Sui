@@ -10,3 +10,72 @@ allow init adbd process2 nosuid_transition
 
 # Fix cannot start
 allow adbd %adb_data_file_secon% file { execute execute_no_trans read open map }
+
+
+# ============================================================
+# [Sui Standalone Rules] 独立模式专用规则 (新增与增强)
+# ============================================================
+
+# 1. 定义自定义文件类型 (兼容 NeoZygisk 代码中的 chcon)
+# 你的 Rust Daemon 代码里可能会尝试 chcon 为 system_file，必须先定义它
+type system_file file_type
+typeattribute system_file mlstrustedobject
+
+# 2. 允许 Monitor (Root) Ptrace Zygote
+allow %su_secon% zygote process ptrace
+
+# 3. 允许 Zygote 访问 /data/adb 目录
+# 既然你把 TMP_PATH 改到了 /data/adb/sui，Zygote 必须能"搜索"父目录
+allow zygote adb_data_file dir search
+
+# 4. 允许 Zygote 读取/执行我们伪装的文件
+# 虽然脚本里 chcon 成了 system_file，但加这几条作为兜底，防止 chcon 失败
+allow zygote adb_data_file file { read map open getattr execute }
+
+# 5. 允许 Zygote 读写 Socket
+# 兼容两种情况：Socket 被标记为 system_file (Daemon 做的) 或 adb_data_file (默认)
+allow zygote system_file sock_file { read write }
+allow zygote adb_data_file sock_file { read write }
+# 兼容 /dev/socket 情况 (如果回退到 /dev)
+allow zygote tmpfs sock_file { read write }
+allow zygote device sock_file { read write }
+
+# 6. 允许内存加载 (关键！)
+# Zygisk 通过 memfd 加载 library，这需要 execmem 权限
+allow zygote zygote process execmem
+allow system_server system_server process execmem
+
+# 7. 允许 Loader 连接 Daemon
+allow zygote %su_secon% unix_stream_socket connectto
+
+# 8. 允许 System Server 连接 Sui Server (Bridge)
+allow system_server %su_secon% unix_stream_socket connectto
+
+
+# ============================================================
+# [Part 3] 修复 Magisk 崩溃/冲突 (关键!)
+# ============================================================
+
+# 警告：不要在这里定义 type magisk_file，会与官方 Magisk 冲突导致 Root 失效！
+
+# 1. 解决日志中大量刷屏的 "avc: denied { read } ... tcontext=u:r:magisk:s0"
+# 当 Zygote 被注入后，它可能会扫描 /proc/pid/fd，这时会碰到 Magisk 的进程文件
+# 必须允许 Zygote 读取 Magisk 域的符号链接和文件信息，否则 Magisk 会因阻塞而崩溃
+allow zygote magisk lnk_file { read getattr }
+allow zygote magisk dir { search getattr }
+allow zygote magisk file { read getattr open }
+
+# 2. 允许 Zygote 访问未标记的文件 (unlabeled)
+# 对应你朋友的建议：allow zygote unlabeled file ...
+allow zygote unlabeled file { read getattr open map }
+allow zygote unlabeled lnk_file { read getattr }
+
+
+# ============================================================
+# [Part 4] 杂项增强 (参考你朋友的建议)
+# ============================================================
+allow zygote mnt_vendor_file dir search
+allow zygote system_file dir mounton
+allow zygote labeledfs filesystem mount
+allow zygote fs_type filesystem unmount
+allow zygote zygote capability sys_chroot

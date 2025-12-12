@@ -1,11 +1,13 @@
 import org.apache.tools.ant.filters.FixCrLfFilter
-
 import java.security.MessageDigest
+import org.apache.tools.ant.filters.ReplaceTokens
 
 plugins {
     id('com.android.application')
     id('dev.rikka.tools.refine')
 }
+
+evaluationDependsOn(':standalone')
 
 apply from: file(rootProject.file('module.gradle'))
 
@@ -21,6 +23,22 @@ android {
             }
         }
     }
+
+    flavorDimensions "mode"
+    productFlavors {
+        zygisk { dimension "mode" }
+        standalone {
+            dimension "mode"
+            externalNativeBuild {
+                cmake {
+                    // [关键修正] Standalone 模式下，模块 ID 是 "sui"
+                    // 必须覆盖之前的默认值，否则 C++ 代码会去错误的路径找 dex
+                    arguments "-DZYGISK_MODULE_ID:STRING=\"sui\""
+                }
+            }
+        }
+    }
+
     buildFeatures {
         viewBinding true
         prefab true
@@ -72,61 +90,88 @@ dependencies {
 def outDir = file("$rootDir/out")
 
 afterEvaluate {
-    def isIDE = properties.containsKey('android.injected.invoked.from.ide')
-    if (isIDE) {
-        println("Invoked from IDE")
-    } else {
-        println("Invoked from command line")
-    }
-
     android.applicationVariants.all { variant ->
         def variantCapped = variant.name.capitalize()
-        def variantLowered = variant.name.toLowerCase()
-        def buildTypeCapped = variant.getBuildType().getName().capitalize()
+        def flavorName = variant.productFlavors[0].name
         def buildTypeLowered = variant.getBuildType().getName().toLowerCase()
+        def zipName = "sui-${moduleVersion}-${flavorName}-${buildTypeLowered}.zip"
+        def magiskDir = file("$outDir/${flavorName}/${buildTypeLowered}")
 
-        def zipName = "sui-${moduleVersion}-${buildTypeLowered}.zip"
-        def magiskDir = file("$outDir/${buildTypeLowered}")
-
-        tasks.getByName("pre${variantCapped}Build").dependsOn(":ui:assemble${buildTypeCapped}")
+        tasks.getByName("pre${variantCapped}Build").dependsOn(":ui:assemble${buildTypeLowered.capitalize()}")
 
         task("prepareMagiskFiles${variantCapped}", type: Sync) {
             dependsOn("assemble$variantCapped")
 
-            def templatePath = "$rootDir/template/magisk_module"
-
-            into magiskDir
-            from(templatePath) {
-                exclude 'module.prop', 'action.sh'
+            if (flavorName == "standalone") {
+                // 现在可以安全地引用了，因为 evaluationDependsOn 保证了任务已注册
+                dependsOn project(':standalone').tasks.named("copyStandaloneBinaries")
             }
+
+            def templatePath = "$rootDir/template/magisk_module"
+            into magiskDir
+
+            from(templatePath) {
+                exclude 'module.prop', 'action.sh', 'post-fs-data.sh', 'customize.sh', 'customize_standalone.sh'
+            }
+
+            if (flavorName == "standalone") {
+                from(templatePath) { include 'customize_standalone.sh'; rename { 'customize.sh' } }
+            } else {
+                from(templatePath) { include 'customize.sh' }
+            }
+
             from(templatePath) {
                 include 'module.prop'
                 expand([
-                        id         : moduleId,
-                        name       : moduleName,
+                        id         : (flavorName == "standalone") ? "sui" : moduleId,
+                        name       : (flavorName == "standalone") ? "$moduleName (Standalone)" : moduleName,
                         version    : moduleVersion,
                         versionCode: moduleVersionCode.toString(),
                         author     : moduleAuthor,
-                        description: moduleDescription,
+                        description: (flavorName == "standalone") ? "$moduleDescription [Standalone Mode]" : moduleDescription,
                         updateJson : "https://rikkaapps.github.io/release/sui_zygisk.json",
                 ])
-                filter(FixCrLfFilter.class,
-                        eol: FixCrLfFilter.CrLf.newInstance("lf"))
+                filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.newInstance("lf"))
             }
+
             from(templatePath) {
                 include 'action.sh'
-                filter(FixCrLfFilter.class,
-                        eol: FixCrLfFilter.CrLf.newInstance("lf"))
+                filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.newInstance("lf"))
             }
+
+            from(templatePath) {
+                include 'post-fs-data.sh'
+                filter(ReplaceTokens, tokens: [ isStandalone: (flavorName == "standalone").toString() ])
+                filter(FixCrLfFilter.class, eol: FixCrLfFilter.CrLf.newInstance("lf"))
+            }
+
             from((buildTypeLowered == "release") ?
                     "$buildDir/intermediates/dex/${variant.name}/minify${variantCapped}WithR8" :
                     "$buildDir/intermediates/dex/${variant.name}/mergeDex$variantCapped") {
                 include 'classes.dex'
                 rename { 'sui.dex' }
             }
+
             from("$buildDir/intermediates/stripped_native_libs/${variant.name}/strip${variantCapped}DebugSymbols/out/lib") {
                 into 'lib'
             }
+
+            if (flavorName == "standalone") {
+                // [修改] 显式指定输出目录路径
+                // 因为 copyStandaloneBinaries 现在是普通任务，它把文件放到了 intermediates/standalone_out
+                def standaloneOutDir = project(':standalone').layout.buildDirectory.dir("intermediates/standalone_out")
+
+                // 确保依赖关系
+                dependsOn project(':standalone').tasks.named("copyStandaloneBinaries")
+
+                // 使用 files() 包装，并用 builtBy 声明构建任务
+                from(files(standaloneOutDir) {
+                    builtBy project(':standalone').tasks.named("copyStandaloneBinaries")
+                }) {
+                    into 'standalone_bin'
+                }
+            }
+
             from("${rootProject.findProject('ui').buildDir}/outputs/apk/$buildTypeLowered") {
                 exclude 'output-metadata.json'
                 rename { 'sui.apk' }

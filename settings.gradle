@@ -43,6 +43,7 @@ dependencyResolutionManagement {
 }
 
 include ':module', ':ui'
+include(":standalone")
 
 import org.apache.tools.ant.DirectoryScanner
 

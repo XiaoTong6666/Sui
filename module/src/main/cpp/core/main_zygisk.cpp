@@ -34,6 +34,11 @@ enum Identity : int {
 class ZygiskModule : public zygisk::ModuleBase {
 
 public:
+    ZygiskModule() = default;
+    ZygiskModule(zygisk::Api *api, JNIEnv *env) {
+        api_ = api;
+        env_ = env;
+    }
     void onLoad(zygisk::Api *api, JNIEnv *env) override {
         api_ = api;
         env_ = env;
@@ -113,11 +118,13 @@ private:
     Dex *dex = nullptr;
 
     void InitCompanion(bool is_system_server, int uid, const char *process_name = nullptr) {
+        LOGI("SuiCore-Companion: InitCompanion started. is_system_server=%d", is_system_server);
         auto companion = api_->connectCompanion();
         if (companion == -1) {
-            LOGE("Zygote: failed to connect to companion");
+            LOGE("SuiCore-Companion: Failed to connect to companion socket from sui_daemon!");
             return;
         }
+        LOGI("SuiCore-Companion: Companion socket connected, fd=%d", companion);
 
         if (is_system_server) {
             write_int(companion, 1);
@@ -133,17 +140,29 @@ private:
             auto fd = recv_fd(companion);
             auto size = (size_t) read_int(companion);
 
-            if (whoami == Identity::SETTINGS) {
-                LOGI("Zygote: in Settings");
-            } else if (whoami == Identity::SYSTEM_UI) {
-                LOGI("Zygote: in SystemUi");
-            } else {
-                LOGI("Zygote: in SystemServer");
-            }
+            // 新增的日志，用于立即查看收到的值
+            LOGI("SuiCore-Companion: Received dex fd=%d, size=%zu", fd, size);
 
-            LOGI("Zygote: dex fd is %d, size is %" PRIdPTR, fd, size);
-            dex = new Dex(fd, size);
-            close(fd);
+            // 新增的检查，判断 fd 是否有效
+            if (fd < 0) {
+                LOGE("SuiCore-Companion: Received invalid dex fd! Dex object will not be created.");
+            } else {
+                // 保留原有的上下文日志
+                if (whoami == Identity::SETTINGS) {
+                    LOGI("SuiCore-Companion: Context identified as Settings.");
+                } else if (whoami == Identity::SYSTEM_UI) {
+                    LOGI("SuiCore-Companion: Context identified as SystemUi.");
+                } else {
+                    LOGI("SuiCore-Companion: Context identified as SystemServer.");
+                }
+
+                // 执行核心逻辑
+                dex = new Dex(fd, size);
+                close(fd);
+
+                // 新增的确认日志
+                LOGI("SuiCore-Companion: Dex object created successfully.");
+            }
         }
 
         close(companion);
@@ -255,6 +274,46 @@ static void CompanionEntry(int socket) {
     close(socket);
 }
 
+// ... (文件前面的所有代码保持不变) ...
+
+// 在文件末尾
 REGISTER_ZYGISK_MODULE(ZygiskModule)
 
 REGISTER_ZYGISK_COMPANION(CompanionEntry)
+
+// ==========================================================
+// [SUI STANDALONE 新增]
+// 为 Standalone 模式添加入口点。
+// 这个函数会被 libsui_loader.so 调用。
+// ==========================================================
+extern "C" [[gnu::visibility("default")]]
+void sui_standalone_init(zygisk::Api *api, JNIEnv *env) {
+    LOGI("SuiCore: sui_standalone_init invoked!"); // [日志]
+
+    char process_name[256] = {0};
+    FILE* fp = fopen("/proc/self/cmdline", "r");
+    if (fp) {
+        fread(process_name, 1, sizeof(process_name) - 1, fp);
+        fclose(fp);
+    }
+    LOGI("SuiCore: Current process is '%s'", process_name); // [日志]
+
+    if (strcmp(process_name, "system_server") != 0) {
+        LOGI("SuiCore: Not in system_server, skipping."); // [日志]
+        return;
+    }
+
+    LOGI("SuiCore: In system_server, performing manual initialization.");
+
+    ZygiskModule module(api, env);
+
+    LOGI("SuiCore: Calling preServerSpecialize..."); // [日志]
+    module.preServerSpecialize(nullptr);
+    LOGI("SuiCore: preServerSpecialize finished."); // [日志]
+
+    LOGI("SuiCore: Calling postServerSpecialize..."); // [日志]
+    module.postServerSpecialize(nullptr);
+    LOGI("SuiCore: postServerSpecialize finished."); // [日志]
+
+    LOGI("SuiCore: Manual initialization completed."); // [日志]
+}
