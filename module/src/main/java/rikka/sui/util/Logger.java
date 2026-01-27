@@ -14,13 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
 
 import android.util.Log;
-
 import java.io.IOException;
 import java.util.Locale;
 import java.util.logging.FileHandler;

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 package rikka.sui.util;
 
 import static java.lang.annotation.RetentionPolicy.SOURCE;
@@ -22,12 +21,10 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
 import android.text.Html;
 import android.text.TextPaint;
 import android.text.TextUtils;
-
 import androidx.annotation.FloatRange;
 import androidx.annotation.IntDef;
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
-
 import java.lang.annotation.Retention;
 import java.util.BitSet;
 
@@ -51,11 +48,10 @@ public class TextUtilsCompat {
      * Flags for {@link #makeSafeForPresentation(String, int, float, int)}
      */
     @Retention(SOURCE)
-    @IntDef(flag = true,
-            value = {SAFE_STRING_FLAG_TRIM, SAFE_STRING_FLAG_SINGLE_LINE,
-                    SAFE_STRING_FLAG_FIRST_LINE})
-    public @interface SafeStringFlags {
-    }
+    @IntDef(
+            flag = true,
+            value = {SAFE_STRING_FLAG_TRIM, SAFE_STRING_FLAG_SINGLE_LINE, SAFE_STRING_FLAG_FIRST_LINE})
+    public @interface SafeStringFlags {}
 
     /**
      * Remove {@link Character#isWhitespace(int) whitespace} and non-breaking spaces from the edges
@@ -83,7 +79,8 @@ public class TextUtilsCompat {
 
     private static boolean isNewline(int codePoint) {
         int type = Character.getType(codePoint);
-        return type == Character.PARAGRAPH_SEPARATOR || type == Character.LINE_SEPARATOR
+        return type == Character.PARAGRAPH_SEPARATOR
+                || type == Character.LINE_SEPARATOR
                 || codePoint == LINE_FEED_CODE_POINT;
     }
 
@@ -120,10 +117,11 @@ public class TextUtilsCompat {
      *                                and {@link #SAFE_STRING_FLAG_FIRST_LINE})
      * @return The cleaned string
      */
-    public static @NonNull
-    CharSequence makeSafeForPresentation(@NonNull String unclean,
-                                         @IntRange(from = 0) int maxCharactersToConsider,
-                                         @FloatRange(from = 0) float ellipsizeDip, @SafeStringFlags int flags) {
+    public static @NonNull CharSequence makeSafeForPresentation(
+            @NonNull String unclean,
+            @IntRange(from = 0) int maxCharactersToConsider,
+            @FloatRange(from = 0) float ellipsizeDip,
+            @SafeStringFlags int flags) {
         boolean onlyKeepFirstLine = ((flags & SAFE_STRING_FLAG_FIRST_LINE) != 0);
         boolean forceSingleLine = ((flags & SAFE_STRING_FLAG_SINGLE_LINE) != 0);
         boolean trim = ((flags & SAFE_STRING_FLAG_TRIM) != 0);
@@ -131,11 +129,11 @@ public class TextUtilsCompat {
         Preconditions.checkNotNull(unclean);
         Preconditions.checkArgumentNonnegative(maxCharactersToConsider);
         Preconditions.checkArgumentNonNegative(ellipsizeDip, "ellipsizeDip");
-        Preconditions.checkFlagsArgument(flags, SAFE_STRING_FLAG_TRIM
-                | SAFE_STRING_FLAG_SINGLE_LINE | SAFE_STRING_FLAG_FIRST_LINE);
-        Preconditions.checkArgument(!(onlyKeepFirstLine && forceSingleLine),
-                "Cannot set SAFE_STRING_FLAG_SINGLE_LINE and SAFE_STRING_FLAG_FIRST_LINE at the"
-                        + "same time");
+        Preconditions.checkFlagsArgument(
+                flags, SAFE_STRING_FLAG_TRIM | SAFE_STRING_FLAG_SINGLE_LINE | SAFE_STRING_FLAG_FIRST_LINE);
+        Preconditions.checkArgument(
+                !(onlyKeepFirstLine && forceSingleLine),
+                "Cannot set SAFE_STRING_FLAG_SINGLE_LINE and SAFE_STRING_FLAG_FIRST_LINE at the" + "same time");
 
         String shortString;
         if (maxCharactersToConsider > 0) {
@@ -154,8 +152,8 @@ public class TextUtilsCompat {
         // - Removes leading white space
         // - Removes all trailing white space beside a single space
         // - Collapses double white space
-        StringWithRemovedChars gettingCleaned = new StringWithRemovedChars(
-                Html.fromHtml(shortString).toString());
+        StringWithRemovedChars gettingCleaned =
+                new StringWithRemovedChars(Html.fromHtml(shortString).toString());
 
         int firstNonWhiteSpace = -1;
         int firstTrailingWhiteSpace = -1;
@@ -208,11 +206,9 @@ public class TextUtilsCompat {
             final TextPaint paint = new TextPaint();
             paint.setTextSize(42);
 
-            return TextUtils.ellipsize(gettingCleaned.toString(), paint, ellipsizeDip,
-                    TextUtils.TruncateAt.END);
+            return TextUtils.ellipsize(gettingCleaned.toString(), paint, ellipsizeDip, TextUtils.TruncateAt.END);
         }
     }
-
 
     /**
      * A special string manipulation class. Just records removals and executes the when onString()

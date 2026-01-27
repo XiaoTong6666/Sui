@@ -14,14 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
 
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -33,8 +32,7 @@ public class ParcelFileDescriptorUtil {
         ParcelFileDescriptor readSide = pipe[0];
         ParcelFileDescriptor writeSide = pipe[1];
 
-        new TransferThread(inputStream, new ParcelFileDescriptor.AutoCloseOutputStream(writeSide))
-                .start();
+        new TransferThread(inputStream, new ParcelFileDescriptor.AutoCloseOutputStream(writeSide)).start();
 
         return readSide;
     }
@@ -44,8 +42,7 @@ public class ParcelFileDescriptorUtil {
         ParcelFileDescriptor readSide = pipe[0];
         ParcelFileDescriptor writeSide = pipe[1];
 
-        new TransferThread(new ParcelFileDescriptor.AutoCloseInputStream(readSide), outputStream)
-                .start();
+        new TransferThread(new ParcelFileDescriptor.AutoCloseInputStream(readSide), outputStream).start();
 
         return writeSide;
     }

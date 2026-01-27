@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 package rikka.sui.management
 
@@ -35,7 +35,7 @@ import rikka.sui.util.BridgeServiceClient
 
 class ManagementViewModel : ViewModel() {
 
-    private val UI_DEBUG_MODE = false
+    private val uiDebugMode = false
     private val fullList = ArrayList<AppInfo>()
     var showOnlyShizukuApps = false
     val appList = MutableLiveData<Resource<List<AppInfo>>>(null)
@@ -58,7 +58,6 @@ class ManagementViewModel : ViewModel() {
         val sortedList = tempSequence.sortedWith(AppInfoComparator()).toList()
         appList.postValue(Resource.success(sortedList))
     }
-
 
     fun invalidateList() {
         if (appList.value?.status != Status.SUCCESS) {
@@ -85,7 +84,7 @@ class ManagementViewModel : ViewModel() {
     }
     fun batchUpdate(targetMode: Int, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (UI_DEBUG_MODE) {
+            if (uiDebugMode) {
                 fullList.forEach { it.defaultFlags = targetMode }
                 displayList()
                 return@launch
@@ -105,7 +104,7 @@ class ManagementViewModel : ViewModel() {
     fun reload(context: Context) {
         appList.postValue(Resource.loading(null))
 
-        if (UI_DEBUG_MODE) {
+        if (uiDebugMode) {
             viewModelScope.launch(Dispatchers.IO) {
                 val fakeData = createFakeAppList()
                 fullList.clear()
@@ -118,7 +117,7 @@ class ManagementViewModel : ViewModel() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val pm = context.packageManager
-                val result = BridgeServiceClient.getApplications(-1 /* ALL */).apply {
+                val result = BridgeServiceClient.getApplications(-1).apply {
                     forEach { it.label = it.packageInfo.applicationInfo!!.loadLabel(pm) }
                 }
 
@@ -127,7 +126,6 @@ class ManagementViewModel : ViewModel() {
 
                 displayList()
             } catch (e: CancellationException) {
-
             } catch (e: Throwable) {
                 android.util.Log.e("SuiViewModel", "THE SMOKING GUN! The final error is:", e)
                 appList.postValue(Resource.error(e, null))
@@ -146,7 +144,7 @@ class ManagementViewModel : ViewModel() {
             "模拟短信", "测试电话", "虚拟文件管理器", "仿酷狗音乐", "假设记账本",
             "虚拟Steam", "测试百度网盘", "仿Telegram", "虚构推特", "假装网易云",
             "伪系统设置", "测试图库", "虚拟录音机", "假相机", "伪Chrome",
-            "虚拟记事贴", "测试视频播放器", "仿哔哩哔哩", "假购物App", "虚构新闻中心"
+            "虚拟记事贴", "测试视频播放器", "仿哔哩哔哩", "假购物App", "虚构新闻中心",
         )
 
         return names.mapIndexed { index, name ->

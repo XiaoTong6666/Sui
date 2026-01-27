@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.app;
@@ -26,14 +26,11 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-
 import com.google.android.material.appbar.AppBarLayout;
-
 import rikka.sui.R;
 
 public class AppActivity extends AppCompatActivity {
@@ -66,8 +63,10 @@ public class AppActivity extends AppCompatActivity {
 
     @Override
     public android.content.ComponentName getComponentName() {
-        return new android.content.ComponentName(getPackageName(), "com.android.settings.Settings$WifiSettingsActivity");
+        return new android.content.ComponentName(
+                getPackageName(), "com.android.settings.Settings$WifiSettingsActivity");
     }
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         setTheme(R.style.Theme_Material3_DayNight_NoActionBar);
@@ -98,7 +97,9 @@ public class AppActivity extends AppCompatActivity {
     }
 
     public void setContentView(@Nullable View view) {
-        setContentView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(
+                view,
+                new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
     }
 
     public void setContentView(@Nullable View view, @Nullable ViewGroup.LayoutParams params) {

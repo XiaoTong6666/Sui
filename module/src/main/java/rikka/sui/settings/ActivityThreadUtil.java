@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.settings;
@@ -25,9 +25,7 @@ import android.app.Instrumentation;
 import android.content.ComponentName;
 import android.content.pm.ApplicationInfo;
 import android.os.Handler;
-
 import androidx.annotation.NonNull;
-
 import java.lang.reflect.Field;
 import java.util.Objects;
 
@@ -49,7 +47,8 @@ public class ActivityThreadUtil {
         instrumentationField = ActivityThread.class.getDeclaredField("mInstrumentation");
         instrumentationField.setAccessible(true);
 
-        Field bindApplicationField = Class.forName(ActivityThread.class.getName() + "$H").getDeclaredField("BIND_APPLICATION");
+        Field bindApplicationField =
+                Class.forName(ActivityThread.class.getName() + "$H").getDeclaredField("BIND_APPLICATION");
         bindApplicationField.setAccessible(true);
         //noinspection ConstantConditions
         bindApplicationCode = (int) bindApplicationField.get(null);
@@ -62,8 +61,7 @@ public class ActivityThreadUtil {
         appInfoField.setAccessible(true);
     }
 
-    @NonNull
-    public static Handler getH(@NonNull ActivityThread activityThread) {
+    @NonNull public static Handler getH(@NonNull ActivityThread activityThread) {
         try {
             return (Handler) Objects.requireNonNull(hField.get(activityThread));
         } catch (IllegalAccessException e) {
@@ -103,8 +101,7 @@ public class ActivityThreadUtil {
         }
     }
 
-    @NonNull
-    public static ApplicationInfo getAppInfoFromAppBindData(@NonNull Object appBindData) {
+    @NonNull public static ApplicationInfo getAppInfoFromAppBindData(@NonNull Object appBindData) {
         try {
             return (ApplicationInfo) Objects.requireNonNull(appInfoField.get(appBindData));
         } catch (IllegalAccessException e) {

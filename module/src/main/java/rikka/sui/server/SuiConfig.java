@@ -14,16 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.server;
 
 import androidx.annotation.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import rikka.shizuku.server.ConfigPackageEntry;
 
 public class SuiConfig {
@@ -63,8 +61,7 @@ public class SuiConfig {
         }
     }
 
-    public SuiConfig() {
-    }
+    public SuiConfig() {}
 
     public SuiConfig(@NonNull List<PackageEntry> packages) {
         this.version = LATEST_VERSION;

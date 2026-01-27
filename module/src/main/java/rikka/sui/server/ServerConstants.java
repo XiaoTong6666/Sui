@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.server;
@@ -31,5 +31,4 @@ public class ServerConstants {
     public static final int BINDER_TRANSACTION_SEND_SHORTCUT_BROADCAST = 10004;
     public static final int BINDER_TRANSACTION_REQUEST_PINNED_SHORTCUT_FROM_UI = 10005;
     public static final int BINDER_TRANSACTION_BATCH_UPDATE_UNCONFIGURED = 10006;
-
 }

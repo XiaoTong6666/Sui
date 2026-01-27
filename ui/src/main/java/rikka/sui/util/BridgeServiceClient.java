@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
@@ -23,12 +23,9 @@ import android.os.IBinder;
 import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.ServiceManager;
-
 import androidx.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.List;
-
 import moe.shizuku.server.IShizukuService;
 import rikka.parcelablelist.ParcelableListSlice;
 import rikka.sui.model.AppInfo;
@@ -66,7 +63,10 @@ public class BridgeServiceClient {
             IBinder activityBinder = ServiceManager.getService(BRIDGE_SERVICE_NAME);
 
             if (activityBinder == null) {
-                android.util.Log.e(TAG, "CRITICAL FAILURE: ServiceManager.getService(\"activity\") returned null! Retry count: " + (i + 1));
+                android.util.Log.e(
+                        TAG,
+                        "CRITICAL FAILURE: ServiceManager.getService(\"activity\") returned null! Retry count: "
+                                + (i + 1));
             } else {
                 android.util.Log.d(TAG, "'activity' service binder obtained. Preparing custom transact...");
 
@@ -88,10 +88,14 @@ public class BridgeServiceClient {
                         android.util.Log.i(TAG, "SUCCESS! Received a non-null binder from the bridge.");
                         return received;
                     } else {
-                        android.util.Log.w(TAG, "FAILURE: Transact was successful, but the returned binder is NULL. The bridge likely rejected the request (or not ready). Retry count: " + (i + 1));
+                        android.util.Log.w(
+                                TAG,
+                                "FAILURE: Transact was successful, but the returned binder is NULL. The bridge likely rejected the request (or not ready). Retry count: "
+                                        + (i + 1));
                     }
                 } catch (Throwable e) {
-                    android.util.Log.e(TAG, "FATAL FAILURE: An exception was thrown during the transact/reply process.", e);
+                    android.util.Log.e(
+                            TAG, "FATAL FAILURE: An exception was thrown during the transact/reply process.", e);
                 } finally {
                     data.recycle();
                     reply.recycle();
@@ -101,7 +105,8 @@ public class BridgeServiceClient {
             if (i < RETRY_MAX - 1) {
                 try {
                     Thread.sleep(RETRY_DELAY_MS);
-                } catch (InterruptedException ignored) {}
+                } catch (InterruptedException ignored) {
+                }
             }
         }
 
@@ -115,7 +120,8 @@ public class BridgeServiceClient {
         if (binder != null) {
             try {
                 binder.unlinkToDeath(DEATH_RECIPIENT, 0);
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
         }
 
         binder = newBinder;
@@ -123,7 +129,8 @@ public class BridgeServiceClient {
             service = IShizukuService.Stub.asInterface(newBinder);
             try {
                 binder.linkToDeath(DEATH_RECIPIENT, 0);
-            } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {
+            }
         } else {
             service = null;
         }
@@ -135,6 +142,7 @@ public class BridgeServiceClient {
         }
         return service;
     }
+
     @SuppressWarnings("unchecked")
     public static List<AppInfo> getApplications(int userId) {
         IShizukuService s = getService();

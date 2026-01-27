@@ -14,16 +14,15 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.systemserver;
 
-import android.content.Intent;
-
-import moe.shizuku.server.IShizukuService;
-
 import static rikka.sui.systemserver.SystemServerConstants.LOGGER;
+
+import android.content.Intent;
+import moe.shizuku.server.IShizukuService;
 
 public class Bridge {
 

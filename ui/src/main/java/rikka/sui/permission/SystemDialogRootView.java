@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.permission;
@@ -26,9 +26,7 @@ import android.content.IntentFilter;
 import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
-
 import androidx.annotation.NonNull;
-
 import rikka.sui.util.Logger;
 
 public class SystemDialogRootView extends FrameLayout {
@@ -50,9 +48,7 @@ public class SystemDialogRootView extends FrameLayout {
         windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
     }
 
-    public void onClose() {
-
-    }
+    public void onClose() {}
 
     public boolean onBackPressed() {
         return true;

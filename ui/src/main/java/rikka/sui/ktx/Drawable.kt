@@ -36,9 +36,9 @@ import androidx.annotation.Px
  * any. Defaults to [Config.ARGB_8888] otherwise.
  */
 fun Drawable.toBitmap(
-        @Px width: Int = intrinsicWidth,
-        @Px height: Int = intrinsicHeight,
-        config: Config? = null
+    @Px width: Int = intrinsicWidth,
+    @Px height: Int = intrinsicHeight,
+    config: Config? = null,
 ): Bitmap {
     if (this is BitmapDrawable) {
         if (config == null || bitmap.config == config) {
@@ -70,10 +70,10 @@ fun Drawable.toBitmap(
  * @see Drawable.setBounds
  */
 fun Drawable.updateBounds(
-        @Px left: Int = bounds.left,
-        @Px top: Int = bounds.top,
-        @Px right: Int = bounds.right,
-        @Px bottom: Int = bounds.bottom
+    @Px left: Int = bounds.left,
+    @Px top: Int = bounds.top,
+    @Px right: Int = bounds.right,
+    @Px bottom: Int = bounds.bottom,
 ) {
     setBounds(left, top, right, bottom)
 }

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
@@ -32,16 +32,15 @@ public class OsUtils {
         try {
             context = SELinux.getContext();
         } catch (Throwable tr) {
-            context =null;
+            context = null;
         }
         SELINUX_CONTEXT = context;
     }
 
-
     public static int getUid() {
         return UID;
     }
-    
+
     public static int getPid() {
         return PID;
     }
@@ -50,4 +49,3 @@ public class OsUtils {
         return SELINUX_CONTEXT;
     }
 }
-

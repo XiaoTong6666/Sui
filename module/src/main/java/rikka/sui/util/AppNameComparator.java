@@ -14,13 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
 
 import android.os.Process;
-
 import java.util.Comparator;
 
 public class AppNameComparator<T> implements Comparator<T> {
@@ -30,7 +29,9 @@ public class AppNameComparator<T> implements Comparator<T> {
 
     public interface InfoProvider<T> {
         CharSequence getTitle(T item);
+
         String getPackageName(T item);
+
         int getUserId(T item);
     }
 
@@ -43,8 +44,7 @@ public class AppNameComparator<T> implements Comparator<T> {
     public int compare(T a, T b) {
         // Order by the title in the current locale
         int result = mLabelComparator.compare(
-                mInfoProvider.getTitle(a).toString(),
-                mInfoProvider.getTitle(b).toString());
+                mInfoProvider.getTitle(a).toString(), mInfoProvider.getTitle(b).toString());
 
         if (result != 0) {
             return result;

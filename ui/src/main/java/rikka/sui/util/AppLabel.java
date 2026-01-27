@@ -19,7 +19,6 @@ package rikka.sui.util;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.text.BidiFormatter;
-
 import androidx.annotation.NonNull;
 
 public class AppLabel {
@@ -38,9 +37,7 @@ public class AppLabel {
      * @param context         the {@code Context} to retrieve {@code PackageManager}
      * @return the label for the application
      */
-    @NonNull
-    public static String getAppLabel(@NonNull ApplicationInfo applicationInfo,
-                                     @NonNull Context context) {
+    @NonNull public static String getAppLabel(@NonNull ApplicationInfo applicationInfo, @NonNull Context context) {
         return getAppLabel(applicationInfo, DEFAULT_MAX_LABEL_SIZE_PX, context);
     }
 
@@ -52,14 +49,17 @@ public class AppLabel {
      * @param context         the {@code Context} to retrieve {@code PackageManager}
      * @return the label for the application
      */
-    @NonNull
-    private static String getAppLabel(@NonNull ApplicationInfo applicationInfo, float ellipsizeDip,
-                                      @NonNull Context context) {
-        String unsafeLabel = applicationInfo.loadLabel(context.getPackageManager()).toString();
+    @NonNull private static String getAppLabel(
+            @NonNull ApplicationInfo applicationInfo, float ellipsizeDip, @NonNull Context context) {
+        String unsafeLabel =
+                applicationInfo.loadLabel(context.getPackageManager()).toString();
 
-        return BidiFormatter.getInstance().unicodeWrap(TextUtilsCompat.makeSafeForPresentation(
-                unsafeLabel, MAX_SAFE_LABEL_LENGTH, ellipsizeDip,
-                TextUtilsCompat.SAFE_STRING_FLAG_TRIM | TextUtilsCompat.SAFE_STRING_FLAG_FIRST_LINE)
-                .toString());
+        return BidiFormatter.getInstance()
+                .unicodeWrap(TextUtilsCompat.makeSafeForPresentation(
+                                unsafeLabel,
+                                MAX_SAFE_LABEL_LENGTH,
+                                ellipsizeDip,
+                                TextUtilsCompat.SAFE_STRING_FLAG_TRIM | TextUtilsCompat.SAFE_STRING_FLAG_FIRST_LINE)
+                        .toString());
     }
 }

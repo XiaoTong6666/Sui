@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.ktx
@@ -23,41 +23,48 @@ import android.view.View
 import android.widget.TextView
 import rikka.sui.R
 
-private const val tag_countdown = 1599296841
+private const val TAG_COUNTDOWN = 1599296841
 
-fun TextView.applyCountdown(countdownSecond: Int, message: CharSequence? = null, format: Int = 0) {
-    val countdownRunnable = object : Runnable {
-        override fun run() {
-            val countdown = getTag(tag_countdown) as Int
-            setTag(tag_countdown, countdown - 1)
-            if (countdown == 0) {
-                isEnabled = true
-                if (message != null) text = message
-            } else {
-                isEnabled = false
-                if (message != null && format != 0) text = context.getString(R.string.brackets_format, message, countdown.toString())
-                postDelayed(this, 1000)
+fun TextView.applyCountdown(
+    countdownSecond: Int,
+    message: CharSequence? = null,
+    format: Int = 0,
+) {
+    val countdownRunnable =
+        object : Runnable {
+            override fun run() {
+                val countdown = getTag(TAG_COUNTDOWN) as Int
+                setTag(TAG_COUNTDOWN, countdown - 1)
+                if (countdown == 0) {
+                    isEnabled = true
+                    if (message != null) text = message
+                } else {
+                    isEnabled = false
+                    if (message != null && format != 0) text = context.getString(R.string.brackets_format, message, countdown.toString())
+                    postDelayed(this, 1000)
+                }
             }
         }
-    }
 
     val attached = isAttachedToWindow
 
-    setTag(tag_countdown, countdownSecond)
+    setTag(TAG_COUNTDOWN, countdownSecond)
     if (attached) {
         countdownRunnable.run()
     }
 
-    addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-        override fun onViewAttachedToWindow(view: View) {
-            if (!attached) {
-                countdownRunnable.run()
+    addOnAttachStateChangeListener(
+        object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(view: View) {
+                if (!attached) {
+                    countdownRunnable.run()
+                }
             }
-        }
 
-        override fun onViewDetachedFromWindow(view: View) {
-            removeOnAttachStateChangeListener(this)
-            removeCallbacks(countdownRunnable)
-        }
-    })
+            override fun onViewDetachedFromWindow(view: View) {
+                removeOnAttachStateChangeListener(this)
+                removeCallbacks(countdownRunnable)
+            }
+        },
+    )
 }

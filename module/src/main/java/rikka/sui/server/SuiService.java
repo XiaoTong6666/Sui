@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.server;
@@ -48,18 +48,15 @@ import android.os.RemoteException;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.ArrayMap;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
-
+import dev.rikka.tools.refine.Refine;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import dev.rikka.tools.refine.Refine;
 import moe.shizuku.server.IShizukuApplication;
 import rikka.hidden.compat.ActivityManagerApis;
 import rikka.hidden.compat.PackageManagerApis;
@@ -230,7 +227,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     }
 
     @Override
-    public boolean checkCallerPermission(String func, int callingUid, int callingPid, @Nullable ClientRecord clientRecord) {
+    public boolean checkCallerPermission(
+            String func, int callingUid, int callingPid, @Nullable ClientRecord clientRecord) {
         // Temporary fix for https://github.com/RikkaApps/Sui/issues/35
         if ("transactRemote".equals(func)) {
             SuiConfig.PackageEntry packageEntry = configManager.find(callingUid);
@@ -258,7 +256,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
         List<String> packages = PackageManagerApis.getPackagesForUidNoThrow(callingUid);
         if (!packages.contains(requestPackageName)) {
-            throw new SecurityException("Request package " + requestPackageName + "does not belong to uid " + callingUid);
+            throw new SecurityException(
+                    "Request package " + requestPackageName + "does not belong to uid " + callingUid);
         }
 
         isManager = MANAGER_APPLICATION_ID.equals(requestPackageName);
@@ -267,23 +266,25 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         if (isManager) {
             IBinder binder = application.asBinder();
             try {
-                binder.linkToDeath(new IBinder.DeathRecipient() {
+                binder.linkToDeath(
+                        new IBinder.DeathRecipient() {
 
-                    @Override
-                    public void binderDied() {
-                        flog.w("manager binder is dead, pid=%d", callingPid);
+                            @Override
+                            public void binderDied() {
+                                flog.w("manager binder is dead, pid=%d", callingPid);
 
-                        synchronized (managerBinderLock) {
-                            if (systemUiApplication.asBinder() == binder) {
-                                systemUiApplication = null;
-                            } else {
-                                flog.w("binderDied is called later than the arrival of the new binder ?!");
+                                synchronized (managerBinderLock) {
+                                    if (systemUiApplication.asBinder() == binder) {
+                                        systemUiApplication = null;
+                                    } else {
+                                        flog.w("binderDied is called later than the arrival of the new binder ?!");
+                                    }
+                                }
+
+                                binder.unlinkToDeath(this, 0);
                             }
-                        }
-
-                        binder.unlinkToDeath(this, 0);
-                    }
-                }, 0);
+                        },
+                        0);
             } catch (RemoteException e) {
                 LOGGER.w(e, "attachApplication");
             }
@@ -296,10 +297,12 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
         if (!isManager && !isSettings) {
             if (clientManager.findClient(callingUid, callingPid) != null) {
-                throw new IllegalStateException("Client (uid=" + callingUid + ", pid=" + callingPid + ") has already attached");
+                throw new IllegalStateException(
+                        "Client (uid=" + callingUid + ", pid=" + callingPid + ") has already attached");
             }
             synchronized (this) {
-                clientRecord = clientManager.addClient(callingUid, callingPid, application, requestPackageName, apiVersion);
+                clientRecord =
+                        clientManager.addClient(callingUid, callingPid, application, requestPackageName, apiVersion);
             }
             if (clientRecord == null) {
                 return;
@@ -323,7 +326,9 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         reply.putInt(BIND_APPLICATION_SERVER_PATCH_VERSION, ShizukuApiConstants.SERVER_PATCH_VERSION);
         if (!isManager && !isSettings) {
             reply.putBoolean(BIND_APPLICATION_PERMISSION_GRANTED, clientRecord.allowed);
-            reply.putBoolean(BIND_APPLICATION_SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE, shouldShowRequestPermissionRationale(clientRecord));
+            reply.putBoolean(
+                    BIND_APPLICATION_SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE,
+                    shouldShowRequestPermissionRationale(clientRecord));
         }
         try {
             application.bindApplication(reply);
@@ -333,10 +338,12 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     }
 
     @Override
-    public void showPermissionConfirmation(int requestCode, @NonNull ClientRecord clientRecord, int callingUid, int callingPid, int userId) {
+    public void showPermissionConfirmation(
+            int requestCode, @NonNull ClientRecord clientRecord, int callingUid, int callingPid, int userId) {
         if (systemUiApplication != null) {
             try {
-                systemUiApplication.showPermissionConfirmation(callingUid, callingPid, clientRecord.packageName, requestCode);
+                systemUiApplication.showPermissionConfirmation(
+                        callingUid, callingPid, clientRecord.packageName, requestCode);
             } catch (Throwable e) {
                 LOGGER.w(e, "showPermissionConfirmation");
             }
@@ -365,9 +372,13 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         int callingUid = Binder.getCallingUid();
         if (callingUid != systemUiUid) {
             if (callingUid == 1000) {
-                LOGGER.w("dispatchPermissionConfirmationResult: callingUid=%d matches SYSTEM_UID (1000) but not systemUiUid=%d. Allowing as fallback.", callingUid, systemUiUid);
+                LOGGER.w(
+                        "dispatchPermissionConfirmationResult: callingUid=%d matches SYSTEM_UID (1000) but not systemUiUid=%d. Allowing as fallback.",
+                        callingUid, systemUiUid);
             } else {
-                LOGGER.w("dispatchPermissionConfirmationResult is allowed to be called only from the manager (callingUid=%d, systemUiUid=%d)", callingUid, systemUiUid);
+                LOGGER.w(
+                        "dispatchPermissionConfirmationResult is allowed to be called only from the manager (callingUid=%d, systemUiUid=%d)",
+                        callingUid, systemUiUid);
                 return;
             }
         }
@@ -379,7 +390,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         boolean allowed = data.getBoolean(REQUEST_PERMISSION_REPLY_ALLOWED);
         boolean onetime = data.getBoolean(REQUEST_PERMISSION_REPLY_IS_ONETIME);
 
-        LOGGER.i("dispatchPermissionConfirmationResult: uid=%d, pid=%d, requestCode=%d, allowed=%s, onetime=%s",
+        LOGGER.i(
+                "dispatchPermissionConfirmationResult: uid=%d, pid=%d, requestCode=%d, allowed=%s, onetime=%s",
                 requestUid, requestPid, requestCode, Boolean.toString(allowed), Boolean.toString(onetime));
 
         List<ClientRecord> records = clientManager.findClients(requestUid);
@@ -395,7 +407,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
 
         if (!onetime) {
-            configManager.update(requestUid, SuiConfig.MASK_PERMISSION, allowed ? SuiConfig.FLAG_ALLOWED : SuiConfig.FLAG_DENIED);
+            configManager.update(
+                    requestUid, SuiConfig.MASK_PERMISSION, allowed ? SuiConfig.FLAG_ALLOWED : SuiConfig.FLAG_DENIED);
         }
     }
 
@@ -444,7 +457,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 record.allowed = allowed;
 
                 if (!allowed || wasHidden) {
-                    ActivityManagerApis.forceStopPackageNoThrow(record.packageName, UserHandleCompat.getUserId(record.uid));
+                    ActivityManagerApis.forceStopPackageNoThrow(
+                            record.packageName, UserHandleCompat.getUserId(record.uid));
                     getUserServiceManager().removeUserServicesForPackage(record.packageName);
                 }
             }
@@ -496,17 +510,14 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             for (PackageInfo pi : PackageManagerApis.getInstalledPackagesNoThrow(installedBaseFlags, user)) {
                 if (pi.applicationInfo == null
                         || Refine.<PackageInfoHidden>unsafeCast(pi).overlayTarget != null
-                        || (pi.applicationInfo.flags & ApplicationInfo.FLAG_HAS_CODE) == 0)
-                    continue;
+                        || (pi.applicationInfo.flags & ApplicationInfo.FLAG_HAS_CODE) == 0) continue;
 
                 int uid = pi.applicationInfo.uid;
                 int appId = UserHandleCompat.getAppId(uid);
-                if (uid == systemUiUid)
-                    continue;
+                if (uid == systemUiUid) continue;
 
                 int flags = getFlagsForUidInternal(uid, SuiConfig.MASK_PERMISSION);
-                if (flags == 0 && uid != 2000 && appId < 10000)
-                    continue;
+                if (flags == 0 && uid != 2000 && appId < 10000) continue;
 
                 if (flags == 0) {
                     String dataDir;
@@ -517,38 +528,52 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     }
 
                     final String sourceDir = pi.applicationInfo.sourceDir;
-                    boolean hasApk = sourceDir != null && MapUtil.getOrPut(existenceCache, sourceDir, () -> new File(sourceDir).exists());
-                    boolean hasData = dataDir != null && MapUtil.getOrPut(existenceCache, dataDir, () -> new File(dataDir).exists());
+                    boolean hasApk = sourceDir != null
+                            && MapUtil.getOrPut(existenceCache, sourceDir, () -> new File(sourceDir).exists());
+                    boolean hasData = dataDir != null
+                            && MapUtil.getOrPut(existenceCache, dataDir, () -> new File(dataDir).exists());
 
                     // Installed (or hidden): hasApk && hasData
                     // Uninstalled but keep data: !hasApk && hasData
                     // Installed in other users only: hasApk && !hasData
                     if (!(hasApk && hasData)) {
-                        LOGGER.v("skip %d:%s: hasApk=%s, hasData=%s", user, pi.packageName, Boolean.toString(hasApk), Boolean.toString(hasData));
+                        LOGGER.v(
+                                "skip %d:%s: hasApk=%s, hasData=%s",
+                                user, pi.packageName, Boolean.toString(hasApk), Boolean.toString(hasData));
                         continue;
                     }
 
                     boolean hasComponents = MapUtil.getOrPut(hasComponentsCache, pi.packageName, () -> {
                         try {
-                            int baseFlags = 0x00000200 /*MATCH_DISABLED_COMPONENTS*/ | 0x00002000 /*MATCH_UNINSTALLED_PACKAGES*/;
-                            PackageInfo pi2 = PackageManagerApis.getPackageInfoNoThrow(pi.packageName,
-                                    baseFlags | PackageManager.GET_ACTIVITIES | PackageManager.GET_RECEIVERS | PackageManager.GET_SERVICES | PackageManager.GET_PROVIDERS,
+                            int baseFlags = 0x00000200 /*MATCH_DISABLED_COMPONENTS*/
+                                    | 0x00002000 /*MATCH_UNINSTALLED_PACKAGES*/;
+                            PackageInfo pi2 = PackageManagerApis.getPackageInfoNoThrow(
+                                    pi.packageName,
+                                    baseFlags
+                                            | PackageManager.GET_ACTIVITIES
+                                            | PackageManager.GET_RECEIVERS
+                                            | PackageManager.GET_SERVICES
+                                            | PackageManager.GET_PROVIDERS,
                                     user);
                             if (pi2 == null) {
                                 // Exceed binder data transfer limit
                                 pi2 = pi;
                                 PackageInfo tmp;
 
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(pi.packageName, baseFlags | PackageManager.GET_ACTIVITIES, user);
+                                tmp = PackageManagerApis.getPackageInfoNoThrow(
+                                        pi.packageName, baseFlags | PackageManager.GET_ACTIVITIES, user);
                                 pi2.activities = (tmp != null) ? tmp.activities : null;
 
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(pi.packageName, baseFlags | PackageManager.GET_RECEIVERS, user);
+                                tmp = PackageManagerApis.getPackageInfoNoThrow(
+                                        pi.packageName, baseFlags | PackageManager.GET_RECEIVERS, user);
                                 pi2.receivers = (tmp != null) ? tmp.receivers : null;
 
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(pi.packageName, baseFlags | PackageManager.GET_SERVICES, user);
+                                tmp = PackageManagerApis.getPackageInfoNoThrow(
+                                        pi.packageName, baseFlags | PackageManager.GET_SERVICES, user);
                                 pi2.services = (tmp != null) ? tmp.services : null;
 
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(pi.packageName, baseFlags | PackageManager.GET_PROVIDERS, user);
+                                tmp = PackageManagerApis.getPackageInfoNoThrow(
+                                        pi.packageName, baseFlags | PackageManager.GET_PROVIDERS, user);
                                 pi2.providers = (tmp != null) ? tmp.providers : null;
                             }
                             return pi2.activities != null && pi2.activities.length > 0
@@ -589,7 +614,9 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             Parcel data = Parcel.obtain();
             data.writeInterfaceToken(ShizukuApiConstants.BINDER_DESCRIPTOR);
             try {
-                systemUiApplication.asBinder().transact(ServerConstants.BINDER_TRANSACTION_showManagement, data, null, IBinder.FLAG_ONEWAY);
+                systemUiApplication
+                        .asBinder()
+                        .transact(ServerConstants.BINDER_TRANSACTION_showManagement, data, null, IBinder.FLAG_ONEWAY);
             } catch (Throwable e) {
                 LOGGER.w(e, "showPermissionConfirmation");
             } finally {
@@ -622,7 +649,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
     @Override
     public boolean onTransact(int code, Parcel data, Parcel reply, int flags) throws RemoteException {
-        //LOGGER.d("transact: code=%d, calling uid=%d", code, Binder.getCallingUid());
+        // LOGGER.d("transact: code=%d, calling uid=%d", code, Binder.getCallingUid());
         if (code == ServerConstants.BINDER_TRANSACTION_getApplications) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
             int userId = data.readInt();
@@ -638,7 +665,10 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     reply.writeInt(0);
                 }
             } catch (Throwable e) {
-                android.util.Log.e("SuiRootService", "A fatal error occurred inside getApplications(). This is the root cause.", e);
+                android.util.Log.e(
+                        "SuiRootService",
+                        "A fatal error occurred inside getApplications(). This is the root cause.",
+                        e);
 
                 reply.writeException(new RuntimeException("Sui root service crashed while trying to get app list.", e));
             }
@@ -665,7 +695,13 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
             try {
                 if (systemUiApplication != null) {
-                    systemUiApplication.asBinder().transact(ServerConstants.BINDER_TRANSACTION_SEND_SHORTCUT_BROADCAST, data, null, IBinder.FLAG_ONEWAY);
+                    systemUiApplication
+                            .asBinder()
+                            .transact(
+                                    ServerConstants.BINDER_TRANSACTION_SEND_SHORTCUT_BROADCAST,
+                                    data,
+                                    null,
+                                    IBinder.FLAG_ONEWAY);
                     reply.writeNoException();
                 } else {
                     reply.writeException(new IllegalStateException("SystemUI is not attached yet."));
@@ -697,7 +733,5 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     }
 
     @Override
-    public void exit() {
-
-    }
+    public void exit() {}
 }

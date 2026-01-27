@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 #include <cstdio>
@@ -47,96 +47,97 @@
 
 namespace Manager {
 
-    static jclass mainClass = nullptr;
+static jclass mainClass = nullptr;
 
-    static bool installDex(JNIEnv *env, const char *appDataDir, Dex *dexFile) {
-        int api = android_get_device_api_level();
-        if (api <= 25) {
-            char dexPath[PATH_MAX], oatDir[PATH_MAX];
-            snprintf(dexPath, PATH_MAX, "%s/sui.dex", appDataDir);
-            snprintf(oatDir, PATH_MAX, "%s/code_cache", appDataDir);
+static bool installDex(JNIEnv* env, const char* appDataDir, Dex* dexFile) {
+    int api = android_get_device_api_level();
+    if (api <= 25) {
+        char dexPath[PATH_MAX], oatDir[PATH_MAX];
+        snprintf(dexPath, PATH_MAX, "%s/sui.dex", appDataDir);
+        snprintf(oatDir, PATH_MAX, "%s/code_cache", appDataDir);
 
-            LOGI("installDex (Below 7.1): using private paths: dex=%s, oat=%s", dexPath, oatDir);
-            dexFile->setPre26Paths(dexPath, oatDir);
-        } else if (api == 26 || api == 27) {
-            const char* dexPath = "/data/system/sui/sui.dex";
-            const char* oatDir = "/data/system/sui/oat";
+        LOGI("installDex (Below 7.1): using private paths: dex=%s, oat=%s", dexPath, oatDir);
+        dexFile->setPre26Paths(dexPath, oatDir);
+    } else if (api == 26 || api == 27) {
+        const char* dexPath = "/data/system/sui/sui.dex";
+        const char* oatDir = "/data/system/sui/oat";
 
-            LOGI("installDex (8.0/8.1): using global system paths: dex=%s, oat=%s", dexPath, oatDir);
-            dexFile->setPre26Paths(dexPath, oatDir);
-        }
-        dexFile->createClassLoader(env);
+        LOGI("installDex (8.0/8.1): using global system paths: dex=%s, oat=%s", dexPath, oatDir);
+        dexFile->setPre26Paths(dexPath, oatDir);
+    }
+    dexFile->createClassLoader(env);
 
-        mainClass = dexFile->findClass(env, MANAGER_PROCESS_CLASSNAME);
-        if (!mainClass) {
-            LOGE("installDex: unable to find main class: %s", MANAGER_PROCESS_CLASSNAME);
-            return false;
-        }
-        mainClass = (jclass) env->NewGlobalRef(mainClass);
+    mainClass = dexFile->findClass(env, MANAGER_PROCESS_CLASSNAME);
+    if (!mainClass) {
+        LOGE("installDex: unable to find main class: %s", MANAGER_PROCESS_CLASSNAME);
+        return false;
+    }
+    mainClass = (jclass)env->NewGlobalRef(mainClass);
 
-        auto mainMethod = env->GetStaticMethodID(mainClass, "main", "([Ljava/lang/String;)V");
-        if (!mainMethod) {
-            LOGE("installDex: unable to find main method");
-            env->ExceptionDescribe();
-            env->ExceptionClear();
-            return false;
-        }
-
-        auto args = env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
-
-        env->CallStaticVoidMethod(mainClass, mainMethod, args);
-        if (env->ExceptionCheck()) {
-            LOGE("installDex: exception in main method");
-            env->ExceptionDescribe();
-            env->ExceptionClear();
-            return false;
-        }
-
-        return true;
+    auto mainMethod = env->GetStaticMethodID(mainClass, "main", "([Ljava/lang/String;)V");
+    if (!mainMethod) {
+        LOGE("installDex: unable to find main method");
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        return false;
     }
 
-    struct InjectArgs {
-        JavaVM *vm;
-        char *appDataDir;
-        Dex *dexFile;
-    };
+    auto args = env->NewObjectArray(0, env->FindClass("java/lang/String"), nullptr);
 
-    static void *InjectRoutine(void *data) {
-        auto args = (InjectArgs *) data;
-        JNIEnv *env;
-        if (args->vm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
-            LOGI("Async injection started");
-            if (installDex(env, args->appDataDir, args->dexFile)) {
-                LOGI("Async injection success");
-            } else {
-                LOGE("Async injection failed");
-            }
-            args->vm->DetachCurrentThread();
-        }
-        if (args->appDataDir) free(args->appDataDir);
-        delete args;
-        return nullptr;
+    env->CallStaticVoidMethod(mainClass, mainMethod, args);
+    if (env->ExceptionCheck()) {
+        LOGE("installDex: exception in main method");
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        return false;
     }
 
-    void main(JNIEnv *env, const char *appDataDir, Dex *dexFile) {
-        if (!dexFile->valid()) {
-            LOGE("no dex");
-            return;
-        }
-
-        LOGV("main: manager");
-
-        JavaVM *vm;
-        env->GetJavaVM(&vm);
-
-        auto args = new InjectArgs();
-        args->vm = vm;
-        args->appDataDir = appDataDir ? strdup(appDataDir) : nullptr;
-        args->dexFile = dexFile;
-
-        pthread_t t;
-        pthread_create(&t, nullptr, InjectRoutine, args);
-
-        LOGV("install dex (async) scheduled");
-    }
+    return true;
 }
+
+struct InjectArgs {
+    JavaVM* vm;
+    char* appDataDir;
+    Dex* dexFile;
+};
+
+static void* InjectRoutine(void* data) {
+    auto args = (InjectArgs*)data;
+    JNIEnv* env;
+    if (args->vm->AttachCurrentThread(&env, nullptr) == JNI_OK) {
+        LOGI("Async injection started");
+        if (installDex(env, args->appDataDir, args->dexFile)) {
+            LOGI("Async injection success");
+        } else {
+            LOGE("Async injection failed");
+        }
+        args->vm->DetachCurrentThread();
+    }
+    if (args->appDataDir)
+        free(args->appDataDir);
+    delete args;
+    return nullptr;
+}
+
+void main(JNIEnv* env, const char* appDataDir, Dex* dexFile) {
+    if (!dexFile->valid()) {
+        LOGE("no dex");
+        return;
+    }
+
+    LOGV("main: manager");
+
+    JavaVM* vm;
+    env->GetJavaVM(&vm);
+
+    auto args = new InjectArgs();
+    args->vm = vm;
+    args->appDataDir = appDataDir ? strdup(appDataDir) : nullptr;
+    args->dexFile = dexFile;
+
+    pthread_t t;
+    pthread_create(&t, nullptr, InjectRoutine, args);
+
+    LOGV("install dex (async) scheduled");
+}
+}  // namespace Manager

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.manager;
@@ -29,19 +29,16 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcel;
 import android.os.RemoteException;
-import android.os.Build;
 import android.provider.Telephony;
 import android.telephony.TelephonyManager;
-
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
-
 import moe.shizuku.server.IShizukuApplication;
 import moe.shizuku.server.IShizukuService;
-import rikka.shizuku.ShizukuApiConstants;
 import rikka.sui.resource.SuiApk;
 import rikka.sui.server.ServerConstants;
 import rikka.sui.shortcut.SuiShortcut;
@@ -55,18 +52,16 @@ public class ManagerProcess {
     private static final IShizukuApplication APPLICATION = new IShizukuApplication.Stub() {
 
         @Override
-        public void bindApplication(Bundle data) {
-
-        }
+        public void bindApplication(Bundle data) {}
 
         @Override
-        public void dispatchRequestPermissionResult(int requestCode, Bundle data) {
-
-        }
+        public void dispatchRequestPermissionResult(int requestCode, Bundle data) {}
 
         @Override
-        public void showPermissionConfirmation(int requestUid, int requestPid, String requestPackageName, int requestCode) {
-            LOGGER.i("showPermissionConfirmation: %d %d %s %d", requestUid, requestPid, requestPackageName, requestCode);
+        public void showPermissionConfirmation(
+                int requestUid, int requestPid, String requestPackageName, int requestCode) {
+            LOGGER.i(
+                    "showPermissionConfirmation: %d %d %s %d", requestUid, requestPid, requestPackageName, requestCode);
 
             if (suiApk == null) {
                 LOGGER.e("Cannot load apk");
@@ -74,10 +69,14 @@ public class ManagerProcess {
             }
 
             try {
-                suiApk.getSuiRequestPermissionDialogConstructor().newInstance(
-                        ActivityThread.currentActivityThread().getApplication(), suiApk.getResources(),
-                        requestUid, requestPid, requestPackageName, requestCode
-                );
+                suiApk.getSuiRequestPermissionDialogConstructor()
+                        .newInstance(
+                                ActivityThread.currentActivityThread().getApplication(),
+                                suiApk.getResources(),
+                                requestUid,
+                                requestPid,
+                                requestPackageName,
+                                requestCode);
             } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
                 LOGGER.e(e, "showPermissionConfirmation");
             }
@@ -176,10 +175,9 @@ public class ManagerProcess {
         intentFilter.addDataAuthority("784784", null);
         intentFilter.addDataScheme("android_secret_code");
 
-
         try {
-            context.registerReceiver(SHOW_MANAGEMENT_RECEIVER, intentFilter,
-                    "android.permission.CONTROL_INCALL_EXPERIENCE", null);
+            context.registerReceiver(
+                    SHOW_MANAGEMENT_RECEIVER, intentFilter, "android.permission.CONTROL_INCALL_EXPERIENCE", null);
             LOGGER.i("registerReceiver android.provider.Telephony.SECRET_CODE");
         } catch (Exception e) {
             LOGGER.w(e, "registerReceiver android.provider.Telephony.SECRET_CODE");

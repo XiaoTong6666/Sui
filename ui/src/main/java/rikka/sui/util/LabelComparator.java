@@ -30,10 +30,8 @@ public class LabelComparator implements Comparator<String> {
     public int compare(String titleA, String titleB) {
         // Ensure that we de-prioritize any titles that don't start with a
         // linguistic letter or digit
-        boolean aStartsWithLetter = (titleA.length() > 0) &&
-                Character.isLetterOrDigit(titleA.codePointAt(0));
-        boolean bStartsWithLetter = (titleB.length() > 0) &&
-                Character.isLetterOrDigit(titleB.codePointAt(0));
+        boolean aStartsWithLetter = (titleA.length() > 0) && Character.isLetterOrDigit(titleA.codePointAt(0));
+        boolean bStartsWithLetter = (titleB.length() > 0) && Character.isLetterOrDigit(titleB.codePointAt(0));
         if (aStartsWithLetter && !bStartsWithLetter) {
             return -1;
         } else if (!aStartsWithLetter && bStartsWithLetter) {

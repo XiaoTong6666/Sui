@@ -1,3 +1,22 @@
+/*
+ * This file is part of Sui.
+ *
+ * Sui is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sui is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c) 2026 Sui Contributors
+ */
+
 package rikka.sui.shell;
 
 import android.content.pm.PackageManager;
@@ -6,9 +25,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.system.Os;
 import android.text.TextUtils;
-
 import java.io.File;
-
 import rikka.rish.Rish;
 import rikka.rish.RishConfig;
 import rikka.shizuku.Shizuku;
@@ -51,7 +68,8 @@ public class Shell extends Rish {
         } else {
             packageName = System.getenv("RISH_APPLICATION_ID");
             if (TextUtils.isEmpty(packageName) || "PKG".equals(packageName)) {
-                System.err.println("RISH_APPLICATION_ID is not set, set this environment variable to the id of current application (package name)");
+                System.err.println(
+                        "RISH_APPLICATION_ID is not set, set this environment variable to the id of current application (package name)");
                 System.err.flush();
                 System.exit(1);
             }
@@ -60,7 +78,6 @@ public class Shell extends Rish {
         String libPath = System.getProperty("sui.library.path");
         if (libPath != null) {
             RishConfig.setLibraryPath(new File(libPath).getAbsolutePath());
-
         }
 
         if (Looper.getMainLooper() == null) {
@@ -71,7 +88,8 @@ public class Shell extends Rish {
 
         try {
             if (!Sui.init(packageName)) {
-                System.err.println("Unable to acquire the binder of Sui. Make sure Sui is installed and the current application is not hidden in Sui.");
+                System.err.println(
+                        "Unable to acquire the binder of Sui. Make sure Sui is installed and the current application is not hidden in Sui.");
                 System.err.flush();
                 System.exit(1);
             }

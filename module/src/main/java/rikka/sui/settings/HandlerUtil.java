@@ -14,16 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.settings;
 
 import android.annotation.SuppressLint;
 import android.os.Handler;
-
 import androidx.annotation.NonNull;
-
 import java.lang.reflect.Field;
 
 @SuppressWarnings("JavaReflectionMemberAccess")
@@ -33,8 +31,8 @@ public class HandlerUtil {
     private static Field callbackField;
 
     public static void init() throws ReflectiveOperationException {
-            callbackField = Handler.class.getDeclaredField("mCallback");
-            callbackField.setAccessible(true);
+        callbackField = Handler.class.getDeclaredField("mCallback");
+        callbackField.setAccessible(true);
     }
 
     public static Handler.Callback getCallback(@NonNull Handler handler) {
@@ -45,7 +43,7 @@ public class HandlerUtil {
         }
     }
 
-    public static void setCallback(@NonNull Handler handler, Handler.Callback callback){
+    public static void setCallback(@NonNull Handler handler, Handler.Callback callback) {
         try {
             callbackField.set(handler, callback);
         } catch (IllegalAccessException ignored) {

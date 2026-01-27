@@ -14,16 +14,13 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
 
 import java.util.Comparator;
-
 import rikka.sui.model.AppInfo;
-import rikka.sui.util.AppNameComparator;
-import rikka.sui.util.UserHandleCompat;
 
 public class AppInfoComparator implements Comparator<AppInfo> {
 

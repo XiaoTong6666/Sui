@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2022 Sui Contributors
+ * Copyright (c) 2022-2026 Sui Contributors
  */
 
 #include <cstdlib>
@@ -30,46 +30,50 @@
 #define JAVA_DEBUGGABLE
 #endif
 
-void app_process(const char *dex_path, const char *files_path, const char *main_class, const char *process_name) {
+void app_process(const char* dex_path, const char* files_path, const char* main_class,
+                 const char* process_name) {
     if (setenv("CLASSPATH", dex_path, true)) {
         LOGE("can't set CLASSPATH");
         exit(EXIT_FAILURE);
     }
 
-#define ARG(v) char **v = nullptr; \
+#define ARG(v)              \
+    char** v = nullptr;     \
     char buf_##v[PATH_MAX]; \
-    size_t v_size = 0; \
+    size_t v_size = 0;      \
     uintptr_t v_current = 0;
-#define ARG_PUSH(v, arg) v_size += sizeof(char *); \
-if (v == nullptr) { \
-    v = (char **) malloc(v_size); \
-} else { \
-    v = (char **) realloc(v, v_size);\
-} \
-v_current = (uintptr_t) v + v_size - sizeof(char *); \
-*((char **) v_current) = arg ? strdup(arg) : nullptr;
+#define ARG_PUSH(v, arg)                               \
+    v_size += sizeof(char*);                           \
+    if (v == nullptr) {                                \
+        v = (char**)malloc(v_size);                    \
+    } else {                                           \
+        v = (char**)realloc(v, v_size);                \
+    }                                                  \
+    v_current = (uintptr_t)v + v_size - sizeof(char*); \
+    *((char**)v_current) = arg ? strdup(arg) : nullptr;
 
 #define ARG_END(v) ARG_PUSH(v, nullptr)
 
-#define ARG_PUSH_FMT(v, fmt, ...) snprintf(buf_##v, PATH_MAX, fmt, __VA_ARGS__); \
+#define ARG_PUSH_FMT(v, fmt, ...)                  \
+    snprintf(buf_##v, PATH_MAX, fmt, __VA_ARGS__); \
     ARG_PUSH(v, buf_##v)
 
 #ifdef JAVA_DEBUGGABLE
-        #define ARG_PUSH_DEBUG_ONLY(v, arg) ARG_PUSH(v, arg)
-#define ARG_PUSH_DEBUG_VM_PARAMS(v) \
-    if (android_get_device_api_level() >= 30) { \
-        ARG_PUSH(v, "-Xcompiler-option"); \
-        ARG_PUSH(v, "--debuggable"); \
-        ARG_PUSH(v, "-XjdwpProvider:adbconnection"); \
-        ARG_PUSH(v, "-XjdwpOptions:suspend=n,server=y"); \
-    } else if (android_get_device_api_level() >= 28) { \
-        ARG_PUSH(v, "-Xcompiler-option"); \
-        ARG_PUSH(v, "--debuggable"); \
-        ARG_PUSH(v, "-XjdwpProvider:internal"); \
-        ARG_PUSH(v, "-XjdwpOptions:transport=dt_android_adb,suspend=n,server=y"); \
-    } else { \
-        ARG_PUSH(v, "-Xcompiler-option"); \
-        ARG_PUSH(v, "--debuggable"); \
+#define ARG_PUSH_DEBUG_ONLY(v, arg) ARG_PUSH(v, arg)
+#define ARG_PUSH_DEBUG_VM_PARAMS(v)                                                \
+    if (android_get_device_api_level() >= 30) {                                    \
+        ARG_PUSH(v, "-Xcompiler-option");                                          \
+        ARG_PUSH(v, "--debuggable");                                               \
+        ARG_PUSH(v, "-XjdwpProvider:adbconnection");                               \
+        ARG_PUSH(v, "-XjdwpOptions:suspend=n,server=y");                           \
+    } else if (android_get_device_api_level() >= 28) {                             \
+        ARG_PUSH(v, "-Xcompiler-option");                                          \
+        ARG_PUSH(v, "--debuggable");                                               \
+        ARG_PUSH(v, "-XjdwpProvider:internal");                                    \
+        ARG_PUSH(v, "-XjdwpOptions:transport=dt_android_adb,suspend=n,server=y");  \
+    } else {                                                                       \
+        ARG_PUSH(v, "-Xcompiler-option");                                          \
+        ARG_PUSH(v, "--debuggable");                                               \
         ARG_PUSH(v, "-agentlib:jdwp=transport=dt_android_adb,suspend=n,server=y"); \
     }
 #else
@@ -90,7 +94,7 @@ v_current = (uintptr_t) v + v_size - sizeof(char *); \
     ARG_END(argv)
 
     LOGI("exec app_process...");
-    if (execvp((const char *) argv[0], argv)) {
+    if (execvp((const char*)argv[0], argv)) {
         PLOGE("execvp %s", argv[0]);
         exit(EXIT_FAILURE);
     }
@@ -102,12 +106,13 @@ void wait_for_zygote() {
 
         zygote_pid = -1;
         foreach_proc([](pid_t pid) -> bool {
-            if (pid == getpid()) return false;
+            if (pid == getpid())
+                return false;
 
 #ifdef __LP64__
             const char* zygote_name = "zygote64";
 #else
-            const char *zygote_name = "zygote";
+            const char* zygote_name = "zygote";
 #endif
             char buf[64];
             snprintf(buf, 64, "/proc/%d/cmdline", pid);

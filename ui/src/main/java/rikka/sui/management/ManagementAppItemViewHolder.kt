@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 package rikka.sui.management
 
@@ -39,17 +39,16 @@ import rikka.sui.util.UserHandleCompat
 
 class ManagementAppItemViewHolder(
     private val binding: ManagementAppItemBinding,
-    private val optionsAdapter: ArrayAdapter<CharSequence>
-) : BaseViewHolder<AppInfo>(binding.root), View.OnClickListener {
-
+    private val optionsAdapter: ArrayAdapter<CharSequence>,
+) : BaseViewHolder<AppInfo>(binding.root),
+    View.OnClickListener {
     companion object {
-        fun newCreator(optionsAdapter: ArrayAdapter<CharSequence>) =
-            Creator<AppInfo> { inflater: LayoutInflater, parent: ViewGroup? ->
-                ManagementAppItemViewHolder(
-                    ManagementAppItemBinding.inflate(inflater, parent, false),
-                    optionsAdapter
-                )
-            }
+        fun newCreator(optionsAdapter: ArrayAdapter<CharSequence>) = Creator<AppInfo> { inflater: LayoutInflater, parent: ViewGroup? ->
+            ManagementAppItemViewHolder(
+                ManagementAppItemBinding.inflate(inflater, parent, false),
+                optionsAdapter,
+            )
+        }
 
         private val SANS_SERIF = Typeface.create("sans-serif", Typeface.NORMAL)
         private val SANS_SERIF_MEDIUM = Typeface.create("sans-serif-medium", Typeface.NORMAL)
@@ -70,29 +69,37 @@ class ManagementAppItemViewHolder(
     private val textColorSecondary: ColorStateList
     private val textColorPrimary: ColorStateList
 
-    private val onItemSelectedListener: OnItemSelectedListener = object : OnItemSelectedListener {
-        override fun onItemSelected(parent: AdapterView<*>, view: View, position: Int, id: Long) {
-            if (suppressSelectionCallback) return
-            val newValue = when (position) {
-                0 -> SuiConfig.FLAG_ALLOWED
-                1 -> SuiConfig.FLAG_DENIED
-                2 -> SuiConfig.FLAG_HIDDEN
-                else -> 0
+    private val onItemSelectedListener: OnItemSelectedListener =
+        object : OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View,
+                position: Int,
+                id: Long,
+            ) {
+                if (suppressSelectionCallback) return
+                val newValue =
+                    when (position) {
+                        0 -> SuiConfig.FLAG_ALLOWED
+                        1 -> SuiConfig.FLAG_DENIED
+                        2 -> SuiConfig.FLAG_HIDDEN
+                        else -> 0
+                    }
+                try {
+                    BridgeServiceClient
+                        .getService()
+                        .updateFlagsForUid(data.packageInfo.applicationInfo!!.uid, SuiConfig.MASK_PERMISSION, newValue)
+                } catch (e: Throwable) {
+                    Log.e("SuiSettings", "updateFlagsForUid", e)
+                    return
+                }
+                data.flags = data.flags and SuiConfig.MASK_PERMISSION.inv() or newValue
+                setSpinnerSelection(position)
+                syncViewStateForFlags()
             }
-            try {
-                BridgeServiceClient.getService()
-                    .updateFlagsForUid(data.packageInfo.applicationInfo!!.uid, SuiConfig.MASK_PERMISSION, newValue)
-            } catch (e: Throwable) {
-                Log.e("SuiSettings", "updateFlagsForUid", e)
-                return
-            }
-            data.flags = data.flags and SuiConfig.MASK_PERMISSION.inv() or newValue
-            setSpinnerSelection(position)
-            syncViewStateForFlags()
-        }
 
-        override fun onNothingSelected(parent: AdapterView<*>?) {}
-    }
+            override fun onNothingSelected(parent: AdapterView<*>?) {}
+        }
 
     init {
         val typedValue = TypedValue()
@@ -118,11 +125,12 @@ class ManagementAppItemViewHolder(
 
         val userId = UserHandleCompat.getUserId(uid)
 
-        name.text = if (userId != UserHandleCompat.myUserId()) {
-            "${data.label} - ($userId)"
-        } else {
-            data.label
-        }
+        name.text =
+            if (userId != UserHandleCompat.myUserId()) {
+                "${data.label} - ($userId)"
+            } else {
+                data.label
+            }
         pkg.text = ai!!.packageName
 
         syncViewStateForFlags()
@@ -141,11 +149,12 @@ class ManagementAppItemViewHolder(
 
     private fun syncViewStateForFlags() {
         val explicitFlags = data.flags and SuiConfig.MASK_PERMISSION
-        val effectiveFlags = if (explicitFlags != 0) {
-            explicitFlags
-        } else {
-            data.defaultFlags and SuiConfig.MASK_PERMISSION
-        }
+        val effectiveFlags =
+            if (explicitFlags != 0) {
+                explicitFlags
+            } else {
+                data.defaultFlags and SuiConfig.MASK_PERMISSION
+            }
         val allowed = effectiveFlags and SuiConfig.FLAG_ALLOWED != 0
         val denied = effectiveFlags and SuiConfig.FLAG_DENIED != 0
         val hidden = effectiveFlags and SuiConfig.FLAG_HIDDEN != 0

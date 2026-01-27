@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
@@ -31,7 +31,10 @@ public class AppIconUtil {
         if (shouldShrinkNonAdaptiveIcons == null) {
             try {
                 shouldShrinkNonAdaptiveIcons = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                        && context.getApplicationContext().getPackageManager().getApplicationIcon(context.getPackageName()) instanceof AdaptiveIconDrawable;
+                        && context.getApplicationContext()
+                                        .getPackageManager()
+                                        .getApplicationIcon(context.getPackageName())
+                                instanceof AdaptiveIconDrawable;
             } catch (Throwable e) {
                 shouldShrinkNonAdaptiveIcons = false;
             }

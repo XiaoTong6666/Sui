@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.ktx
@@ -25,20 +25,19 @@ import android.util.Log
 import android.view.LayoutInflater
 
 @SuppressLint("PrivateApi")
-private val constructor = try {
-    Class.forName("com.android.internal.policy.PhoneLayoutInflater").getDeclaredConstructor(Context::class.java).apply {
-        isAccessible = true
-    }
-} catch (e: Throwable) {
-    Log.e("LayoutInflaterKt", Log.getStackTraceString(e))
-    null
-}
-
-fun createLayoutInflater(context: Context): LayoutInflater? {
-    return try {
-        constructor?.newInstance(context) as LayoutInflater?
+private val constructor =
+    try {
+        Class.forName("com.android.internal.policy.PhoneLayoutInflater").getDeclaredConstructor(Context::class.java).apply {
+            isAccessible = true
+        }
     } catch (e: Throwable) {
         Log.e("LayoutInflaterKt", Log.getStackTraceString(e))
         null
     }
+
+fun createLayoutInflater(context: Context): LayoutInflater? = try {
+    constructor?.newInstance(context) as LayoutInflater?
+} catch (e: Throwable) {
+    Log.e("LayoutInflaterKt", Log.getStackTraceString(e))
+    null
 }

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 package rikka.sui
 
@@ -34,7 +34,8 @@ class DebugActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        com.google.android.material.color.DynamicColors.applyToActivityIfAvailable(this)
+        com.google.android.material.color.DynamicColors
+            .applyToActivityIfAvailable(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
@@ -48,7 +49,9 @@ class DebugActivity : AppCompatActivity() {
             val accentColor = typedValue.data
             val accentHex = String.format("#%06X", 0xFFFFFF and accentColor)
             val subtitleHtml = "<font color='$accentHex'>$accentHex</font>"
-            val coloredSubtitle = androidx.core.text.HtmlCompat.fromHtml(subtitleHtml, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
+            val coloredSubtitle =
+                androidx.core.text.HtmlCompat
+                    .fromHtml(subtitleHtml, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY)
             supportActionBar?.title = "Sui(Debug)"
             supportActionBar?.subtitle = coloredSubtitle
         } catch (e: Exception) {
@@ -56,7 +59,8 @@ class DebugActivity : AppCompatActivity() {
         }
 
         if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
+            supportFragmentManager
+                .beginTransaction()
                 .replace(R.id.fragment_container, ManagementFragment())
                 .commit()
         }

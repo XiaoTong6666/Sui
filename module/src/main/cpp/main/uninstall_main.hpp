@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 #include <cstdlib>
@@ -27,7 +27,7 @@
 /*
  * argv[1]: path of the module, such as /data/adb/modules/zygisk-sui
  */
-static int uninstall_main(int argc, char **argv) {
+static int uninstall_main(int argc, char** argv) {
     LOGI("Sui uninstaller begin: %s", argv[1]);
 
     auto root_path = argv[1];

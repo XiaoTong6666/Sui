@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.systemserver;
@@ -25,12 +25,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.RemoteException;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-
-import java.util.Objects;
-
 import moe.shizuku.server.IShizukuService;
 
 public class BridgeService {
@@ -97,7 +93,9 @@ public class BridgeService {
         data.enforceInterface(DESCRIPTOR);
 
         int action = data.readInt();
-        LOGGER.d("onTransact: action=%d, callingUid=%d, callingPid=%d", action, Binder.getCallingUid(), Binder.getCallingPid());
+        LOGGER.d(
+                "onTransact: action=%d, callingUid=%d, callingPid=%d",
+                action, Binder.getCallingUid(), Binder.getCallingPid());
 
         switch (action) {
             case ACTION_SEND_BINDER: {

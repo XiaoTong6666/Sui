@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 package rikka.sui.widget
 
@@ -23,21 +23,23 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 
-class SmartSwipeRefreshLayout @JvmOverloads constructor(
-    context: Context, attrs: AttributeSet? = null
+class SmartSwipeRefreshLayout
+@JvmOverloads
+constructor(
+    context: Context,
+    attrs: AttributeSet? = null,
 ) : SwipeRefreshLayout(context, attrs) {
-
     private val fastScrollerHotZoneWidth = (50 * resources.displayMetrics.density).toInt()
     private var isTouchingFastScroller = false
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val x = ev.x
                 val width = width
                 isTouchingFastScroller = (x > width - fastScrollerHotZoneWidth)
             }
+
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 isTouchingFastScroller = false
             }

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 #pragma once
@@ -23,9 +23,9 @@
 
 namespace BridgeService {
 
-    const jint BRIDGE_TRANSACTION_CODE = 1599296841; // ('_' << 24) | ('S' << 16) | ('U' << 8) | 'I'
+const jint BRIDGE_TRANSACTION_CODE = 1599296841;  // ('_' << 24) | ('S' << 16) | ('U' << 8) | 'I'
 
-    void init(JNIEnv *env);
-    void insertFileMonitor(JNIEnv *env, const char* packageName, const char *func, const char *path);
-    jobjectArray requestCheckProcess(JNIEnv *env, const char* packageName);
-}
+void init(JNIEnv* env);
+void insertFileMonitor(JNIEnv* env, const char* packageName, const char* func, const char* path);
+jobjectArray requestCheckProcess(JNIEnv* env, const char* packageName);
+}  // namespace BridgeService

@@ -17,10 +17,8 @@
 package rikka.sui.util;
 
 import android.text.TextUtils;
-
 import androidx.annotation.IntRange;
 import androidx.annotation.NonNull;
-
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
@@ -60,9 +58,7 @@ public class Preconditions {
      * @param messageArgs     arguments for {@code messageTemplate}
      * @throws IllegalArgumentException if {@code expression} is false
      */
-    public static void checkArgument(boolean expression,
-                                     final String messageTemplate,
-                                     final Object... messageArgs) {
+    public static void checkArgument(boolean expression, final String messageTemplate, final Object... messageArgs) {
         if (!expression) {
             throw new IllegalArgumentException(String.format(messageTemplate, messageArgs));
         }
@@ -76,8 +72,7 @@ public class Preconditions {
      * @return the string reference that was validated
      * @throws IllegalArgumentException if {@code string} is empty
      */
-    public static @NonNull
-    <T extends CharSequence> T checkStringNotEmpty(final T string) {
+    public static @NonNull <T extends CharSequence> T checkStringNotEmpty(final T string) {
         if (TextUtils.isEmpty(string)) {
             throw new IllegalArgumentException();
         }
@@ -94,9 +89,7 @@ public class Preconditions {
      * @return the string reference that was validated
      * @throws IllegalArgumentException if {@code string} is empty
      */
-    public static @NonNull
-    <T extends CharSequence> T checkStringNotEmpty(final T string,
-                                                   final Object errorMessage) {
+    public static @NonNull <T extends CharSequence> T checkStringNotEmpty(final T string, final Object errorMessage) {
         if (TextUtils.isEmpty(string)) {
             throw new IllegalArgumentException(String.valueOf(errorMessage));
         }
@@ -113,8 +106,7 @@ public class Preconditions {
      * @return the string reference that was validated
      * @throws IllegalArgumentException if {@code string} is empty
      */
-    public static @NonNull
-    <T extends CharSequence> T checkStringNotEmpty(
+    public static @NonNull <T extends CharSequence> T checkStringNotEmpty(
             final T string, final String messageTemplate, final Object... messageArgs) {
         if (TextUtils.isEmpty(string)) {
             throw new IllegalArgumentException(String.format(messageTemplate, messageArgs));
@@ -132,8 +124,7 @@ public class Preconditions {
      * @deprecated - use {@link java.util.Objects.requireNonNull} instead.
      */
     @Deprecated
-    public static @NonNull
-    <T> T checkNotNull(final T reference) {
+    public static @NonNull <T> T checkNotNull(final T reference) {
         if (reference == null) {
             throw new NullPointerException();
         }
@@ -152,8 +143,7 @@ public class Preconditions {
      * @deprecated - use {@link java.util.Objects.requireNonNull} instead.
      */
     @Deprecated
-    public static @NonNull
-    <T> T checkNotNull(final T reference, final Object errorMessage) {
+    public static @NonNull <T> T checkNotNull(final T reference, final Object errorMessage) {
         if (reference == null) {
             throw new NullPointerException(String.valueOf(errorMessage));
         }
@@ -209,9 +199,7 @@ public class Preconditions {
      * @return the validated numeric value
      * @throws IllegalArgumentException if {@code value} was negative
      */
-    public static @IntRange(from = 0)
-    int checkArgumentNonnegative(final int value,
-                                 final String errorMessage) {
+    public static @IntRange(from = 0) int checkArgumentNonnegative(final int value, final String errorMessage) {
         if (value < 0) {
             throw new IllegalArgumentException(errorMessage);
         }
@@ -226,8 +214,7 @@ public class Preconditions {
      * @return the validated numeric value
      * @throws IllegalArgumentException if {@code value} was negative
      */
-    public static @IntRange(from = 0)
-    int checkArgumentNonnegative(final int value) {
+    public static @IntRange(from = 0) int checkArgumentNonnegative(final int value) {
         if (value < 0) {
             throw new IllegalArgumentException();
         }
@@ -348,18 +335,15 @@ public class Preconditions {
      * @return the validated floating point value
      * @throws IllegalArgumentException if {@code value} was not within the range
      */
-    public static float checkArgumentInRange(float value, float lower, float upper,
-                                             String valueName) {
+    public static float checkArgumentInRange(float value, float lower, float upper, String valueName) {
         if (Float.isNaN(value)) {
             throw new IllegalArgumentException(valueName + " must not be NaN");
         } else if (value < lower) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "%s is out of range of [%f, %f] (too low)", valueName, lower, upper));
+                    String.format("%s is out of range of [%f, %f] (too low)", valueName, lower, upper));
         } else if (value > upper) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "%s is out of range of [%f, %f] (too high)", valueName, lower, upper));
+                    String.format("%s is out of range of [%f, %f] (too high)", valueName, lower, upper));
         }
 
         return value;
@@ -375,16 +359,13 @@ public class Preconditions {
      * @return the validated int value
      * @throws IllegalArgumentException if {@code value} was not within the range
      */
-    public static int checkArgumentInRange(int value, int lower, int upper,
-                                           String valueName) {
+    public static int checkArgumentInRange(int value, int lower, int upper, String valueName) {
         if (value < lower) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "%s is out of range of [%d, %d] (too low)", valueName, lower, upper));
+                    String.format("%s is out of range of [%d, %d] (too low)", valueName, lower, upper));
         } else if (value > upper) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "%s is out of range of [%d, %d] (too high)", valueName, lower, upper));
+                    String.format("%s is out of range of [%d, %d] (too high)", valueName, lower, upper));
         }
 
         return value;
@@ -400,16 +381,13 @@ public class Preconditions {
      * @return the validated long value
      * @throws IllegalArgumentException if {@code value} was not within the range
      */
-    public static long checkArgumentInRange(long value, long lower, long upper,
-                                            String valueName) {
+    public static long checkArgumentInRange(long value, long lower, long upper, String valueName) {
         if (value < lower) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "%s is out of range of [%d, %d] (too low)", valueName, lower, upper));
+                    String.format("%s is out of range of [%d, %d] (too low)", valueName, lower, upper));
         } else if (value > upper) {
             throw new IllegalArgumentException(
-                    String.format(
-                            "%s is out of range of [%d, %d] (too high)", valueName, lower, upper));
+                    String.format("%s is out of range of [%d, %d] (too high)", valueName, lower, upper));
         }
 
         return value;
@@ -430,8 +408,7 @@ public class Preconditions {
 
         for (int i = 0; i < value.length; ++i) {
             if (value[i] == null) {
-                throw new NullPointerException(
-                        String.format("%s[%d] must not be null", valueName, i));
+                throw new NullPointerException(String.format("%s[%d] must not be null", valueName, i));
             }
         }
 
@@ -447,8 +424,7 @@ public class Preconditions {
      * @return the validated {@link Collection}
      * @throws NullPointerException if the {@code value} or any of its elements were {@code null}
      */
-    public static @NonNull
-    <C extends Collection<T>, T> C checkCollectionElementsNotNull(
+    public static @NonNull <C extends Collection<T>, T> C checkCollectionElementsNotNull(
             final C value, final String valueName) {
         if (value == null) {
             throw new NullPointerException(valueName + " must not be null");
@@ -457,8 +433,7 @@ public class Preconditions {
         long ctr = 0;
         for (T elem : value) {
             if (elem == null) {
-                throw new NullPointerException(
-                        String.format("%s[%d] must not be null", valueName, ctr));
+                throw new NullPointerException(String.format("%s[%d] must not be null", valueName, ctr));
             }
             ++ctr;
         }
@@ -475,8 +450,7 @@ public class Preconditions {
      * @throws NullPointerException     if the {@code value} was {@code null}
      * @throws IllegalArgumentException if the {@code value} was empty
      */
-    public static <T> Collection<T> checkCollectionNotEmpty(final Collection<T> value,
-                                                            final String valueName) {
+    public static <T> Collection<T> checkCollectionNotEmpty(final Collection<T> value, final String valueName) {
         if (value == null) {
             throw new NullPointerException(valueName + " must not be null");
         }
@@ -495,8 +469,7 @@ public class Preconditions {
      * @throws NullPointerException     if the {@code value} was {@code null}
      * @throws IllegalArgumentException if the {@code value} was empty
      */
-    @NonNull
-    public static byte[] checkByteArrayNotEmpty(final byte[] value, final String valueName) {
+    @NonNull public static byte[] checkByteArrayNotEmpty(final byte[] value, final String valueName) {
         if (value == null) {
             throw new NullPointerException(valueName + " must not be null");
         }
@@ -515,15 +488,12 @@ public class Preconditions {
      * @throws NullPointerException     if either {@code value} or {@code supportedValues} is null
      * @throws IllegalArgumentException if the {@code value} is not in {@code supportedValues}
      */
-    @NonNull
-    public static String checkArgumentIsSupported(final String[] supportedValues,
-                                                  final String value) {
+    @NonNull public static String checkArgumentIsSupported(final String[] supportedValues, final String value) {
         checkNotNull(value);
         checkNotNull(supportedValues);
 
         if (!contains(supportedValues, value)) {
-            throw new IllegalArgumentException(value + "is not supported "
-                    + Arrays.toString(supportedValues));
+            throw new IllegalArgumentException(value + "is not supported " + Arrays.toString(supportedValues));
         }
         return value;
     }
@@ -554,8 +524,7 @@ public class Preconditions {
      * @throws IllegalArgumentException if any of the elements in {@code value} were out of range
      * @throws NullPointerException     if the {@code value} was {@code null}
      */
-    public static float[] checkArrayElementsInRange(float[] value, float lower, float upper,
-                                                    String valueName) {
+    public static float[] checkArrayElementsInRange(float[] value, float lower, float upper, String valueName) {
         checkNotNull(value, valueName + " must not be null");
 
         for (int i = 0; i < value.length; ++i) {
@@ -565,12 +534,10 @@ public class Preconditions {
                 throw new IllegalArgumentException(valueName + "[" + i + "] must not be NaN");
             } else if (v < lower) {
                 throw new IllegalArgumentException(
-                        String.format("%s[%d] is out of range of [%f, %f] (too low)",
-                                valueName, i, lower, upper));
+                        String.format("%s[%d] is out of range of [%f, %f] (too low)", valueName, i, lower, upper));
             } else if (v > upper) {
                 throw new IllegalArgumentException(
-                        String.format("%s[%d] is out of range of [%f, %f] (too high)",
-                                valueName, i, lower, upper));
+                        String.format("%s[%d] is out of range of [%f, %f] (too high)", valueName, i, lower, upper));
             }
         }
 
@@ -588,8 +555,7 @@ public class Preconditions {
      * @throws IllegalArgumentException if any of the elements in {@code value} were out of range
      * @throws NullPointerException     if the {@code value} was {@code null}
      */
-    public static int[] checkArrayElementsInRange(int[] value, int lower, int upper,
-                                                  String valueName) {
+    public static int[] checkArrayElementsInRange(int[] value, int lower, int upper, String valueName) {
         checkNotNull(value, valueName + " must not be null");
 
         for (int i = 0; i < value.length; ++i) {
@@ -597,12 +563,10 @@ public class Preconditions {
 
             if (v < lower) {
                 throw new IllegalArgumentException(
-                        String.format("%s[%d] is out of range of [%d, %d] (too low)",
-                                valueName, i, lower, upper));
+                        String.format("%s[%d] is out of range of [%d, %d] (too low)", valueName, i, lower, upper));
             } else if (v > upper) {
                 throw new IllegalArgumentException(
-                        String.format("%s[%d] is out of range of [%d, %d] (too high)",
-                                valueName, i, lower, upper));
+                        String.format("%s[%d] is out of range of [%d, %d] (too high)", valueName, i, lower, upper));
             }
         }
 

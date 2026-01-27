@@ -14,39 +14,34 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.server;
 
 import android.os.Build;
-
 import java.io.File;
 import java.util.Locale;
-
 import rikka.shizuku.server.UserServiceManager;
 
 public class SuiUserServiceManager extends UserServiceManager {
 
     public static final String USER_SERVICE_CMD_DEBUG;
 
-    private static final String USER_SERVICE_CMD_FORMAT = "(CLASSPATH='%s' %s%s /system/bin " +
-            "--nice-name='%s' %s " +
-            "--token='%s' --package='%s' --class='%s' --uid=%d%s)&";
+    private static final String USER_SERVICE_CMD_FORMAT = "(CLASSPATH='%s' %s%s /system/bin " + "--nice-name='%s' %s "
+            + "--token='%s' --package='%s' --class='%s' --uid=%d%s)&";
 
     static {
         int sdk = Build.VERSION.SDK_INT;
         if (sdk >= 30) {
-            USER_SERVICE_CMD_DEBUG = "-Xcompiler-option" + " --debuggable" +
-                    " -XjdwpProvider:adbconnection" +
-                    " -XjdwpOptions:suspend=n,server=y";
+            USER_SERVICE_CMD_DEBUG = "-Xcompiler-option" + " --debuggable" + " -XjdwpProvider:adbconnection"
+                    + " -XjdwpOptions:suspend=n,server=y";
         } else if (sdk >= 28) {
-            USER_SERVICE_CMD_DEBUG = "-Xcompiler-option" + " --debuggable" +
-                    " -XjdwpProvider:internal" +
-                    " -XjdwpOptions:transport=dt_android_adb,suspend=n,server=y";
+            USER_SERVICE_CMD_DEBUG = "-Xcompiler-option" + " --debuggable" + " -XjdwpProvider:internal"
+                    + " -XjdwpOptions:transport=dt_android_adb,suspend=n,server=y";
         } else {
-            USER_SERVICE_CMD_DEBUG = "-Xcompiler-option" + " --debuggable" +
-                    " -agentlib:jdwp=transport=dt_android_adb,suspend=n,server=y";
+            USER_SERVICE_CMD_DEBUG = "-Xcompiler-option" + " --debuggable"
+                    + " -agentlib:jdwp=transport=dt_android_adb,suspend=n,server=y";
         }
     }
 
@@ -57,15 +52,33 @@ public class SuiUserServiceManager extends UserServiceManager {
     }
 
     @Override
-    public String getUserServiceStartCmd(rikka.shizuku.server.UserServiceRecord record, String key, String token, String packageName, String classname, String processNameSuffix, int callingUid, boolean use32Bits, boolean debug) {
+    public String getUserServiceStartCmd(
+            rikka.shizuku.server.UserServiceRecord record,
+            String key,
+            String token,
+            String packageName,
+            String classname,
+            String processNameSuffix,
+            int callingUid,
+            boolean use32Bits,
+            boolean debug) {
         String appProcess = "/system/bin/app_process";
         if (use32Bits && new File("/system/bin/app_process32").exists()) {
             appProcess = "/system/bin/app_process32";
         }
         String processName = String.format("%s:%s", packageName, processNameSuffix);
-        return String.format(Locale.ENGLISH, USER_SERVICE_CMD_FORMAT, dexPath, appProcess,
+        return String.format(
+                Locale.ENGLISH,
+                USER_SERVICE_CMD_FORMAT,
+                dexPath,
+                appProcess,
                 debug ? (" " + SuiUserServiceManager.USER_SERVICE_CMD_DEBUG) : "",
-                processName, "rikka.sui.server.userservice.Starter",
-                token, packageName, classname, callingUid, debug ? (" " + "--debug-name=" + processName) : "");
+                processName,
+                "rikka.sui.server.userservice.Starter",
+                token,
+                packageName,
+                classname,
+                callingUid,
+                debug ? (" " + "--debug-name=" + processName) : "");
     }
 }

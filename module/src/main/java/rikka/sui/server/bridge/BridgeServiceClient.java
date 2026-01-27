@@ -14,23 +14,21 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.server.bridge;
+
+import static rikka.sui.server.ServerConstants.LOGGER;
 
 import android.os.Build;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
-
 import java.lang.reflect.Field;
 import java.util.Map;
-
 import rikka.sui.server.SuiService;
-
-import static rikka.sui.server.ServerConstants.LOGGER;
 
 public class BridgeServiceClient {
 

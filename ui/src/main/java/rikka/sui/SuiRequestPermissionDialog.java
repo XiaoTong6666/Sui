@@ -14,21 +14,24 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui;
 
 import android.app.Application;
 import android.content.res.Resources;
-
 import rikka.sui.permission.ConfirmationDialog;
 
 public class SuiRequestPermissionDialog extends ConfirmationDialog {
     @SuppressWarnings("this-escape")
     public SuiRequestPermissionDialog(
-            Application application, Resources resources,
-            int requestUid, int requestPid, String requestPackageName, int requestCode) {
+            Application application,
+            Resources resources,
+            int requestUid,
+            int requestPid,
+            String requestPackageName,
+            int requestCode) {
         super(application, resources);
         show(requestUid, requestPid, requestPackageName, requestCode);
     }

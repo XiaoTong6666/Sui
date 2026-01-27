@@ -14,13 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2022 Sui Contributors
+ * Copyright (c) 2022-2026 Sui Contributors
  */
 
 package rikka.sui.installer;
 
 import android.annotation.TargetApi;
-import android.content.pm.IPackageManager;
 import android.content.pm.IShortcutService;
 import android.content.pm.IShortcutServiceV31;
 import android.os.Build;
@@ -32,12 +31,10 @@ import android.os.ServiceManager;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
-
+import dev.rikka.tools.refine.Refine;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import dev.rikka.tools.refine.Refine;
 import rikka.sui.shortcut.ShortcutConstants;
 
 @TargetApi(Build.VERSION_CODES.O)
@@ -57,9 +54,7 @@ public class Uninstaller {
             if (userManager == null) {
                 userManager = IUserManager.Stub.asInterface(ServiceManager.getService("user"));
             }
-            if (shortcutService != null
-                    && userManager != null
-                    && userManager.isUserUnlocked(0)) {
+            if (shortcutService != null && userManager != null && userManager.isUserUnlocked(0)) {
                 break;
             }
 
@@ -72,11 +67,10 @@ public class Uninstaller {
         list.add(ShortcutConstants.SHORTCUT_ID);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Refine.<IShortcutServiceV31>unsafeCast(shortcutService).removeDynamicShortcuts(
-                    "com.android.settings", list, 0);
+            Refine.<IShortcutServiceV31>unsafeCast(shortcutService)
+                    .removeDynamicShortcuts("com.android.settings", list, 0);
         } else {
-            shortcutService.removeDynamicShortcuts(
-                    "com.android.settings", list, 0);
+            shortcutService.removeDynamicShortcuts("com.android.settings", list, 0);
         }
     }
 

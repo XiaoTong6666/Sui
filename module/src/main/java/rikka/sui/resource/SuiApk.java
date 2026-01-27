@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.resource;
@@ -30,14 +30,12 @@ import android.content.res.Resources;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
-
+import dalvik.system.PathClassLoader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
-
-import dalvik.system.PathClassLoader;
 import rikka.sui.util.BridgeServiceClient;
 
 @SuppressLint({"DiscouragedPrivateApi", "BlockedPrivateApi"})
@@ -46,6 +44,7 @@ public class SuiApk {
 
     @SuppressWarnings("FieldCanBeLocal")
     private final ClassLoader classLoader;
+
     private final Resources resources;
     private Class<?> suiActivityClass;
     private Class<?> suiRequestPermissionDialogClass;
@@ -76,7 +75,9 @@ public class SuiApk {
         }
     }
 
-    private SuiApk() throws IllegalAccessException, InstantiationException, NoSuchMethodException, InvocationTargetException, NoSuchFieldException, InterruptedException {
+    private SuiApk()
+            throws IllegalAccessException, InstantiationException, NoSuchMethodException, InvocationTargetException,
+                    NoSuchFieldException, InterruptedException {
         int retries = 10;
         do {
             if (BridgeServiceClient.getService() != null) break;
@@ -120,7 +121,10 @@ public class SuiApk {
             }
         }
 
-        resources = new Resources(am, application.getResources().getDisplayMetrics(), application.getResources().getConfiguration());
+        resources = new Resources(
+                am,
+                application.getResources().getDisplayMetrics(),
+                application.getResources().getConfiguration());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             Field classLoaderField = Resources.class.getDeclaredField("mClassLoader");
@@ -142,8 +146,7 @@ public class SuiApk {
         try {
             suiRequestPermissionDialogClass = classLoader.loadClass("rikka.sui.SuiRequestPermissionDialog");
             suiRequestPermissionDialogConstructor = suiRequestPermissionDialogClass.getDeclaredConstructor(
-                    Application.class, Resources.class,
-                    int.class, int.class, String.class, int.class);
+                    Application.class, Resources.class, int.class, int.class, String.class, int.class);
         } catch (Throwable e) {
             LOGGER.e(e, "Cannot load SuiRequestPermissionDialog class");
         }

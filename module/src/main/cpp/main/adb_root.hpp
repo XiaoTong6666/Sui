@@ -1,3 +1,22 @@
+/*
+ * This file is part of Sui.
+ *
+ * Sui is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sui is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c) 2021-2026 Sui Contributors
+ */
+
 #include <sys/mount.h>
 #include <private/ScopedFd.h>
 #include <sys/mman.h>
@@ -28,7 +47,7 @@ struct attrs {
     uid_t uid{};
     gid_t gid{};
     mode_t mode{};
-    char *context{nullptr};
+    char* context{nullptr};
 
     ~attrs() {
         if (context) {
@@ -37,7 +56,7 @@ struct attrs {
     }
 };
 
-inline int getattrs(const char *file, attrs *attrs) {
+inline int getattrs(const char* file, attrs* attrs) {
     struct stat statbuf{};
     if (stat(file, &statbuf) != 0) {
         PLOGE("stat %s", file);
@@ -55,11 +74,11 @@ inline int getattrs(const char *file, attrs *attrs) {
     return 0;
 }
 
-inline int setattrs(const char *file, const attrs *attrs) {
+inline int setattrs(const char* file, const attrs* attrs) {
     uid_t uid = attrs->uid;
     gid_t gid = attrs->gid;
     mode_t mode = attrs->mode;
-    const char *secontext = attrs->context;
+    const char* secontext = attrs->context;
 
     if (chmod(file, mode) != 0) {
         PLOGE("chmod %s", file);
@@ -76,7 +95,7 @@ inline int setattrs(const char *file, const attrs *attrs) {
     return 0;
 }
 
-inline int setup_file(const char *source, const char *target, const attrs *attrs) {
+inline int setup_file(const char* source, const char* target, const attrs* attrs) {
     if (attrs && setattrs(source, attrs) != 0) {
         return 1;
     }
@@ -93,7 +112,7 @@ inline int setup_file(const char *source, const char *target, const attrs *attrs
     return 0;
 }
 
-inline bool is_dynamically_linked(const char *path) {
+inline bool is_dynamically_linked(const char* path) {
     struct stat st;
     ScopedFd fd(open(path, O_RDONLY));
 
@@ -106,13 +125,14 @@ inline bool is_dynamically_linked(const char *path) {
         return false;
     }
 
-    auto data = static_cast<uint8_t *>(mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd.get(), 0));
+    auto data =
+        static_cast<uint8_t*>(mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd.get(), 0));
     if (data == MAP_FAILED) {
         PLOGE("mmap");
         return false;
     }
 
-    auto ehdr = (ElfW(Ehdr) *) data;
+    auto ehdr = (ElfW(Ehdr)*)data;
 #ifdef __LP64__
     if (ehdr->e_ident[EI_CLASS] != ELFCLASS64) {
         LOGE("Not elf64");
@@ -129,7 +149,7 @@ inline bool is_dynamically_linked(const char *path) {
 
     bool is_dynamically_linked = false;
 
-    auto phdr = (ElfW(Phdr) *) (data + ehdr->e_phoff);
+    auto phdr = (ElfW(Phdr)*)(data + ehdr->e_phoff);
     int phnum = ehdr->e_phnum;
 
     for (int i = 0; i < phnum; ++i) {
@@ -143,7 +163,8 @@ inline bool is_dynamically_linked(const char *path) {
     return is_dynamically_linked;
 }
 
-inline int setup_adb_root_apex(const char *root_path, const char *adbd_wrapper, const char *adbd_preload) {
+inline int setup_adb_root_apex(const char* root_path, const char* adbd_wrapper,
+                               const char* adbd_preload) {
     char versioned_adbd[PATH_MAX]{0};
     char path[PATH_MAX]{0};
     char source[PATH_MAX]{0};
@@ -168,15 +189,14 @@ inline int setup_adb_root_apex(const char *root_path, const char *adbd_wrapper, 
         LOGI("%s is dynamically linked", adbd);
     }
 
-    if (getattrs(adbd, &file_attr) != 0
-        || getattrs(bin_folder, &folder_attr) != 0
-        || getattrs(data_adb_folder, &data_adb_attr) != 0) {
+    if (getattrs(adbd, &file_attr) != 0 || getattrs(bin_folder, &folder_attr) != 0 ||
+        getattrs(data_adb_folder, &data_adb_attr) != 0) {
         return ERR_OTHER;
     } else {
-        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s",
-             adbd, file_attr.uid, file_attr.gid, file_attr.mode, file_attr.context);
-        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s",
-             bin_folder, folder_attr.uid, folder_attr.gid, folder_attr.mode, folder_attr.context);
+        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s", adbd, file_attr.uid, file_attr.gid,
+             file_attr.mode, file_attr.context);
+        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s", bin_folder, folder_attr.uid,
+             folder_attr.gid, folder_attr.mode, folder_attr.context);
     }
 
     // Path of real of adbd in module folder
@@ -202,14 +222,14 @@ inline int setup_adb_root_apex(const char *root_path, const char *adbd_wrapper, 
     bool found = false;
     uint64_t version = 0;
     auto adbd_prefix = "com.android.adbd@"sv;
-    while (dirent *entry = dir.ReadEntry()) {
+    while (dirent* entry = dir.ReadEntry()) {
         std::string_view d_name{entry->d_name};
 
         if (d_name.length() <= adbd_prefix.length() ||
             d_name.substr(0, adbd_prefix.length()) != adbd_prefix)
             continue;
 
-        const char *version_string = entry->d_name + adbd_prefix.length();
+        const char* version_string = entry->d_name + adbd_prefix.length();
         int new_version = atoll(version_string);
         if (new_version >= version) {
             strncpy(versioned_adbd + apex.length(), d_name.data(), d_name.length());
@@ -283,8 +303,9 @@ inline int setup_adb_root_apex(const char *root_path, const char *adbd_wrapper, 
             goto failed;
         }
 
-        while (dirent *entry = lib.ReadEntry()) {
-            if (entry->d_name[0] == '.') continue;
+        while (dirent* entry = lib.ReadEntry()) {
+            if (entry->d_name[0] == '.')
+                continue;
 
             strcpy(source, versioned_adbd);
 #ifdef __LP64__
@@ -320,7 +341,7 @@ inline int setup_adb_root_apex(const char *root_path, const char *adbd_wrapper, 
     LOGI("Finished");
     return EXIT_SUCCESS;
 
-    failed:
+failed:
     if (bin_mounted) {
         if (umount2(bin_folder, MNT_DETACH) != 0) {
             PLOGE("umount2 %s", bin_folder);
@@ -338,7 +359,8 @@ inline int setup_adb_root_apex(const char *root_path, const char *adbd_wrapper, 
     return ERR_OTHER;
 }
 
-inline int setup_adb_root_non_apex(const char *root_path, const char *adbd_wrapper, const char *adbd_preload) {
+inline int setup_adb_root_non_apex(const char* root_path, const char* adbd_wrapper,
+                                   const char* adbd_preload) {
     const char *file, *folder, *data_adb_folder;
     attrs file_attr{}, folder_attr{}, data_adb_attr{};
 
@@ -352,15 +374,14 @@ inline int setup_adb_root_non_apex(const char *root_path, const char *adbd_wrapp
         LOGI("%s is dynamically linked", file);
     }
 
-    if (getattrs(file, &file_attr) != 0
-        || getattrs(folder, &folder_attr) != 0
-        || getattrs(data_adb_folder, &data_adb_attr) != 0) {
+    if (getattrs(file, &file_attr) != 0 || getattrs(folder, &folder_attr) != 0 ||
+        getattrs(data_adb_folder, &data_adb_attr) != 0) {
         return ERR_OTHER;
     } else {
-        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s",
-             file, file_attr.uid, file_attr.gid, file_attr.mode, file_attr.context);
-        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s",
-             folder, folder_attr.uid, folder_attr.gid, folder_attr.mode, folder_attr.context);
+        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s", file, file_attr.uid, file_attr.gid,
+             file_attr.mode, file_attr.context);
+        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s", folder, folder_attr.uid, folder_attr.gid,
+             folder_attr.mode, folder_attr.context);
     }
 
     LOGI("Copy files to MODDIR/system");
@@ -431,13 +452,13 @@ inline int setup_adb_root_non_apex(const char *root_path, const char *adbd_wrapp
     return EXIT_SUCCESS;
 }
 
-static int setup_adb_root(const char *root_path) {
+static int setup_adb_root(const char* root_path) {
     if (selinux_check_access("u:r:adbd:s0", "u:r:adbd:s0", "process", "setcurrent", nullptr) != 0) {
         PLOGE("u:r:adbd:s0 u:r:adbd:s0 process setcurrent not allowed");
         return ERR_SELINUX;
     }
 
-    char *curr_con = nullptr;
+    char* curr_con = nullptr;
     if (getcon(&curr_con) != 0) {
         PLOGE("getcon");
         return ERR_SELINUX;
@@ -476,7 +497,7 @@ static int setup_adb_root(const char *root_path) {
     return setup_adb_root_non_apex(root_path, adbd_wrapper, adbd_preload);
 }
 
-inline int adb_root_main(int argc, char **argv) {
+inline int adb_root_main(int argc, char** argv) {
     LOGI("Setup adb root support: %s", argv[1]);
 
     if (init_selinux()) {

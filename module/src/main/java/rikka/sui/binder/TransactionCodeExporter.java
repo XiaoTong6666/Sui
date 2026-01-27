@@ -1,3 +1,22 @@
+/*
+ * This file is part of Sui.
+ *
+ * Sui is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sui is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c) 2026 Sui Contributors
+ */
+
 package rikka.sui.binder;
 
 import static rikka.sui.systemserver.SystemServerConstants.LOGGER;
@@ -10,9 +29,7 @@ import android.os.IBinder;
 import android.os.IInterface;
 import android.os.Parcel;
 import android.os.RemoteException;
-
 import androidx.annotation.RequiresApi;
-
 import java.io.FileDescriptor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -21,7 +38,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-
 import rikka.sui.util.BuildUtils;
 
 public class TransactionCodeExporter {
@@ -129,7 +145,10 @@ public class TransactionCodeExporter {
             } else if (c == ArrayList.class) {
                 result.add(new ArrayList<>());
             } else if (BuildUtils.atLeast31() && c == AttributionSource.class) {
-                result.add(new AttributionSource.Builder(0).setPackageName("example").setAttributionTag("example").build());
+                result.add(new AttributionSource.Builder(0)
+                        .setPackageName("example")
+                        .setAttributionTag("example")
+                        .build());
             } else {
                 result.add(null);
             }
@@ -170,14 +189,10 @@ public class TransactionCodeExporter {
         }
 
         @Override
-        public void dump(FileDescriptor fileDescriptor, String[] strings) throws RemoteException {
-
-        }
+        public void dump(FileDescriptor fileDescriptor, String[] strings) throws RemoteException {}
 
         @Override
-        public void dumpAsync(FileDescriptor fileDescriptor, String[] strings) throws RemoteException {
-
-        }
+        public void dumpAsync(FileDescriptor fileDescriptor, String[] strings) throws RemoteException {}
 
         @Override
         public boolean transact(int code, Parcel data, Parcel reply, int flags) {
@@ -186,9 +201,7 @@ public class TransactionCodeExporter {
         }
 
         @Override
-        public void linkToDeath(DeathRecipient deathRecipient, int i) throws RemoteException {
-
-        }
+        public void linkToDeath(DeathRecipient deathRecipient, int i) throws RemoteException {}
 
         @Override
         public boolean unlinkToDeath(DeathRecipient deathRecipient, int i) {

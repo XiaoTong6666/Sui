@@ -1,20 +1,35 @@
+/*
+ * This file is part of Sui.
+ *
+ * Sui is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sui is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c) 2026 Sui Contributors
+ */
+
 package rikka.sui.server;
 
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-
 import androidx.annotation.Nullable;
-
 import java.io.File;
-
 import rikka.sui.server.SuiConfig.PackageEntry;
 import rikka.sui.util.SQLiteDataBaseRemoteCompat;
 
 public class SuiDatabase {
 
-    private SuiDatabase() {
-    }
+    private SuiDatabase() {}
 
     static {
         DATABASE_PATH = (new File("/data/adb/sui/sui.db")).getPath();
@@ -49,14 +64,21 @@ public class SuiDatabase {
         return databaseInternal;
     }
 
-    @Nullable
-    public static SuiConfig readConfig() {
+    @Nullable public static SuiConfig readConfig() {
         SQLiteDatabase database = getDatabase();
         if (database == null) {
             return null;
         }
 
-        try (Cursor cursor = database.query(UID_CONFIG_TABLE, (String[]) null, (String) null, (String[]) null, (String) null, (String) null, (String) null, (String) null)) {
+        try (Cursor cursor = database.query(
+                UID_CONFIG_TABLE,
+                (String[]) null,
+                (String) null,
+                (String[]) null,
+                (String) null,
+                (String) null,
+                (String) null,
+                (String) null)) {
             if (cursor == null) {
                 return null;
             }
@@ -65,7 +87,8 @@ public class SuiDatabase {
             int cursorIndexOfFlags = cursor.getColumnIndexOrThrow("flags");
             if (cursor.moveToFirst()) {
                 do {
-                    res.packages.add(new PackageEntry(cursor.getInt(cursorIndexOfUid), cursor.getInt(cursorIndexOfFlags)));
+                    res.packages.add(
+                            new PackageEntry(cursor.getInt(cursorIndexOfUid), cursor.getInt(cursorIndexOfFlags)));
                 } while (cursor.moveToNext());
             }
             return res;
@@ -82,7 +105,7 @@ public class SuiDatabase {
         values.put("uid", uid);
         values.put("flags", flags);
         String selection = "uid=?";
-        String[] selectionArgs = new String[]{String.valueOf(uid)};
+        String[] selectionArgs = new String[] {String.valueOf(uid)};
         if (database.update(UID_CONFIG_TABLE, values, selection, selectionArgs) <= 0) {
             database.insertWithOnConflict(UID_CONFIG_TABLE, (String) null, values, SQLiteDatabase.CONFLICT_IGNORE);
         }
@@ -95,7 +118,7 @@ public class SuiDatabase {
         }
 
         String selection = "uid=?";
-        String[] selectionArgs = new String[]{String.valueOf(uid)};
+        String[] selectionArgs = new String[] {String.valueOf(uid)};
         database.delete(UID_CONFIG_TABLE, selection, selectionArgs);
     }
 }

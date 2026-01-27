@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.util;
@@ -24,9 +24,7 @@ import android.os.Parcel;
 import android.os.ParcelFileDescriptor;
 import android.os.RemoteException;
 import android.os.ServiceManager;
-
 import androidx.annotation.Nullable;
-
 import moe.shizuku.server.IShizukuService;
 import rikka.shizuku.ShizukuApiConstants;
 import rikka.sui.server.ServerConstants;
@@ -122,6 +120,7 @@ public class BridgeServiceClient {
         }
         return result;
     }
+
     public static void requestPinnedShortcut() throws RemoteException {
         IShizukuService service = getService();
         if (service == null) {
@@ -131,7 +130,8 @@ public class BridgeServiceClient {
         Parcel reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(ShizukuApiConstants.BINDER_DESCRIPTOR);
-            service.asBinder().transact(ServerConstants.BINDER_TRANSACTION_REQUEST_PINNED_SHORTCUT_FROM_UI, data, reply, 0);
+            service.asBinder()
+                    .transact(ServerConstants.BINDER_TRANSACTION_REQUEST_PINNED_SHORTCUT_FROM_UI, data, reply, 0);
             reply.readException();
         } finally {
             data.recycle();

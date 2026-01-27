@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.settings;
@@ -25,5 +25,4 @@ public class SettingsConstants {
 
     public static final Logger LOGGER = new Logger("SuiSettings");
     public static final String ACTION_REQUEST_PINNED_SHORTCUT = "rikka.sui.ACTION_REQUEST_PINNED_SHORTCUT";
-
 }

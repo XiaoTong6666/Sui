@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.systemserver;
@@ -24,18 +24,16 @@ import static rikka.sui.systemserver.SystemServerConstants.LOGGER;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Parcel;
-
 import androidx.annotation.NonNull;
-
 import java.util.Arrays;
-
 import rikka.sui.util.ParcelUtils;
 
 public final class SystemProcess {
 
     private static final BridgeService SERVICE = new BridgeService();
 
-    private static boolean execActivityTransaction(@NonNull Binder binder, int code, Parcel data, Parcel reply, int flags) {
+    private static boolean execActivityTransaction(
+            @NonNull Binder binder, int code, Parcel data, Parcel reply, int flags) {
         return SERVICE.onTransact(code, data, reply, flags);
     }
 

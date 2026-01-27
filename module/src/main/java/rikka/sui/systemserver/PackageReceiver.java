@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.systemserver;
@@ -31,7 +31,6 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.UserHandleHidden;
-
 import dev.rikka.tools.refine.Refine;
 
 public class PackageReceiver {
@@ -64,14 +63,10 @@ public class PackageReceiver {
         Handler handler = new Handler(Looper.getMainLooper());
 
         try {
-            Refine.<ContextHidden>unsafeCast(ActivityThread.currentActivityThread().getSystemContext())
+            Refine.<ContextHidden>unsafeCast(
+                            ActivityThread.currentActivityThread().getSystemContext())
                     .registerReceiverAsUser(
-                            RECEIVER,
-                            Refine.unsafeCast(UserHandleHidden.ALL),
-                            intentFilter,
-                            null,
-                            handler
-                    );
+                            RECEIVER, Refine.unsafeCast(UserHandleHidden.ALL), intentFilter, null, handler);
             LOGGER.d("register package receiver");
         } catch (Throwable e) {
             LOGGER.w("registerReceiver failed", e);

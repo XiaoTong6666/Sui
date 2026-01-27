@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 #pragma once
@@ -23,11 +23,11 @@
 
 namespace BinderHook {
 
-    using ExecTransact_t = bool(jboolean *, JNIEnv *, jobject, va_list);
+using ExecTransact_t = bool(jboolean*, JNIEnv*, jobject, va_list);
 
-    void Install(JavaVM *javaVm, JNIEnv *env, ExecTransact_t *callback);
+void Install(JavaVM* javaVm, JNIEnv* env, ExecTransact_t* callback);
 
-    void Uninstall(JavaVM *javaVm);
+void Uninstall(JavaVM* javaVm);
 
-    void Uninstall(JNIEnv *env);
-}
+void Uninstall(JNIEnv* env);
+}  // namespace BinderHook

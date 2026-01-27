@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.permission;
@@ -39,10 +39,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-
-import java.util.Objects;
-
 import dev.rikka.tools.refine.Refine;
+import java.util.Objects;
 import rikka.html.text.HtmlCompat;
 import rikka.sui.R;
 import rikka.sui.databinding.ConfirmationDialogBinding;
@@ -79,7 +77,8 @@ public class ConfirmationDialog {
         data.putBoolean(REQUEST_PERMISSION_REPLY_IS_ONETIME, onetime);
 
         try {
-            BridgeServiceClient.getService().dispatchPermissionConfirmationResult(requestUid, requestPid, requestCode, data);
+            BridgeServiceClient.getService()
+                    .dispatchPermissionConfirmationResult(requestUid, requestPid, requestCode, data);
         } catch (Throwable e) {
             LOGGER.e("dispatchPermissionConfirmationResult");
         }
@@ -116,15 +115,18 @@ public class ConfirmationDialog {
         PackageManager pm = context.getPackageManager();
         try {
             ApplicationInfo ai = Objects.requireNonNull(Refine.<PackageManagerHidden>unsafeCast(pm))
-                    .getApplicationInfoAsUser(requestPackageName, PackageManagerHidden.MATCH_UNINSTALLED_PACKAGES, userId);
+                    .getApplicationInfoAsUser(
+                            requestPackageName, PackageManagerHidden.MATCH_UNINSTALLED_PACKAGES, userId);
             label = AppLabel.getAppLabel(ai, context);
         } catch (Throwable e) {
             LOGGER.e("getApplicationInfoAsUser");
         }
 
         binding.icon.setImageDrawable(resources.getDrawable(R.drawable.ic_su_24, theme));
-        binding.title.setText(HtmlCompat.fromHtml(
-                String.format(resources.getString(R.string.permission_warning_template), label, resources.getString(R.string.permission_description))));
+        binding.title.setText(HtmlCompat.fromHtml(String.format(
+                resources.getString(R.string.permission_warning_template),
+                label,
+                resources.getString(R.string.permission_description))));
         binding.button1.setText(resources.getString(R.string.grant_dialog_button_allow_always));
         binding.button2.setText(resources.getString(R.string.grant_dialog_button_allow_one_time));
         binding.button3.setText(resources.getString(R.string.grant_dialog_button_deny_and_dont_ask_again));
@@ -164,7 +166,8 @@ public class ConfirmationDialog {
         attr.windowAnimations = android.R.style.Animation_Dialog;
         attr.dimAmount = 0.32f;
         attr.format = PixelFormat.TRANSLUCENT;
-        WindowKt.setPrivateFlags(attr, WindowKt.getPrivateFlags(attr) | WindowKt.getSYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS());
+        WindowKt.setPrivateFlags(
+                attr, WindowKt.getPrivateFlags(attr) | WindowKt.getSYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS());
 
         root.show(attr);
     }

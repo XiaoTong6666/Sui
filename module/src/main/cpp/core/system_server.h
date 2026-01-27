@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 #pragma once
@@ -23,5 +23,5 @@
 #include "dex_file.h"
 
 namespace SystemServer {
-    void main(JNIEnv *env, Dex *dexFile);
+void main(JNIEnv* env, Dex* dexFile);
 }

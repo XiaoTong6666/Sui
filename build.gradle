@@ -1,7 +1,27 @@
+/*
+ * This file is part of Sui.
+ *
+ * Sui is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Sui is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * Copyright (c) 2026 Sui Contributors
+ */
+
 plugins {
     id("idea")
+    id "com.diffplug.spotless" version "8.2.0"
 }
-
+def NDK_VERSION = "29.0.14206865"
 idea.module {
     excludeDirs += file('out')
     resourceDirs += file('template')
@@ -13,7 +33,7 @@ subprojects {
         android {
             compileSdk = 36
             buildToolsVersion = "36.0.0"
-            ndkVersion = "29.0.14206865"
+            ndkVersion = NDK_VERSION
             defaultConfig {
                 minSdk = 23
                 targetSdk = 36
@@ -28,3 +48,75 @@ subprojects {
         }
     }
 }
+
+spotless {
+    lineEndings 'UNIX'
+
+    java {
+        target '**/src/*/java/**/*.java'
+        targetExclude '**/api/**', '**/build/**'
+
+        palantirJavaFormat()
+        importOrder()
+        removeUnusedImports()
+        formatAnnotations()
+    }
+
+    kotlin {
+        target '**/src/*/kotlin/**/*.kt', '**/src/*/java/**/*.kt'
+        targetExclude '**/api/**', '**/build/**'
+        ktlint().editorConfigOverride([
+                "standard:backing-property-naming": "disabled",
+                "standard:no-wildcard-imports": "disabled",
+                "standard:property-naming": "disabled",
+                "standard:max-line-length": "disabled",
+                "standard:comment-wrapping": "disabled"
+        ])
+    }
+    format 'cpp', {
+        target '**/src/main/cpp/**/*.c', '**/src/main/cpp/**/*.cpp', '**/src/main/cpp/**/*.h', '**/src/main/cpp/**/*.hpp'
+        targetExclude '**/api/**', '**/build/**'
+
+        def sdkDir = ""
+        Properties properties = new Properties()
+        File localProps = project.rootProject.file('local.properties')
+        if (localProps.exists()) {
+            localProps.withInputStream { properties.load(it) }
+            sdkDir = properties.getProperty('sdk.dir')
+        }
+        if (!sdkDir) {
+            sdkDir = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
+        }
+        if (!sdkDir) {
+            def commonPaths = ["/opt/android-sdk", "/usr/local/lib/android/sdk"]
+            for (path in commonPaths) {
+                if (new File(path).exists()) {
+                    sdkDir = path
+                    break
+                }
+            }
+        }
+        def osName = System.getProperty("os.name").toLowerCase()
+        def platform = osName.contains("linux") ? "linux-x86_64" :
+                osName.contains("mac") ? "darwin-x86_64" : "windows-x86_64"
+        def ndkVersion = NDK_VERSION
+        def clangPath = "${sdkDir}/ndk/${ndkVersion}/toolchains/llvm/prebuilt/${platform}/bin/clang-format"
+        if (osName.contains("windows")) clangPath += ".exe"
+        File clangFile = new File(clangPath)
+        if (clangFile.exists()) {
+            clangFormat('21.0.0').style('file').pathToExe(clangPath)
+        } else {
+            println "Spotless Warning: Clang-format not found at ${clangPath}"
+            clangFormat().style('file')
+        }
+    }
+}
+
+
+tasks.register('format') {
+    dependsOn 'spotlessApply'
+    group = 'formatting'
+    description = 'Formats the code using Spotless'
+}
+
+

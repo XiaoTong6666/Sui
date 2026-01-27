@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 package rikka.sui.management
 
@@ -48,7 +48,7 @@ import rikka.sui.model.AppInfo
 class ManagementFragment : AppFragment() {
 
     private var _binding: ManagementBinding? = null
-    private val binding: ManagementBinding get() = _binding!!
+    val binding: ManagementBinding get() = _binding!!
 
     private val viewModel by viewModels { ManagementViewModel() }
     private val adapter by lazy { ManagementAdapter(requireContext()) }
@@ -61,47 +61,47 @@ class ManagementFragment : AppFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val menuHost: MenuHost = requireActivity()
-        menuHost.addMenuProvider(object : MenuProvider {
-            override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
-                menuInflater.inflate(R.menu.management_menu, menu)
+        menuHost.addMenuProvider(
+            object : MenuProvider {
+                override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+                    menuInflater.inflate(R.menu.management_menu, menu)
 
-                val searchItem = menu.findItem(R.id.action_search)
-                val searchView = searchItem.actionView as SearchView
+                    val searchItem = menu.findItem(R.id.action_search)
+                    val searchView = searchItem.actionView as SearchView
 
-                var isSearchViewInitialized = false
-                searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-                    override fun onQueryTextSubmit(query: String?): Boolean {
-                        return false
-                    }
-                    override fun onQueryTextChange(newText: String?): Boolean {
-                        if (!isSearchViewInitialized && newText.isNullOrEmpty()) {
-                            isSearchViewInitialized = true
+                    var isSearchViewInitialized = false
+                    searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+                        override fun onQueryTextSubmit(query: String?): Boolean = false
+                        override fun onQueryTextChange(newText: String?): Boolean {
+                            if (!isSearchViewInitialized && newText.isNullOrEmpty()) {
+                                isSearchViewInitialized = true
+                                return true
+                            }
+                            viewModel.filter(newText)
                             return true
                         }
-                        viewModel.filter(newText)
-                        return true
-                    }
-                })
-                val overflowItem = menu.findItem(R.id.action_overflow)
-                requireActivity().findViewById<View>(R.id.toolbar)?.post {
-                    val overflowButtonView = requireActivity().findViewById<View>(R.id.action_overflow)
-                    if (overflowButtonView != null) {
-                        overflowButtonView.setOnClickListener { anchorView ->
-                            showOverflowPopupMenu(anchorView)
-                        }
-                    } else {
-                        overflowItem.setOnMenuItemClickListener {
-                            showOverflowPopupMenu(requireActivity().findViewById(R.id.toolbar))
-                            true
+                    })
+                    val overflowItem = menu.findItem(R.id.action_overflow)
+                    requireActivity().findViewById<View>(R.id.toolbar)?.post {
+                        val overflowButtonView = requireActivity().findViewById<View>(R.id.action_overflow)
+                        if (overflowButtonView != null) {
+                            overflowButtonView.setOnClickListener { anchorView ->
+                                showOverflowPopupMenu(anchorView)
+                            }
+                        } else {
+                            overflowItem.setOnMenuItemClickListener {
+                                showOverflowPopupMenu(requireActivity().findViewById(R.id.toolbar))
+                                true
+                            }
                         }
                     }
                 }
-            }
 
-            override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
-                return false
-            }
-        }, viewLifecycleOwner, Lifecycle.State.RESUMED)
+                override fun onMenuItemSelected(menuItem: MenuItem): Boolean = false
+            },
+            viewLifecycleOwner,
+            Lifecycle.State.RESUMED,
+        )
 
         val context = view.context
         view.post {
@@ -126,7 +126,7 @@ class ManagementFragment : AppFragment() {
                 binding.list.paddingLeft,
                 0,
                 binding.list.paddingRight,
-                systemBars.bottom
+                systemBars.bottom,
             )
 
             insets
@@ -191,25 +191,28 @@ class ManagementFragment : AppFragment() {
                     viewModel.toggleShizukuFilter(menuItem.isChecked)
                     true
                 }
+
                 R.id.action_batch_unconfigured -> {
                     showBatchOptionsMenu(anchorView)
                     true
                 }
+
                 R.id.action_add_shortcut -> {
                     try {
                         rikka.sui.util.BridgeServiceClient.requestPinnedShortcut()
                         android.widget.Toast.makeText(requireContext(), "在尝试创建喵...", android.widget.Toast.LENGTH_SHORT).show()
-
                     } catch (e: Throwable) {
                         android.util.Log.e("SuiShortcutRPC", "Failed to request pinned shortcut via RPC", e)
                         android.widget.Toast.makeText(requireContext(), "创建失败喵: " + e.message, android.widget.Toast.LENGTH_LONG).show()
                     }
                     true
                 }
+
                 R.id.action_about -> {
                     showAboutDialog()
                     true
                 }
+
                 else -> false
             }
         }
@@ -241,13 +244,15 @@ class ManagementFragment : AppFragment() {
                 val spannableTitle = android.text.SpannableString(item.title)
                 spannableTitle.setSpan(
                     android.text.style.ForegroundColorSpan(highlightColor),
-                    0, spannableTitle.length,
-                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    0,
+                    spannableTitle.length,
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
                 )
                 spannableTitle.setSpan(
                     android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
-                    0, spannableTitle.length,
-                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                    0,
+                    spannableTitle.length,
+                    android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
                 )
 
                 item.title = spannableTitle
@@ -300,7 +305,7 @@ class ManagementFragment : AppFragment() {
             val startGithub = length
             append("GitHub")
             setSpan(android.text.style.URLSpan("https://github.com/XiaoTong6666/Sui"), startGithub, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            append(" 开源 \nCopyright (c) 2021-2025 Sui Contributors\n\n")
+            append(" 开源 \nCopyright (c) 2021-2026 Sui Contributors\n\n")
             append("贡献者: Rikka, yujincheng08, Kr328, yangFenTuoZi, XiaoTong")
         }
 

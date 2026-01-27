@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.shortcut;
@@ -42,7 +42,6 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.provider.Settings;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -52,15 +51,15 @@ public class SuiShortcut {
     private static final int FLAGS = Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK;
 
     public static Intent getIntent(Context context, boolean requiresStandardLaunchMode) {
-        String[] actions = new String[]{
-                Settings.ACTION_WIFI_SETTINGS,
-                Settings.ACTION_NETWORK_OPERATOR_SETTINGS,
-                Settings.ACTION_DEVICE_INFO_SETTINGS,
-                Settings.ACTION_DISPLAY_SETTINGS,
-                Settings.ACTION_SOUND_SETTINGS,
-                Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
-                Settings.ACTION_SECURITY_SETTINGS,
-                Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
+        String[] actions = new String[] {
+            Settings.ACTION_WIFI_SETTINGS,
+            Settings.ACTION_NETWORK_OPERATOR_SETTINGS,
+            Settings.ACTION_DEVICE_INFO_SETTINGS,
+            Settings.ACTION_DISPLAY_SETTINGS,
+            Settings.ACTION_SOUND_SETTINGS,
+            Settings.ACTION_INTERNAL_STORAGE_SETTINGS,
+            Settings.ACTION_SECURITY_SETTINGS,
+            Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
         };
 
         Intent intent = new Intent("null").setPackage(PACKAGE_NAME);
@@ -74,7 +73,8 @@ public class SuiShortcut {
                 if (resolveInfo != null
                         && resolveInfo.activityInfo != null
                         && resolveInfo.activityInfo.exported
-                        && (!requiresStandardLaunchMode || resolveInfo.activityInfo.launchMode == ActivityInfo.LAUNCH_MULTIPLE)) {
+                        && (!requiresStandardLaunchMode
+                                || resolveInfo.activityInfo.launchMode == ActivityInfo.LAUNCH_MULTIPLE)) {
                     if (requiresStandardLaunchMode) {
                         LOGGER.i("Found action for Sui shortcut (standard launch mode): %s", action);
                     } else {
@@ -118,7 +118,8 @@ public class SuiShortcut {
         List<ShortcutInfo> existingShortcuts;
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            existingShortcuts = shortcutManager.getShortcuts(ShortcutManager.FLAG_MATCH_PINNED | ShortcutManager.FLAG_MATCH_DYNAMIC);
+            existingShortcuts = shortcutManager.getShortcuts(
+                    ShortcutManager.FLAG_MATCH_PINNED | ShortcutManager.FLAG_MATCH_DYNAMIC);
         } else {
             existingShortcuts = new ArrayList<>();
             existingShortcuts.addAll(shortcutManager.getDynamicShortcuts());
@@ -179,13 +180,14 @@ public class SuiShortcut {
         Icon icon;
 
         try {
-            Configuration configuration = new Configuration(context.getResources().getConfiguration());
+            Configuration configuration =
+                    new Configuration(context.getResources().getConfiguration());
             configuration.uiMode &= ~Configuration.UI_MODE_NIGHT_MASK;
             configuration.uiMode |= Configuration.UI_MODE_NIGHT_NO;
             Context themedContext = context.createConfigurationContext(configuration);
             int size = Math.round(Resources.getSystem().getDisplayMetrics().density * 108);
 
-            TypedArray a = themedContext.getTheme().obtainStyledAttributes(new int[]{android.R.attr.colorAccent});
+            TypedArray a = themedContext.getTheme().obtainStyledAttributes(new int[] {android.R.attr.colorAccent});
             int accentColor = a.getColor(0, 0);
             a.recycle();
 

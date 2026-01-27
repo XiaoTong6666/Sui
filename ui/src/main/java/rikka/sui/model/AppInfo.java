@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.model;
@@ -23,7 +23,6 @@ import android.content.pm.PackageInfo;
 import android.os.Build;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.Log;
 
 public class AppInfo implements Parcelable {
 
@@ -32,8 +31,7 @@ public class AppInfo implements Parcelable {
     public int defaultFlags;
     public CharSequence label = null;
 
-    public AppInfo() {
-    }
+    public AppInfo() {}
 
     @SuppressWarnings("deprecation")
     protected AppInfo(Parcel in) {

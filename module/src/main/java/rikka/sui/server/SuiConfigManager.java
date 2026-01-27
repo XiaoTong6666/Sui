@@ -14,20 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.server;
 
 import androidx.annotation.Nullable;
-
 import java.util.List;
-
 import rikka.shizuku.server.ConfigManager;
 
 public class SuiConfigManager extends ConfigManager {
 
     public static final int DEFAULT_UID = -1;
+
     public static SuiConfig load() {
         SuiConfig config = SuiDatabase.readConfig();
         if (config == null) {
@@ -47,7 +46,6 @@ public class SuiConfigManager extends ConfigManager {
         return instance;
     }
 
-
     private final SuiConfig config;
 
     public SuiConfigManager() {
@@ -63,15 +61,13 @@ public class SuiConfigManager extends ConfigManager {
         return null;
     }
 
-    @Nullable
-    public SuiConfig.PackageEntry findExplicit(int uid) {
+    @Nullable public SuiConfig.PackageEntry findExplicit(int uid) {
         synchronized (this) {
             return findLocked(uid);
         }
     }
 
-    @Nullable
-    public SuiConfig.PackageEntry find(int uid) {
+    @Nullable public SuiConfig.PackageEntry find(int uid) {
         synchronized (this) {
             if (uid == 0 || uid == 1000) {
                 return new SuiConfig.PackageEntry(uid, SuiConfig.FLAG_ALLOWED);

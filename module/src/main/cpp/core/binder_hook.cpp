@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 #include <cstring>
@@ -29,39 +29,40 @@
 
 static jmethodID original_execTransactMethodID;
 
-static const JNIInvokeInterface *old_JNIInvokeInterface = nullptr;
-static const JNINativeInterface *old_JNINativeInterface = nullptr;
+static const JNIInvokeInterface* old_JNIInvokeInterface = nullptr;
+static const JNINativeInterface* old_JNINativeInterface = nullptr;
 
-static JNIInvokeInterface *new_JNIInvokeInterface = nullptr;
-static JNINativeInterface *new_JNINativeInterface = nullptr;
+static JNIInvokeInterface* new_JNIInvokeInterface = nullptr;
+static JNINativeInterface* new_JNINativeInterface = nullptr;
 
-using CallBooleanMethodV_t = jboolean(JNIEnv *, jobject, jmethodID, va_list);
-using GetEnv_t = jint(JavaVM *, void **, jint);
+using CallBooleanMethodV_t = jboolean(JNIEnv*, jobject, jmethodID, va_list);
+using GetEnv_t = jint(JavaVM*, void**, jint);
 
-static GetEnv_t *old_GetEnv;
-static CallBooleanMethodV_t *old_CallBooleanMethodV;
-static BinderHook::ExecTransact_t *my_ExecTransact;
+static GetEnv_t* old_GetEnv;
+static CallBooleanMethodV_t* old_CallBooleanMethodV;
+static BinderHook::ExecTransact_t* my_ExecTransact;
 
-using SetTableOverride_t = void(JNINativeInterface *);
+using SetTableOverride_t = void(JNINativeInterface*);
 
-static jboolean new_CallBooleanMethodV(JNIEnv *env, jobject obj, jmethodID methodId, va_list args) {
+static jboolean new_CallBooleanMethodV(JNIEnv* env, jobject obj, jmethodID methodId, va_list args) {
     if (methodId == original_execTransactMethodID) {
         jboolean res = false;
-        if (my_ExecTransact(&res, env, obj, args)) return res;
+        if (my_ExecTransact(&res, env, obj, args))
+            return res;
     }
 
     return old_CallBooleanMethodV(env, obj, methodId, args);
 }
 
-static jint new_GetEnv(JavaVM *vm, void **env, jint version) {
+static jint new_GetEnv(JavaVM* vm, void** env, jint version) {
     jint res = old_GetEnv(vm, env, version);
     if (res == JNI_OK && env && *env) {
-        ((JNIEnv *) *env)->functions = new_JNINativeInterface;
+        ((JNIEnv*)*env)->functions = new_JNINativeInterface;
     }
     return res;
 }
 
-static void InstallDirectly(JavaVM *javaVm, JNIEnv *env) {
+static void InstallDirectly(JavaVM* javaVm, JNIEnv* env) {
     // JavaVM
     old_JNIInvokeInterface = javaVm->functions;
     old_GetEnv = javaVm->functions->GetEnv;
@@ -76,9 +77,11 @@ static void InstallDirectly(JavaVM *javaVm, JNIEnv *env) {
 }
 
 static bool InstallOverrideTable() {
-    if (android_get_device_api_level() < 26) return false;
+    if (android_get_device_api_level() < 26)
+        return false;
 
-    auto setTableOverride = (SetTableOverride_t *) plt_dlsym("_ZN3art9JNIEnvExt16SetTableOverrideEPK18JNINativeInterface", nullptr);
+    auto setTableOverride = (SetTableOverride_t*)plt_dlsym(
+        "_ZN3art9JNIEnvExt16SetTableOverrideEPK18JNINativeInterface", nullptr);
     if (setTableOverride != nullptr) {
         setTableOverride(new_JNINativeInterface);
         return true;
@@ -86,7 +89,7 @@ static bool InstallOverrideTable() {
     return false;
 }
 
-void BinderHook::Install(JavaVM *javaVm, JNIEnv *env, ExecTransact_t *callback) {
+void BinderHook::Install(JavaVM* javaVm, JNIEnv* env, ExecTransact_t* callback) {
     my_ExecTransact = callback;
 
     // Binder
@@ -108,10 +111,10 @@ void BinderHook::Install(JavaVM *javaVm, JNIEnv *env, ExecTransact_t *callback) 
     }
 }
 
-void BinderHook::Uninstall(JavaVM *javaVm) {
+void BinderHook::Uninstall(JavaVM* javaVm) {
     javaVm->functions = old_JNIInvokeInterface;
 }
 
-void BinderHook::Uninstall(JNIEnv *env) {
+void BinderHook::Uninstall(JNIEnv* env) {
     env->functions = old_JNINativeInterface;
 }

@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Sui.  If not, see <https://www.gnu.org/licenses/>.
  *
- * Copyright (c) 2021 Sui Contributors
+ * Copyright (c) 2021-2026 Sui Contributors
  */
 
 package rikka.sui.settings;
@@ -23,7 +23,6 @@ import static rikka.sui.settings.SettingsConstants.LOGGER;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.ActivityThread;
 import android.app.Application;
 import android.app.Instrumentation;
@@ -31,23 +30,16 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.os.Binder;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.UserManager;
-import android.provider.Settings;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-
 import java.util.Arrays;
-
 import rikka.sui.resource.SuiApk;
 import rikka.sui.shortcut.SuiShortcut;
 
@@ -181,7 +173,8 @@ public class SettingsProcess {
 
             Application application = activityThread.getApplication();
             if (application == null) {
-                LOGGER.e("postBindApplication [Delayed]: FAILED, Application is still null even after posting to main looper.");
+                LOGGER.e(
+                        "postBindApplication [Delayed]: FAILED, Application is still null even after posting to main looper.");
                 return;
             }
             LOGGER.d("postBindApplication [Delayed]: SUCCESS, Application object is available now!");
@@ -203,7 +196,7 @@ public class SettingsProcess {
                     }
                 };
                 IntentFilter filter = new IntentFilter("rikka.sui.ACTION_REQUEST_PINNED_SHORTCUT");
-                
+
                 // Smart reflection to support both Android 7.1 and Android 14+
                 try {
                     java.lang.reflect.Method m2 = null;
@@ -211,9 +204,14 @@ public class SettingsProcess {
                     for (java.lang.reflect.Method m : Context.class.getMethods()) {
                         if (m.getName().equals("registerReceiver")) {
                             Class<?>[] params = m.getParameterTypes();
-                            if (params.length == 2 && params[0].equals(BroadcastReceiver.class) && params[1].equals(IntentFilter.class)) {
+                            if (params.length == 2
+                                    && params[0].equals(BroadcastReceiver.class)
+                                    && params[1].equals(IntentFilter.class)) {
                                 m2 = m;
-                            } else if (params.length == 3 && params[0].equals(BroadcastReceiver.class) && params[1].equals(IntentFilter.class) && params[2].equals(int.class)) {
+                            } else if (params.length == 3
+                                    && params[0].equals(BroadcastReceiver.class)
+                                    && params[1].equals(IntentFilter.class)
+                                    && params[2].equals(int.class)) {
                                 m3 = m;
                             }
                         }
@@ -265,8 +263,7 @@ public class SettingsProcess {
 
         Handler.Callback original = HandlerUtil.getCallback(handler);
         HandlerUtil.setCallback(handler, msg -> {
-            if (msg.what == bindApplicationCode
-                    && ActivityThreadUtil.isAppBindData(msg.obj)) {
+            if (msg.what == bindApplicationCode && ActivityThreadUtil.isAppBindData(msg.obj)) {
                 LOGGER.v("call original bindApplication");
                 handler.handleMessage(msg);
                 LOGGER.v("bindApplication finished");

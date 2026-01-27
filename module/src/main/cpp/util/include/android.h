@@ -21,7 +21,7 @@
 
 namespace android {
 
-    bool Has32Bit();
+bool Has32Bit();
 
-    bool Has64Bit();
-}
+bool Has64Bit();
+}  // namespace android
