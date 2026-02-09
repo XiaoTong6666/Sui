@@ -51,7 +51,7 @@ subprojects {
         resolutionStrategy {
             force "org.bitbucket.b_c:jose4j:0.9.6" // Fix CVE-2024-29371
             force "org.jdom:jdom2:2.0.6.1" // Fix CVE-2021-33813
-            force "org.apache.commons:commons-lang3:3.18.0" // Fix CVE-2025-48924
+            force "org.apache.commons:commons-lang3:3.20.0" // Fix CVE-2025-48924
         }
     }
 }
