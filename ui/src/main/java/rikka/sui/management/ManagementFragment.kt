@@ -197,7 +197,7 @@ class ManagementFragment : AppFragment() {
             when (menuItem.itemId) {
                 R.id.action_filter_shizuku -> {
                     menuItem.isChecked = !menuItem.isChecked
-                    viewModel.toggleShizukuFilter(menuItem.isChecked)
+                    viewModel.toggleShizukuFilter(menuItem.isChecked, requireContext())
                     true
                 }
 

@@ -31,6 +31,7 @@ import rikka.lifecycle.Resource
 import rikka.lifecycle.Status
 import rikka.sui.model.AppInfo
 import rikka.sui.util.AppInfoComparator
+import rikka.sui.util.AppLabelCache
 import rikka.sui.util.BridgeServiceClient
 
 class ManagementViewModel : ViewModel() {
@@ -42,12 +43,6 @@ class ManagementViewModel : ViewModel() {
     private var currentQuery: String? = null
     private fun displayList() {
         var tempSequence = fullList.asSequence()
-        if (showOnlyShizukuApps) {
-            tempSequence = tempSequence.filter { appInfo ->
-                val permissions = appInfo.packageInfo.requestedPermissions
-                permissions != null && permissions.contains("moe.shizuku.manager.permission.API_V23")
-            }
-        }
         if (!currentQuery.isNullOrBlank()) {
             tempSequence = tempSequence.filter { appInfo ->
                 val appName = appInfo.label ?: ""
@@ -74,12 +69,10 @@ class ManagementViewModel : ViewModel() {
             displayList()
         }
     }
-    fun toggleShizukuFilter(enable: Boolean) {
+    fun toggleShizukuFilter(enable: Boolean, context: Context) {
         if (showOnlyShizukuApps != enable) {
             showOnlyShizukuApps = enable
-            viewModelScope.launch(Dispatchers.IO) {
-                displayList()
-            }
+            reload(context)
         }
     }
     fun batchUpdate(targetMode: Int, context: Context) {
@@ -115,10 +108,15 @@ class ManagementViewModel : ViewModel() {
         }
 
         viewModelScope.launch(Dispatchers.IO) {
+            val pm = context.packageManager
             try {
-                val pm = context.packageManager
-                val result = BridgeServiceClient.getApplications(-1).apply {
-                    forEach { it.label = it.packageInfo.applicationInfo!!.loadLabel(pm) }
+                val result = BridgeServiceClient.getApplications(-1, showOnlyShizukuApps).apply {
+                    forEach {
+                        val appInfo = it.packageInfo.applicationInfo
+                        if (appInfo != null) {
+                            it.label = AppLabelCache.loadLabel(pm, appInfo)
+                        }
+                    }
                 }
 
                 fullList.clear()

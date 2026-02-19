@@ -490,7 +490,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     }
 
-    private ParcelableListSlice<AppInfo> getApplications(int userId) {
+    private ParcelableListSlice<AppInfo> getApplications(int userId, boolean onlyShizuku) {
         enforceManagerPermission("getApplications");
 
         int defaultPermissionFlags = configManager.getDefaultPermissionFlags();
@@ -511,6 +511,18 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 if (pi.applicationInfo == null
                         || Refine.<PackageInfoHidden>unsafeCast(pi).overlayTarget != null
                         || (pi.applicationInfo.flags & ApplicationInfo.FLAG_HAS_CODE) == 0) continue;
+
+                if (onlyShizuku) {
+                    if (pi.requestedPermissions == null) continue;
+                    boolean requested = false;
+                    for (String p : pi.requestedPermissions) {
+                        if ("moe.shizuku.manager.permission.API_V23".equals(p)) {
+                            requested = true;
+                            break;
+                        }
+                    }
+                    if (!requested) continue;
+                }
 
                 int uid = pi.applicationInfo.uid;
                 int appId = UserHandleCompat.getAppId(uid);
@@ -653,9 +665,10 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         if (code == ServerConstants.BINDER_TRANSACTION_getApplications) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
             int userId = data.readInt();
+            boolean onlyShizuku = data.readInt() != 0;
 
             try {
-                ParcelableListSlice<AppInfo> result = getApplications(userId);
+                ParcelableListSlice<AppInfo> result = getApplications(userId, onlyShizuku);
 
                 reply.writeNoException();
                 if (result != null) {

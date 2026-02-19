@@ -61,4 +61,20 @@ public class AppInfo implements Parcelable {
         dest.writeInt(this.flags);
         dest.writeInt(defaultFlags);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        AppInfo appInfo = (AppInfo) o;
+        return flags == appInfo.flags
+                && defaultFlags == appInfo.defaultFlags
+                && java.util.Objects.equals(packageInfo.packageName, appInfo.packageInfo.packageName)
+                && java.util.Objects.equals(label, appInfo.label);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(packageInfo.packageName, flags, defaultFlags, label);
+    }
 }

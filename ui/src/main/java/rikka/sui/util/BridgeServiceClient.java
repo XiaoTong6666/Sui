@@ -144,7 +144,7 @@ public class BridgeServiceClient {
     }
 
     @SuppressWarnings("unchecked")
-    public static List<AppInfo> getApplications(int userId) {
+    public static List<AppInfo> getApplications(int userId, boolean onlyShizuku) {
         IShizukuService s = getService();
         if (s == null) {
             android.util.Log.e("SuiBridgeDebug", "getApplications: Service is null! Returning empty list.");
@@ -157,6 +157,7 @@ public class BridgeServiceClient {
         try {
             data.writeInterfaceToken("moe.shizuku.server.IShizukuService");
             data.writeInt(userId);
+            data.writeInt(onlyShizuku ? 1 : 0);
             try {
                 s.asBinder().transact(BINDER_TRANSACTION_getApplications, data, reply, 0);
             } catch (Throwable e) {

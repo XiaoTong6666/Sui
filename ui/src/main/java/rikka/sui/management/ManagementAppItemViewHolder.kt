@@ -34,6 +34,7 @@ import rikka.sui.databinding.ManagementAppItemBinding
 import rikka.sui.model.AppInfo
 import rikka.sui.server.SuiConfig
 import rikka.sui.util.AppIconCache
+import rikka.sui.util.AppLabelCache
 import rikka.sui.util.BridgeServiceClient
 import rikka.sui.util.UserHandleCompat
 
@@ -101,6 +102,8 @@ class ManagementAppItemViewHolder(
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
 
+    private val iconSize: Int
+
     init {
         val typedValue = TypedValue()
         context.theme.resolveAttribute(android.R.attr.textColorSecondary, typedValue, true)
@@ -114,6 +117,8 @@ class ManagementAppItemViewHolder(
         this.itemView.setOnClickListener { spinner.performClick() }
         spinner.adapter = optionsAdapter
         spinner.onItemSelectedListener = onItemSelectedListener
+
+        iconSize = context.resources.getDimensionPixelSize(rikka.sui.R.dimen.expected_app_icon_max_size)
     }
 
     override fun onClick(v: View) {
@@ -125,18 +130,18 @@ class ManagementAppItemViewHolder(
 
         val userId = UserHandleCompat.getUserId(uid)
 
-        name.text =
-            if (userId != UserHandleCompat.myUserId()) {
-                "${data.label} - ($userId)"
-            } else {
-                data.label
-            }
+        val label = data.label
+        if (userId == UserHandleCompat.myUserId()) {
+            name.text = label
+        } else {
+            name.text = "$label - ($userId)"
+        }
+
         pkg.text = ai!!.packageName
 
         syncViewStateForFlags()
 
-        icon.setImageDrawable(null)
-        loadIconJob = AppIconCache.loadIconBitmapAsync(context, ai!!, ai!!.uid / 100000, icon)
+        loadIconJob = AppIconCache.loadIconBitmapAsync(context, ai!!, userId, icon, iconSize)
     }
 
     override fun onBind(payloads: List<Any>) {}
