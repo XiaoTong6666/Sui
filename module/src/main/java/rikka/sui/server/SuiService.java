@@ -640,10 +640,11 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     reply.writeInt(0);
                 }
             } catch (Throwable e) {
-                android.util.Log.e(
-                        "SuiRootService",
-                        "A fatal error occurred inside getApplications(). This is the root cause.",
-                        e);
+                if (e instanceof Error) {
+                    LOGGER.e(e, "Fatal error occurred, terminating.");
+                    throw (Error) e;
+                }
+                LOGGER.e(e, "An exception occurred inside getApplications(). This is the root cause.");
 
                 reply.writeException(new RuntimeException("Sui root service crashed while trying to get app list.", e));
             }

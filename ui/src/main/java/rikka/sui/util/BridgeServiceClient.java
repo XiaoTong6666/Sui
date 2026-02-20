@@ -146,13 +146,18 @@ public class BridgeServiceClient {
     @SuppressWarnings("unchecked")
     public static List<AppInfo> getApplications(int userId, boolean onlyShizuku) {
         int retryCount = 0;
+        long retryDelay = 500;
         while (retryCount < 3) {
             IShizukuService s = getService();
             if (s == null) {
                 android.util.Log.e("SuiBridgeDebug", "getApplications: Service is null! (Retry " + retryCount + ")");
                 try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ignored) {
+                    Thread.sleep(retryDelay);
+                    retryDelay *= 2;
+                } catch (InterruptedException ie) {
+                    android.util.Log.w("SuiBridgeDebug", "Retry sleep interrupted");
+                    Thread.currentThread().interrupt();
+                    return Collections.emptyList();
                 }
                 retryCount++;
                 continue;
@@ -173,6 +178,14 @@ public class BridgeServiceClient {
                             "DeadObjectException explicitly caught in getApplications. Invalidating binder and retrying...",
                             e);
                     setBinder(null);
+                    try {
+                        Thread.sleep(retryDelay);
+                        retryDelay *= 2;
+                    } catch (InterruptedException ie) {
+                        android.util.Log.w("SuiBridgeDebug", "Retry sleep interrupted");
+                        Thread.currentThread().interrupt();
+                        return Collections.emptyList();
+                    }
                     retryCount++;
                     continue;
                 } catch (android.os.TransactionTooLargeException e) {

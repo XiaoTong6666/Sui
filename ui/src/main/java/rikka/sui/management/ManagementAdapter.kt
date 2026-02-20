@@ -145,10 +145,13 @@ class ManagementAdapter(
     fun updateData(data: List<AppInfo>) {
         updateJob?.cancel()
 
-        val oldData = ArrayList(getItems<Any>())
-        val newData = ArrayList<Any>(data)
+        val newData = java.util.ArrayList<Any>(data)
 
         updateJob = adapterScope.launch(Dispatchers.Default) {
+            val oldData = withContext(Dispatchers.Main) {
+                java.util.ArrayList(getItems<Any>())
+            }
+
             val result = androidx.recyclerview.widget.DiffUtil.calculateDiff(object : androidx.recyclerview.widget.DiffUtil.Callback() {
                 override fun getOldListSize(): Int = oldData.size
 
@@ -173,8 +176,9 @@ class ManagementAdapter(
 
             withContext(Dispatchers.Main) {
                 if (isActive) {
-                    getItems<Any>().clear()
-                    getItems<Any>().addAll(data)
+                    val itemsList = getItems<Any>()
+                    itemsList.clear()
+                    itemsList.addAll(newData)
                     result.dispatchUpdatesTo(this@ManagementAdapter)
                 }
             }
