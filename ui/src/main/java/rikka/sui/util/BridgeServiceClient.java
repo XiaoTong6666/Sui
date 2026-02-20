@@ -145,36 +145,59 @@ public class BridgeServiceClient {
 
     @SuppressWarnings("unchecked")
     public static List<AppInfo> getApplications(int userId, boolean onlyShizuku) {
-        IShizukuService s = getService();
-        if (s == null) {
-            android.util.Log.e("SuiBridgeDebug", "getApplications: Service is null! Returning empty list.");
-            return Collections.emptyList();
-        }
+        int retryCount = 0;
+        while (retryCount < 3) {
+            IShizukuService s = getService();
+            if (s == null) {
+                android.util.Log.e("SuiBridgeDebug", "getApplications: Service is null! (Retry " + retryCount + ")");
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException ignored) {
+                }
+                retryCount++;
+                continue;
+            }
 
-        Parcel data = Parcel.obtain();
-        Parcel reply = Parcel.obtain();
-        List<AppInfo> result;
-        try {
-            data.writeInterfaceToken("moe.shizuku.server.IShizukuService");
-            data.writeInt(userId);
-            data.writeInt(onlyShizuku ? 1 : 0);
+            Parcel data = Parcel.obtain();
+            Parcel reply = Parcel.obtain();
+            List<AppInfo> result;
             try {
-                s.asBinder().transact(BINDER_TRANSACTION_getApplications, data, reply, 0);
-            } catch (Throwable e) {
-                throw new RuntimeException(e);
+                data.writeInterfaceToken("moe.shizuku.server.IShizukuService");
+                data.writeInt(userId);
+                data.writeInt(onlyShizuku ? 1 : 0);
+                try {
+                    s.asBinder().transact(BINDER_TRANSACTION_getApplications, data, reply, 0);
+                } catch (android.os.DeadObjectException e) {
+                    android.util.Log.w(
+                            "SuiBridgeDebug",
+                            "DeadObjectException explicitly caught in getApplications. Invalidating binder and retrying...",
+                            e);
+                    setBinder(null);
+                    retryCount++;
+                    continue;
+                } catch (android.os.TransactionTooLargeException e) {
+                    android.util.Log.e(
+                            "SuiBridgeDebug",
+                            "TransactionTooLargeException in getApplications. The list is too big.",
+                            e);
+                    return Collections.emptyList();
+                } catch (Throwable e) {
+                    throw new RuntimeException(e);
+                }
+                reply.readException();
+                if ((0 != reply.readInt())) {
+                    result = ParcelableListSlice.CREATOR.createFromParcel(reply).getList();
+                } else {
+                    result = null;
+                }
+                return result;
+            } finally {
+                reply.recycle();
+                data.recycle();
             }
-            reply.readException();
-            if ((0 != reply.readInt())) {
-                //noinspection unchecked
-                result = ParcelableListSlice.CREATOR.createFromParcel(reply).getList();
-            } else {
-                result = null;
-            }
-        } finally {
-            reply.recycle();
-            data.recycle();
         }
-        return result;
+        android.util.Log.e("SuiBridgeDebug", "getApplications failed after max retries.");
+        return Collections.emptyList();
     }
 
     public static void requestPinnedShortcut() throws RemoteException {

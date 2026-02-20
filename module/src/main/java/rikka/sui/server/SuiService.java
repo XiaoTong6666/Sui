@@ -508,112 +508,74 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         int installedBaseFlags = 0x00002000 /*MATCH_UNINSTALLED_PACKAGES*/ | PackageManager.GET_PERMISSIONS;
         for (int user : users) {
             for (PackageInfo pi : PackageManagerApis.getInstalledPackagesNoThrow(installedBaseFlags, user)) {
-                if (pi.applicationInfo == null
-                        || Refine.<PackageInfoHidden>unsafeCast(pi).overlayTarget != null
-                        || (pi.applicationInfo.flags & ApplicationInfo.FLAG_HAS_CODE) == 0) continue;
+                try {
+                    if (pi.applicationInfo == null
+                            || Refine.<PackageInfoHidden>unsafeCast(pi).overlayTarget != null
+                            || (pi.applicationInfo.flags & ApplicationInfo.FLAG_HAS_CODE) == 0) continue;
 
-                if (onlyShizuku) {
-                    if (pi.requestedPermissions == null) continue;
-                    boolean requested = false;
-                    for (String p : pi.requestedPermissions) {
-                        if ("moe.shizuku.manager.permission.API_V23".equals(p)) {
-                            requested = true;
-                            break;
-                        }
-                    }
-                    if (!requested) continue;
-                }
-
-                int uid = pi.applicationInfo.uid;
-                int appId = UserHandleCompat.getAppId(uid);
-                if (uid == systemUiUid) continue;
-
-                int flags = getFlagsForUidInternal(uid, SuiConfig.MASK_PERMISSION);
-                if (flags == 0 && uid != 2000 && appId < 10000) continue;
-
-                if (flags == 0) {
-                    String dataDir;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                        dataDir = pi.applicationInfo.deviceProtectedDataDir;
-                    } else {
-                        dataDir = pi.applicationInfo.dataDir;
-                    }
-
-                    final String sourceDir = pi.applicationInfo.sourceDir;
-                    boolean hasApk = sourceDir != null
-                            && MapUtil.getOrPut(existenceCache, sourceDir, () -> new File(sourceDir).exists());
-                    boolean hasData = dataDir != null
-                            && MapUtil.getOrPut(existenceCache, dataDir, () -> new File(dataDir).exists());
-
-                    // Installed (or hidden): hasApk && hasData
-                    // Uninstalled but keep data: !hasApk && hasData
-                    // Installed in other users only: hasApk && !hasData
-                    if (!(hasApk && hasData)) {
-                        LOGGER.v(
-                                "skip %d:%s: hasApk=%s, hasData=%s",
-                                user, pi.packageName, Boolean.toString(hasApk), Boolean.toString(hasData));
-                        continue;
-                    }
-
-                    boolean hasComponents = MapUtil.getOrPut(hasComponentsCache, pi.packageName, () -> {
-                        try {
-                            int baseFlags = 0x00000200 /*MATCH_DISABLED_COMPONENTS*/
-                                    | 0x00002000 /*MATCH_UNINSTALLED_PACKAGES*/;
-                            PackageInfo pi2 = PackageManagerApis.getPackageInfoNoThrow(
-                                    pi.packageName,
-                                    baseFlags
-                                            | PackageManager.GET_ACTIVITIES
-                                            | PackageManager.GET_RECEIVERS
-                                            | PackageManager.GET_SERVICES
-                                            | PackageManager.GET_PROVIDERS,
-                                    user);
-                            if (pi2 == null) {
-                                // Exceed binder data transfer limit
-                                pi2 = pi;
-                                PackageInfo tmp;
-
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(
-                                        pi.packageName, baseFlags | PackageManager.GET_ACTIVITIES, user);
-                                pi2.activities = (tmp != null) ? tmp.activities : null;
-
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(
-                                        pi.packageName, baseFlags | PackageManager.GET_RECEIVERS, user);
-                                pi2.receivers = (tmp != null) ? tmp.receivers : null;
-
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(
-                                        pi.packageName, baseFlags | PackageManager.GET_SERVICES, user);
-                                pi2.services = (tmp != null) ? tmp.services : null;
-
-                                tmp = PackageManagerApis.getPackageInfoNoThrow(
-                                        pi.packageName, baseFlags | PackageManager.GET_PROVIDERS, user);
-                                pi2.providers = (tmp != null) ? tmp.providers : null;
+                    if (onlyShizuku) {
+                        if (pi.requestedPermissions == null) continue;
+                        boolean requested = false;
+                        for (String p : pi.requestedPermissions) {
+                            if ("moe.shizuku.manager.permission.API_V23".equals(p)) {
+                                requested = true;
+                                break;
                             }
-                            return pi2.activities != null && pi2.activities.length > 0
-                                    || pi2.receivers != null && pi2.receivers.length > 0
-                                    || pi2.services != null && pi2.services.length > 0
-                                    || pi2.providers != null && pi2.providers.length > 0;
-                        } catch (Throwable e) {
-                            return true;
                         }
-                    });
-
-                    // Packages without components cannot run as themselves
-                    if (!hasComponents) {
-                        LOGGER.v("skip %d:%s: hasComponents=false", user, pi.packageName);
-                        continue;
+                        if (!requested) continue;
                     }
+
+                    int uid = pi.applicationInfo.uid;
+                    int appId = UserHandleCompat.getAppId(uid);
+                    if (uid == systemUiUid) continue;
+
+                    int flags = getFlagsForUidInternal(uid, SuiConfig.MASK_PERMISSION);
+                    if (flags == 0 && uid != 2000 && appId < 10000) continue;
+
+                    if (flags == 0) {
+                        String dataDir;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            dataDir = pi.applicationInfo.deviceProtectedDataDir;
+                        } else {
+                            dataDir = pi.applicationInfo.dataDir;
+                        }
+
+                        final String sourceDir = pi.applicationInfo.sourceDir;
+                        boolean hasApk = sourceDir != null
+                                && MapUtil.getOrPut(existenceCache, sourceDir, () -> new File(sourceDir).exists());
+                        boolean hasData = dataDir != null
+                                && MapUtil.getOrPut(existenceCache, dataDir, () -> new File(dataDir).exists());
+
+                        // Installed (or hidden): hasApk && hasData
+                        // Uninstalled but keep data: !hasApk && hasData
+                        // Installed in other users only: hasApk && !hasData
+                        if (!(hasApk && hasData)) {
+                            LOGGER.v(
+                                    "skip %d:%s: hasApk=%s, hasData=%s",
+                                    user, pi.packageName, Boolean.toString(hasApk), Boolean.toString(hasData));
+                            continue;
+                        }
+
+                        // Removed the cumbersome hasComponents check.
+                        // This check required fetching activity/services/providers/receiver for each application,
+                        // This resulted in excessive Binder requests, slow loading, and ultimately, a
+                        // DeadObjectException (server crash).
+                        // Now relies on FLAG_HAS_CODE and other basic checks.
+                    }
+
+                    pi.activities = null;
+                    pi.receivers = null;
+                    pi.services = null;
+                    pi.providers = null;
+
+                    AppInfo item = new AppInfo();
+                    item.packageInfo = pi;
+                    item.flags = flags;
+                    item.defaultFlags = defaultPermissionFlags;
+                    list.add(item);
+                } catch (Throwable e) {
+                    LOGGER.w(e, "Error processing package %d %s", user, pi.packageName);
                 }
-
-                pi.activities = null;
-                pi.receivers = null;
-                pi.services = null;
-                pi.providers = null;
-
-                AppInfo item = new AppInfo();
-                item.packageInfo = pi;
-                item.flags = flags;
-                item.defaultFlags = defaultPermissionFlags;
-                list.add(item);
             }
         }
         return new ParcelableListSlice<>(list);
