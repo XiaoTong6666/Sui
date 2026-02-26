@@ -21,6 +21,7 @@ package rikka.sui.settings;
 
 import static rikka.sui.settings.SettingsConstants.LOGGER;
 import static rikka.sui.shortcut.ShortcutConstants.SHORTCUT_EXTRA;
+import static rikka.sui.shortcut.ShortcutConstants.SHORTCUT_EXTRA_TOKEN;
 
 import android.app.Activity;
 import android.app.ActivityThread;
@@ -111,11 +112,25 @@ public class SettingsInstrumentation extends Instrumentation {
         if (extras != null) {
             extras.setClassLoader(cl);
             if (extras.getInt(SHORTCUT_EXTRA, -1) != -1) {
-                LOGGER.v("creating SuiActivity");
+                String suiToken = extras.getString(SHORTCUT_EXTRA_TOKEN);
+                String realToken = null;
+                android.os.StrictMode.ThreadPolicy oldPolicy = android.os.StrictMode.allowThreadDiskReads();
                 try {
-                    return (Activity) suiActivityConstructor.newInstance(application, resources);
-                } catch (InvocationTargetException e) {
-                    LOGGER.e(e, "Cannot create activity");
+                    android.content.SharedPreferences prefs =
+                            application.getSharedPreferences("sui_settings", Context.MODE_PRIVATE);
+                    realToken = prefs.getString("shortcut_token", null);
+                } finally {
+                    android.os.StrictMode.setThreadPolicy(oldPolicy);
+                }
+                if (realToken != null && realToken.equals(suiToken)) {
+                    LOGGER.v("creating SuiActivity");
+                    try {
+                        return (Activity) suiActivityConstructor.newInstance(application, resources);
+                    } catch (InvocationTargetException e) {
+                        LOGGER.e(e, "Cannot create activity");
+                    }
+                } else {
+                    LOGGER.w("Invalid or missing SUI token in shortcut intent");
                 }
             }
         }
@@ -350,11 +365,25 @@ public class SettingsInstrumentation extends Instrumentation {
             if (extras != null) {
                 extras.setClassLoader(clazz.getClassLoader());
                 if (extras.getInt(SHORTCUT_EXTRA, -1) != -1) {
-                    LOGGER.v("creating SuiActivity from 10 args newActivity");
+                    String suiToken = extras.getString(SHORTCUT_EXTRA_TOKEN);
+                    String realToken = null;
+                    android.os.StrictMode.ThreadPolicy oldPolicy = android.os.StrictMode.allowThreadDiskReads();
                     try {
-                        return (Activity) suiActivityConstructor.newInstance(application, resources);
-                    } catch (InvocationTargetException e) {
-                        LOGGER.e(e, "Cannot create activity from 10 args");
+                        android.content.SharedPreferences prefs =
+                                application.getSharedPreferences("sui_settings", Context.MODE_PRIVATE);
+                        realToken = prefs.getString("shortcut_token", null);
+                    } finally {
+                        android.os.StrictMode.setThreadPolicy(oldPolicy);
+                    }
+                    if (realToken != null && realToken.equals(suiToken)) {
+                        LOGGER.v("creating SuiActivity from 10 args newActivity");
+                        try {
+                            return (Activity) suiActivityConstructor.newInstance(application, resources);
+                        } catch (InvocationTargetException e) {
+                            LOGGER.e(e, "Cannot create activity from 10 args");
+                        }
+                    } else {
+                        LOGGER.w("Invalid or missing SUI token in shortcut intent (10 args)");
                     }
                 }
             }

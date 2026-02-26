@@ -108,11 +108,25 @@ public class ManagerProcess {
         Context context;
         try {
             context = ActivityThread.currentActivityThread().getApplication();
-            if (intent == null) {
-                intent = SuiShortcut.getIntent(context, true);
-                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+            LOGGER.i("Fetching Token from Settings and launching Sui UI directly from SystemUI...");
+
+            Context settingsContext =
+                    context.createPackageContext("com.android.settings", Context.CONTEXT_IGNORE_SECURITY);
+            android.content.SharedPreferences prefs =
+                    settingsContext.getSharedPreferences("sui_settings", Context.MODE_PRIVATE);
+            String token = prefs.getString("shortcut_token", null);
+
+            if (token == null) {
+                token = java.util.UUID.randomUUID().toString();
+                prefs.edit().putString("shortcut_token", token).apply();
+                LOGGER.v("Generated and saved secure token from SystemUI");
             }
+
+            Intent intent = SuiShortcut.getIntent(context, true, token);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(intent);
+            LOGGER.v("Sui UI explicitly launched via ManagerProcess");
         } catch (Throwable e) {
             LOGGER.w(e, "showManagement");
         }
