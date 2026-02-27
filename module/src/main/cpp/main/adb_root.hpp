@@ -48,10 +48,15 @@ struct attrs {
     gid_t gid{};
     mode_t mode{};
     char* context{nullptr};
+    bool is_malloced{false};
 
     ~attrs() {
         if (context) {
-            freecon(context);
+            if (is_malloced) {
+                free(context);
+            } else {
+                freecon(context);
+            }
         }
     }
 };
@@ -278,9 +283,14 @@ inline int setup_adb_root_apex(const char* root_path, const char* adbd_wrapper,
         }
 
         if (file_attr.context) {
-            freecon(file_attr.context);
+            if (file_attr.is_malloced) {
+                free(file_attr.context);
+            } else {
+                freecon(file_attr.context);
+            }
         }
         file_attr.context = strdup(data_adb_attr.context);
+        file_attr.is_malloced = true;
 
         // $MODDIR/bin/adbd_real -> /apex/com.android.adbd/bin/adbd_real
         if (setup_file(my_backup, adbd_real, &file_attr) != 0) {
@@ -417,9 +427,14 @@ inline int setup_adb_root_non_apex(const char* root_path, const char* adbd_wrapp
         return ERR_OTHER;
     }
     if (file_attr.context) {
-        freecon(file_attr.context);
+        if (file_attr.is_malloced) {
+            free(file_attr.context);
+        } else {
+            freecon(file_attr.context);
+        }
     }
     file_attr.context = strdup(data_adb_attr.context);
+    file_attr.is_malloced = true;
     if (setattrs(target, &file_attr) != 0) {
         unlink(target);
         return ERR_OTHER;
@@ -468,6 +483,19 @@ static int setup_adb_root(const char* root_path) {
         PLOGE("u:r:adbd:s0 %s process dyntransition not allowed", curr_con);
         return ERR_SELINUX;
     }
+
+    if (FILE* fp = fopen("/data/adb/sui/seclabel.tmp", "we")) {
+        fputs(curr_con, fp);
+        fchmod(fileno(fp), 0600);
+        fclose(fp);
+        rename("/data/adb/sui/seclabel.tmp", "/data/adb/sui/seclabel");
+    } else {
+        PLOGE("fopen /data/adb/sui/seclabel");
+        freecon(curr_con);
+        return ERR_OTHER;
+    }
+
+    freecon(curr_con);
 
     char adbd_wrapper[PATH_MAX]{0};
     strcpy(adbd_wrapper, root_path);

@@ -30,7 +30,14 @@ using namespace std::literals::string_view_literals;
 int main(int argc, char** argv) {
     const char* adbd_ld_preload;
     const char* adbd_real;
-    const char* root_seclabel_value = "ROOT_SECLABEL_ROOT_SECLABEL_ROOT_SECLABEL_ROOT_SECLABEL";
+
+    char root_seclabel_value[128] = "u:r:su:s0";
+    if (FILE* fp = fopen("/data/adb/sui/seclabel", "re")) {
+        if (fgets(root_seclabel_value, sizeof(root_seclabel_value), fp)) {
+            root_seclabel_value[strcspn(root_seclabel_value, "\r\n")] = '\0';
+        }
+        fclose(fp);
+    }
 
     auto apex = "/apex/"sv;
     std::string_view argv0{argv[0]};

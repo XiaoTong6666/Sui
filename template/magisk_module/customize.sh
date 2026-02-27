@@ -97,7 +97,6 @@ extract "$ZIPFILE" "lib/$ARCH_NAME/libmain.so" "$MODPATH/bin" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/librish.so" "$MODPATH" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/libadbd_wrapper.so" "$MODPATH/bin" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/libadbd_preload.so" "$MODPATH/lib" true
-extract "$ZIPFILE" "lib/$ARCH_NAME/libbin_patcher.so" "$MODPATH/bin" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/libsepolicy_checker.so" "$MODPATH/bin" true
 
 mv "$MODPATH/bin/libmain.so" "$MODPATH/bin/sui"
@@ -106,24 +105,10 @@ mv "$MODPATH/bin/libsepolicy_checker.so" "$MODPATH/bin/sepolicy_checker"
 
 set_perm "$MODPATH/bin/sepolicy_checker" 0 0 0755
 if [ "$API" -ge 24 ]; then
-ui_print "- Patching adbd_wrapper"
-
-chmod +x "$MODPATH/bin/libbin_patcher.so"
-"$MODPATH/bin/libbin_patcher.so" "$MODPATH/bin/adbd_wrapper" \
-  "ROOT_SECLABEL_ROOT_SECLABEL_ROOT_SECLABEL_ROOT_SECLABEL" \
-  "$(id -Z)" 2>&1 >/dev/null
-ev=$?
-if [ "$ev" -ne 0 ]; then
-  ui_print "*********************************************************"
-  ui_print "! Failed to patch adbd_wrapper, exit with code $ev"
-  ui_print "! Please check SELinux context of your root impl and try again"
-  abort "*********************************************************"
-fi
-  rm "$MODPATH/bin/libbin_patcher.so"
+  ui_print "- Setting up adbd_wrapper"
 else
-  ui_print "- Android API < 24, skip adbd_wrapper patch"
+  ui_print "- Android API < 24, skip adbd_wrapper setup"
 fi
-rm "$MODPATH/bin/libbin_patcher.so"
 
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 

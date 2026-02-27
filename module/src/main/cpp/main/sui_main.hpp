@@ -54,9 +54,9 @@ static int sui_main(int argc, char** argv) {
     wait_for_zygote();
 
     if (access("/data/adb/sui", F_OK) != 0) {
-        mkdir("/data/adb/sui", 0600);
+        mkdir("/data/adb/sui", 0700);
     }
-    chmod("/data/adb/sui", 0600);
+    chmod("/data/adb/sui", 0700);
     chown("/data/adb/sui", 0, 0);
 
     auto root_path = argv[1];
