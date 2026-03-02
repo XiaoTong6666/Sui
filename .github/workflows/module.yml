@@ -118,7 +118,7 @@ jobs:
         with:
           tag_name: nightly
           name: Nightly Build
-          prerelease: true
+          prerelease: false
           overwrite: true
           files: |
             out/sui-*-release.zip
