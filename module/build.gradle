@@ -81,7 +81,7 @@ dependencies {
     implementation 'dev.rikka.rikkax.parcelablelist:parcelablelist:2.0.1'
 
     implementation "androidx.annotation:annotation:1.9.1"
-    implementation 'androidx.core:core:1.17.0'
+    implementation 'androidx.core:core:1.18.0'
 
     implementation project(':aidl')
     implementation project(':shared')
