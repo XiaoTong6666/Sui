@@ -92,7 +92,7 @@ dependencies {
     implementation 'dev.rikka.rikkax.html:html-ktx:1.1.2'
 
     implementation "androidx.annotation:annotation:1.9.1"
-    implementation 'androidx.core:core-ktx:1.17.0'
+    implementation 'androidx.core:core-ktx:1.18.0'
     implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.fragment:fragment-ktx:1.8.9'
     implementation 'androidx.recyclerview:recyclerview:1.4.0'
