@@ -16,94 +16,93 @@
  *
  * Copyright (c) 2026 Sui Contributors
  */
-
-import java.nio.file.Files
-import java.nio.file.Paths
-
 plugins {
-    id('com.android.application')
-    id('dev.rikka.tools.refine')
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.refine)
 }
 
-apply from: file(rootProject.file('module.gradle'))
+apply from: "$rootDir/module.gradle"
 
 android {
-    namespace "rikka.sui"
+    namespace = "rikka.sui"
+
     defaultConfig {
-        minSdk 23
-        versionCode gitCommitCount
-        versionName moduleVersion.substring(1)
-        resConfigs 'en', 'zh', 'zh-rCN', 'zh-rTW'
+        minSdk = 23
+        versionCode = gitCommitCount
+        versionName = moduleVersion.substring(1)
+        resourceConfigurations.addAll(["en", "zh", "zh-rCN", "zh-rTW"])
         vectorDrawables.useSupportLibrary = true
     }
+
     buildFeatures {
-        viewBinding true
-        buildConfig true
+        viewBinding = true
+        buildConfig = true
     }
+
     buildTypes {
         debug {
-            multiDexEnabled false
+            multiDexEnabled = false
         }
         release {
-            minifyEnabled true
-            shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled = true
+            shrinkResources = true
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
-    packagingOptions {
-        exclude '/META-INF/*.version'
-        exclude '/META-INF/*.kotlin_module'
-        exclude '/kotlin/**'
-        exclude '**.bin'
-    }
-    lintOptions {
-        checkReleaseBuilds false
-    }
-    dependenciesInfo {
-        includeInApk false
-    }
-}
-tasks.withType(JavaCompile).configureEach {
-    options.compilerArgs.add("-Xlint:deprecation")
-    options.compilerArgs.add("-Xlint:all")
-}
 
+    packaging {
+        resources {
+            excludes.add("/META-INF/*.version")
+            excludes.add("/META-INF/*.kotlin_module")
+            excludes.add("/kotlin/**")
+            excludes.add("**.bin")
+        }
+    }
+
+    lint {
+        checkReleaseBuilds = false
+    }
+
+    dependenciesInfo {
+        includeInApk = false
+    }
+}
 
 dependencies {
-    implementation 'io.github.scwang90:refresh-layout-kernel:2.1.1'
-    implementation 'io.github.scwang90:refresh-header-material:2.1.1'
+    implementation libs.smart.refresh.kernel
+    implementation libs.smart.refresh.header.material
+    implementation libs.smart.refresh.header.classics
+    compileOnly libs.support.annotations
 
     implementation libs.refine.runtime
 
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2"
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2"
+    implementation libs.kotlinx.coroutines.core
+    implementation libs.kotlinx.coroutines.android
 
-    implementation project(':aidl')
-    implementation project(':api')
+    implementation project(":aidl")
+    implementation project(":api")
     compileOnly libs.hidden.stub
 
-    implementation 'dev.rikka.rikkax.parcelablelist:parcelablelist:2.0.1'
-    implementation 'dev.rikka.rikkax.insets:insets:1.3.0'
-    implementation 'dev.rikka.rikkax.lifecycle:lifecycle-resource-livedata:1.0.1'
-    implementation 'dev.rikka.rikkax.lifecycle:lifecycle-viewmodel-lazy:2.0.0'
-    implementation 'dev.rikka.rikkax.recyclerview:recyclerview-adapter:1.3.0'
-    implementation 'dev.rikka.rikkax.recyclerview:recyclerview-ktx:1.3.2'
-    implementation 'dev.rikka.rikkax.widget:borderview:1.1.0'
-    implementation 'dev.rikka.rikkax.html:html-ktx:1.1.2'
+    implementation libs.parcelablelist
+    implementation libs.rikkax.insets
+    implementation libs.rikkax.lifecycle.resource.livedata
+    implementation libs.rikkax.lifecycle.viewmodel.lazy
+    implementation libs.rikkax.recyclerview.adapter
+    implementation libs.rikkax.recyclerview.ktx
+    implementation libs.rikkax.widget.borderview
+    implementation libs.rikkax.html.ktx
 
-    implementation "androidx.annotation:annotation:1.9.1"
-    implementation 'androidx.core:core-ktx:1.17.0'
-    implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.fragment:fragment-ktx:1.8.9'
-    implementation 'androidx.recyclerview:recyclerview:1.4.0'
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.10.0'
-    implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.10.0'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.2.0'
+    implementation libs.androidx.annotation
+    implementation libs.androidx.core.ktx
+    implementation libs.androidx.appcompat
+    implementation libs.androidx.fragment.ktx
+    implementation libs.androidx.recyclerview
+    implementation libs.androidx.lifecycle.viewmodel.ktx
+    implementation libs.androidx.lifecycle.livedata.ktx
+    implementation libs.androidx.swiperefreshlayout
 
-    implementation 'com.google.android.material:material:1.13.0'
-    implementation "androidx.dynamicanimation:dynamicanimation:1.1.0"
-    implementation 'me.zhanghai.android.fastscroll:library:1.3.0'
-    implementation 'me.zhanghai.android.appiconloader:appiconloader:1.5.0'
-    implementation "io.github.scwang90:refresh-layout-kernel:2.1.1"
-    implementation "io.github.scwang90:refresh-header-classics:2.1.1"
+    implementation libs.google.material
+    implementation libs.androidx.dynamicanimation
+    implementation libs.fastscroll
+    implementation libs.appiconloader
 }

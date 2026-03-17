@@ -18,14 +18,18 @@
  */
 
 plugins {
-    id("idea")
-    id "com.diffplug.spotless" version "8.3.0"
+    id "idea"
+    alias libs.plugins.spotless
+    alias libs.plugins.android.application apply false
+    alias libs.plugins.android.library apply false
+    alias libs.plugins.kotlin.android apply false
+    alias libs.plugins.refine apply false
 }
 def NDK_VERSION = "29.0.14206865"
 idea.module {
-    excludeDirs += file('out')
-    resourceDirs += file('template')
-    resourceDirs += file('scripts')
+    excludeDirs += file("out")
+    resourceDirs += file("template")
+    resourceDirs += file("scripts")
 }
 
 subprojects {
@@ -43,10 +47,15 @@ subprojects {
                 targetCompatibility = JavaVersion.VERSION_21
             }
             buildFeatures {
-                aidl true
+                aidl = true
             }
         }
     }
+
+    tasks.withType(JavaCompile).configureEach {
+        options.compilerArgs << "-Xlint:deprecation"
+    }
+
     configurations.configureEach {
         resolutionStrategy {
             force "org.bitbucket.b_c:jose4j:0.9.6" // Fix CVE-2024-29371
@@ -57,11 +66,11 @@ subprojects {
 }
 
 spotless {
-    lineEndings 'UNIX'
+    lineEndings = "UNIX"
 
     java {
-        target '**/src/*/java/**/*.java'
-        targetExclude '**/api/**', '**/build/**'
+        target "**/src/*/java/**/*.java"
+        targetExclude "**/api/**", "**/build/**"
 
         palantirJavaFormat()
         importOrder()
@@ -70,8 +79,8 @@ spotless {
     }
 
     kotlin {
-        target '**/src/*/kotlin/**/*.kt', '**/src/*/java/**/*.kt'
-        targetExclude '**/api/**', '**/build/**'
+        target "**/src/*/kotlin/**/*.kt", "**/src/*/java/**/*.kt"
+        targetExclude "**/api/**", "**/build/**"
         ktlint().editorConfigOverride([
                 "standard:backing-property-naming": "disabled",
                 "standard:no-wildcard-imports": "disabled",
@@ -80,16 +89,16 @@ spotless {
                 "standard:comment-wrapping": "disabled"
         ])
     }
-    format 'cpp', {
-        target '**/src/main/cpp/**/*.c', '**/src/main/cpp/**/*.cpp', '**/src/main/cpp/**/*.h', '**/src/main/cpp/**/*.hpp'
-        targetExclude '**/api/**', '**/build/**'
+    format "cpp", {
+        target "**/src/main/cpp/**/*.c", "**/src/main/cpp/**/*.cpp", "**/src/main/cpp/**/*.h", "**/src/main/cpp/**/*.hpp"
+        targetExclude "**/api/**", "**/build/**"
 
         def sdkDir = ""
         Properties properties = new Properties()
-        File localProps = project.rootProject.file('local.properties')
+        File localProps = file("local.properties")
         if (localProps.exists()) {
             localProps.withInputStream { properties.load(it) }
-            sdkDir = properties.getProperty('sdk.dir')
+            sdkDir = properties.getProperty("sdk.dir")
         }
         if (!sdkDir) {
             sdkDir = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
@@ -111,18 +120,16 @@ spotless {
         if (osName.contains("windows")) clangPath += ".exe"
         File clangFile = new File(clangPath)
         if (clangFile.exists()) {
-            clangFormat('21.0.0').style('file').pathToExe(clangPath)
+            clangFormat("21.0.0").style("file").pathToExe(clangPath)
         } else {
             println "Spotless Warning: Clang-format not found at ${clangPath}"
-            clangFormat().style('file')
+            clangFormat().style("file")
         }
     }
 }
 
-tasks.register('format') {
-    dependsOn 'spotlessApply'
-    group = 'formatting'
-    description = 'Formats the code using Spotless'
+tasks.register("format") {
+    dependsOn "spotlessApply"
+    group = "formatting"
+    description = "Formats the code using Spotless"
 }
-
-

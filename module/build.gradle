@@ -22,66 +22,65 @@ import org.apache.tools.ant.filters.FixCrLfFilter
 import java.security.MessageDigest
 
 plugins {
-    id('com.android.application')
-    id('dev.rikka.tools.refine')
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.refine)
 }
 
-apply from: file(rootProject.file('module.gradle'))
+apply from: "$rootDir/module.gradle"
 
 android {
-    namespace "rikka.sui"
+    namespace = "rikka.sui"
     defaultConfig {
-        versionCode gitCommitCount
-        versionName moduleVersion.substring(1)
+        versionCode = gitCommitCount
+        versionName = moduleVersion.substring(1)
         externalNativeBuild {
             cmake {
-                arguments "-DZYGISK_MODULE_ID:STRING=\"$moduleId\"",
-                        "-DANDROID_STL=none"
+                arguments += ["-DZYGISK_MODULE_ID:STRING=\"$moduleId\"", "-DANDROID_STL=none"]
             }
         }
     }
     buildFeatures {
-        viewBinding true
-        prefab true
+        viewBinding = true
+        prefab = true
     }
     externalNativeBuild {
         cmake {
-            path "src/main/cpp/CMakeLists.txt"
-            version "3.31.0+"
+            path = "src/main/cpp/CMakeLists.txt"
+            version = "3.31.0+"
         }
     }
     buildTypes {
         debug {
-            defaultConfig.minSdk 23
-            multiDexEnabled false
+            defaultConfig.minSdk = 23
+            multiDexEnabled = false
         }
         release {
-            minifyEnabled true
-            shrinkResources false
-            multiDexEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            minifyEnabled = true
+            shrinkResources = false
+            multiDexEnabled = false
+            proguardFiles += [getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro']
             ndk {
-                debugSymbolLevel 'SYMBOL_TABLE'
+                debugSymbolLevel = 'SYMBOL_TABLE'
             }
         }
     }
     lintOptions {
-        checkReleaseBuilds false
+        checkReleaseBuilds = false
     }
     dependenciesInfo {
-        includeInApk false
+        includeInApk = false
     }
 }
 
 dependencies {
     implementation libs.refine.runtime
 
-    implementation 'org.lsposed.libcxx:libcxx:29.0.14206865'
-    implementation 'dev.rikka.ndk.thirdparty:nativehelper:1.0.1'
-    implementation 'dev.rikka.rikkax.parcelablelist:parcelablelist:2.0.1'
+    implementation libs.libcxx
+    implementation libs.nativehelper
+    implementation libs.parcelablelist
 
-    implementation "androidx.annotation:annotation:1.9.1"
-    implementation 'androidx.core:core:1.17.0'
+    implementation libs.androidx.annotation
+    implementation libs.androidx.core
 
     implementation project(':aidl')
     implementation project(':shared')
@@ -132,15 +131,15 @@ androidComponents {
                         eol: FixCrLfFilter.CrLf.newInstance("lf"))
             }
             from((buildTypeLowered == "release") ?
-                    "$buildDir/intermediates/dex/${variantLowered}/minify${variantCapped}WithR8" :
-                    "$buildDir/intermediates/dex/${variantLowered}/mergeDex$variantCapped") {
+                    "${layout.buildDirectory.get()}/intermediates/dex/${variantLowered}/minify${variantCapped}WithR8" :
+                    "${layout.buildDirectory.get()}/intermediates/dex/${variantLowered}/mergeDex$variantCapped") {
                 include 'classes.dex'
                 rename { 'sui.dex' }
             }
-            from("$buildDir/intermediates/stripped_native_libs/${variantLowered}/strip${variantCapped}DebugSymbols/out/lib") {
+            from("${layout.buildDirectory.get()}/intermediates/stripped_native_libs/${variantLowered}/strip${variantCapped}DebugSymbols/out/lib") {
                 into 'lib'
             }
-            from("${rootProject.findProject('ui').buildDir}/outputs/apk/$buildTypeLowered") {
+            from("${rootProject.findProject('ui').layout.buildDirectory.get()}/outputs/apk/$buildTypeLowered") {
                 exclude 'output-metadata.json'
                 rename { 'sui.apk' }
             }

@@ -1,22 +1,25 @@
 pluginManagement {
     repositories {
-        maven { url "https://jitpack.io" }
+        maven { url = "https://jitpack.io" }
         gradlePluginPortal()
         google()
         mavenCentral()
         mavenLocal()
-        maven { url "https://maven.aliyun.com/repository/gradle-plugin" }
-        maven { url "https://maven.aliyun.com/repository/google" }
-        maven { url "https://maven.aliyun.com/repository/public" }
+        maven { url = "https://maven.aliyun.com/repository/gradle-plugin" }
+        maven { url = "https://maven.aliyun.com/repository/google" }
+        maven { url = "https://maven.aliyun.com/repository/public" }
     }
     plugins {
-        id("com.android.application") version "9.1.0"
-        id("com.android.library") version "9.1.0"
-        id("org.jetbrains.kotlin.android") version "2.3.10"
-        id("dev.rikka.tools.autoresconfig") version "1.2.2"
-        id("dev.rikka.tools.materialthemebuilder") version "1.5.1"
-        id("dev.rikka.tools.refine") version "4.4.0"
+        id("com.android.application")
+        id("com.android.library")
+        id("org.jetbrains.kotlin.android")
+        id("dev.rikka.tools.autoresconfig")
+        id("dev.rikka.tools.materialthemebuilder")
+        id("dev.rikka.tools.refine")
     }
+}
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -24,22 +27,9 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         mavenLocal()
-        maven { url "https://maven.aliyun.com/repository/gradle-plugin" }
-        maven { url "https://maven.aliyun.com/repository/google" }
-        maven { url "https://maven.aliyun.com/repository/public" }
-    }
-    versionCatalogs {
-        libs {
-            version('hidden-api', '4.4.0')
-            library('hidden-compat', 'dev.rikka.hidden', 'compat').versionRef('hidden-api')
-            library('hidden-stub', 'dev.rikka.hidden', 'stub').versionRef('hidden-api')
-
-            version('refine', '4.4.0')
-            library('refine-runtime', 'dev.rikka.tools.refine', 'runtime').versionRef('refine')
-            library('refine-annotation', 'dev.rikka.tools.refine', 'annotation').versionRef('refine')
-            library('refine-annotation-processor', 'dev.rikka.tools.refine', 'annotation-processor').versionRef('refine')
-            plugin('refine', 'dev.rikka.tools.refine').versionRef('refine')
-        }
+        maven { url = "https://maven.aliyun.com/repository/gradle-plugin" }
+        maven { url = "https://maven.aliyun.com/repository/google" }
+        maven { url = "https://maven.aliyun.com/repository/public" }
     }
 }
 
@@ -77,7 +67,7 @@ if (propFile.canRead()) {
     props.load(new FileInputStream(propFile))
 
     if (props != null) {
-        if (props["api.useLocal"].equals("true")) {
+        if (props["api.useLocal"] == "true") {
             root = props["api.dir"]
         }
     }

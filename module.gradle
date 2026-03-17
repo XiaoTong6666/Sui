@@ -20,8 +20,8 @@
 ext {
     apply from: "$rootDir/api/manifest.gradle"
 
-    gitCommitId = 'git rev-parse --short HEAD'.execute([], project.rootDir).text.trim()
-    gitCommitCount = Integer.parseInt('git rev-list --count HEAD'.execute([], project.rootDir).text.trim())
+    gitCommitId = 'git rev-parse --short HEAD'.execute([], rootDir).text.trim()
+    gitCommitCount = Integer.parseInt('git rev-list --count HEAD'.execute([], rootDir).text.trim())
 
     moduleLibraryName = "sui"
 
