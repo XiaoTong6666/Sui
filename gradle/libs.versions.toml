@@ -1,6 +1,6 @@
 [versions]
 agp = "9.2.0"
-kotlin = "2.3.20"
+kotlin = "2.3.21"
 autoresconfig = "1.2.2"
 materialthemebuilder = "1.5.1"
 hidden-api = "4.4.0"
