@@ -1,30 +1,25 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `463`
-- **Commit:** `2c4c0c1`
+- **VersionCode:** `464`
+- **Commit:** `f889d08`
 
 ## Message
 
 ```text
-build(deps): bump agp from 9.1.1 to 9.2.0 (#50)
+build(deps): bump org.jetbrains.kotlin.android from 2.3.20 to 2.3.21 (#51)
 
-Bumps `agp` from 9.1.1 to 9.2.0.
-
-Updates `com.android.application` from 9.1.1 to 9.2.0
-
-Updates `com.android.library` from 9.1.1 to 9.2.0
+Bumps [org.jetbrains.kotlin.android](https://github.com/JetBrains/kotlin) from 2.3.20 to 2.3.21.
+- [Release notes](https://github.com/JetBrains/kotlin/releases)
+- [Changelog](https://github.com/JetBrains/kotlin/blob/master/ChangeLog.md)
+- [Commits](https://github.com/JetBrains/kotlin/compare/v2.3.20...v2.3.21)
 
 ---
 updated-dependencies:
-- dependency-name: com.android.application
-  dependency-version: 9.2.0
+- dependency-name: org.jetbrains.kotlin.android
+  dependency-version: 2.3.21
   dependency-type: direct:production
-  update-type: version-update:semver-minor
-- dependency-name: com.android.library
-  dependency-version: 9.2.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
+  update-type: version-update:semver-patch
 ...
 
 Signed-off-by: dependabot[bot] <support@github.com>
