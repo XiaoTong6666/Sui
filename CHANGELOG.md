@@ -1,27 +1,25 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `464`
-- **Commit:** `f889d08`
+- **VersionCode:** `465`
+- **Commit:** `3b42ca0`
 
 ## Message
 
 ```text
-build(deps): bump org.jetbrains.kotlin.android from 2.3.20 to 2.3.21 (#51)
+build(deps): bump gradle-wrapper from 9.4.1 to 9.5.0
 
-Bumps [org.jetbrains.kotlin.android](https://github.com/JetBrains/kotlin) from 2.3.20 to 2.3.21.
-- [Release notes](https://github.com/JetBrains/kotlin/releases)
-- [Changelog](https://github.com/JetBrains/kotlin/blob/master/ChangeLog.md)
-- [Commits](https://github.com/JetBrains/kotlin/compare/v2.3.20...v2.3.21)
+Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.4.1 to 9.5.0.
+- [Release notes](https://github.com/gradle/gradle/releases)
+- [Commits](https://github.com/gradle/gradle/compare/v9.4.1...v9.5.0)
 
 ---
 updated-dependencies:
-- dependency-name: org.jetbrains.kotlin.android
-  dependency-version: 2.3.21
+- dependency-name: gradle-wrapper
+  dependency-version: 9.5.0
   dependency-type: direct:production
-  update-type: version-update:semver-patch
+  update-type: version-update:semver-minor
 ...
 
 Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 ```
