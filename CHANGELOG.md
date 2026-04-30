@@ -1,8 +1,8 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `468`
-- **Commit:** `d6d4cbe`
+- **VersionCode:** `469`
+- **Commit:** [`8edd3a8`](https://github.com/XiaoTong6666/Sui/commit/8edd3a805651caec3f2e2cd62e55b96a65164174)
 
 ## Message
 
