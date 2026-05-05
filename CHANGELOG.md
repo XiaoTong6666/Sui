@@ -2,7 +2,9 @@
 
 - **Version:** `v13.5.4.3`
 - **VersionCode:** `471`
-- **Commit:** [`822be76`](https://github.com/XiaoTong6666/Sui/commit/822be7670df56ef45869bea38309f3399911bc9f)
+- **Commit:** [`21a732f`](https://github.com/XiaoTong6666/Sui/commit/21a732fd3a95c2124cece5f5765bdd4eda72497e)
+- **Build time:** `4m 42s`
+- **SHA256:** `ea100280b0b867732d3a754b3602793df77fae91dd5177cc2ac4a64999a87b29`
 
 ## Message
 
