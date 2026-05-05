@@ -1,20 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `472`
-- **Commit:** [`889b033`](https://github.com/XiaoTong6666/Sui/commit/889b033819e76afd1ed87376ed4e453fd34173d4)
-- **Build time:** `1m 13s`
-- **SHA256:** `71b48f53438630bf705fb3f56059e80639f4a23ef30579a25d11d6411c2349bb`
+- **VersionCode:** `473`
+- **Commit:** [`4b640d1`](https://github.com/XiaoTong6666/Sui/commit/4b640d18085fcac8b85e1e65fee9a8d824936b6a)
+- **Build time:** `2m 59s`
+- **SHA256:** `1648f1516d709788e3f5ac5e2c8dab175847dfb45e657e0dffcc6fa3427a1ccc`
 
 ## Message
 
 ```text
-ci(workflows): 统一发布流程
-
-- 合并 nightly 与 tag release 为统一发布 job
-- 使用发布参数区分 nightly 与正式 release
-- 支持 tag release 同步 KSU 仓库
-- 支持 tag release 更新 pages 元数据
-- 复用发布说明生成逻辑
+docs: 更新 README 并补充权限与开发说明
 
 ```
