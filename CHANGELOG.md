@@ -2,9 +2,9 @@
 
 - **Version:** `v13.5.4.3`
 - **VersionCode:** `471`
-- **Commit:** [`35f0abf`](https://github.com/XiaoTong6666/Sui/commit/35f0abfce661ed4daa2ee28ce78e2a1acff88db6)
-- **Build time:** `1m 21s`
-- **SHA256:** `b43464917db467ba4b0a9d047a2b7d5b65e27ec07d9c30b7b01aa429bfec6665`
+- **Commit:** [`45257aa`](https://github.com/XiaoTong6666/Sui/commit/45257aa7d07075912b43f9a98bea07f9cf226a92)
+- **Build time:** `1m 20s`
+- **SHA256:** `a0cc270a84b17b6be202fdf99a498eed92f6ffbb3e61c181b5631b4ddcd50aa2`
 
 ## Message
 
@@ -19,6 +19,6 @@ ci(workflows): 模块化构建与发布工作流
 - 复用 module-zips 与 build-metadata，减少发布任务重复逻辑
 - 优化 Nightly、Tag Release、KernelSU 和 pages 发布说明
 - 添加并发控制，避免同一 ref 重复运行
-- 收紧 artifact 缺失检查和 release 文件匹配校验1
+- 收紧 artifact 缺失检查和 release 文件匹配校验
 
 ```
