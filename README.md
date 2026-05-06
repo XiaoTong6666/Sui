@@ -1,14 +1,34 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `473`
-- **Commit:** [`6f8aa2f`](https://github.com/XiaoTong6666/Sui/commit/6f8aa2fc3b6a08504f10f7eb950fd2db4a4c308e)
-- **Build time:** `1m 20s`
-- **SHA256:** `c1650e93c2cb1524cdd64fc91d953215672ae6ff60e6b5586b4f9d9afb43d789`
+- **VersionCode:** `474`
+- **Commit:** [`9ecaf2e`](https://github.com/XiaoTong6666/Sui/commit/9ecaf2e2860f732af77a4dca5f3b00186f6bd6e6)
+- **Build time:** `4m 02s`
+- **SHA256:** `59b3a0cdd240be8c54077a36846c36055a965a1c4aadf6867f050ec550cbefe9`
 
 ## Message
 
 ```text
-docs: 更新 README 并补充权限与开发说明
+build(deps): bump agp from 9.2.0 to 9.2.1 (#55)
 
+Bumps `agp` from 9.2.0 to 9.2.1.
+
+Updates `com.android.application` from 9.2.0 to 9.2.1
+
+Updates `com.android.library` from 9.2.0 to 9.2.1
+
+---
+updated-dependencies:
+- dependency-name: com.android.application
+  dependency-version: 9.2.1
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+- dependency-name: com.android.library
+  dependency-version: 9.2.1
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 ```
