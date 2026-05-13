@@ -3,7 +3,7 @@
 - **Version:** `v13.5.4.3`
 - **VersionCode:** `476`
 - **Commit:** [`5b6e88f`](https://github.com/XiaoTong6666/Sui/commit/5b6e88fc85f280a3769907929288c01166667a12)
-- **Build time:** `1m 19s`
+- **Build time:** `1m 17s`
 - **SHA256:** `9a0b2bf7e02e0f391ae677a7dfeee833e0774304358ed1f9ecf12a870a1fb4eb`
 
 ## Message
