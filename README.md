@@ -1,38 +1,26 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `475`
-- **Commit:** [`510699d`](https://github.com/XiaoTong6666/Sui/commit/510699de516d344d0081e86e59f8f02e59657cd0)
-- **Build time:** `3m 28s`
-- **SHA256:** `eb657228d1d9e80603af9305b962fc42797a964298fc8af915215d15b91745d8`
+- **VersionCode:** `476`
+- **Commit:** [`7046e46`](https://github.com/XiaoTong6666/Sui/commit/7046e466ad4b32a329486ff3ae6f93df70b1d12b)
+- **Build time:** `4m 08s`
+- **SHA256:** `a78b0982473043d4f236c50372bfd8f470cb7a31562db23d0c1e1738e91c3bd0`
 
 ## Message
 
 ```text
-build(deps): bump coroutines from 1.10.2 to 1.11.0 (#56)
+build(deps): bump gradle-wrapper from 9.5.0 to 9.5.1 (#57)
 
-Bumps `coroutines` from 1.10.2 to 1.11.0.
-
-Updates `org.jetbrains.kotlinx:kotlinx-coroutines-core` from 1.10.2 to 1.11.0
-- [Release notes](https://github.com/Kotlin/kotlinx.coroutines/releases)
-- [Changelog](https://github.com/Kotlin/kotlinx.coroutines/blob/master/CHANGES.md)
-- [Commits](https://github.com/Kotlin/kotlinx.coroutines/compare/1.10.2...1.11.0)
-
-Updates `org.jetbrains.kotlinx:kotlinx-coroutines-android` from 1.10.2 to 1.11.0
-- [Release notes](https://github.com/Kotlin/kotlinx.coroutines/releases)
-- [Changelog](https://github.com/Kotlin/kotlinx.coroutines/blob/master/CHANGES.md)
-- [Commits](https://github.com/Kotlin/kotlinx.coroutines/compare/1.10.2...1.11.0)
+Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.5.0 to 9.5.1.
+- [Release notes](https://github.com/gradle/gradle/releases)
+- [Commits](https://github.com/gradle/gradle/compare/v9.5.0...v9.5.1)
 
 ---
 updated-dependencies:
-- dependency-name: org.jetbrains.kotlinx:kotlinx-coroutines-core
-  dependency-version: 1.11.0
+- dependency-name: gradle-wrapper
+  dependency-version: 9.5.1
   dependency-type: direct:production
-  update-type: version-update:semver-minor
-- dependency-name: org.jetbrains.kotlinx:kotlinx-coroutines-android
-  dependency-version: 1.11.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
+  update-type: version-update:semver-patch
 ...
 
 Signed-off-by: dependabot[bot] <support@github.com>
