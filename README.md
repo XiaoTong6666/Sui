@@ -1,29 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `476`
-- **Commit:** [`5b6e88f`](https://github.com/XiaoTong6666/Sui/commit/5b6e88fc85f280a3769907929288c01166667a12)
-- **Build time:** `1m 17s`
-- **SHA256:** `9a0b2bf7e02e0f391ae677a7dfeee833e0774304358ed1f9ecf12a870a1fb4eb`
+- **VersionCode:** `477`
+- **Commit:** [`ac9f375`](https://github.com/XiaoTong6666/Sui/commit/ac9f3753e91a5d17edc1771e08b549da654d0fdf)
+- **Build time:** `2m 49s`
+- **SHA256:** `5dc2e6ce0c0a5e58fbe2bc3d938993e418e0761c895ed1d5bdabdcc49869ffb1`
 
 ## Message
 
 ```text
-build(deps): bump gradle-wrapper from 9.5.0 to 9.5.1 (#57)
-
-Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.5.0 to 9.5.1.
-- [Release notes](https://github.com/gradle/gradle/releases)
-- [Commits](https://github.com/gradle/gradle/compare/v9.5.0...v9.5.1)
-
----
-updated-dependencies:
-- dependency-name: gradle-wrapper
-  dependency-version: 9.5.1
-  dependency-type: direct:production
-  update-type: version-update:semver-patch
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+ci(workflows): 先删除模块仓库同版本号的 release 和 tag 再重建
 
 ```
