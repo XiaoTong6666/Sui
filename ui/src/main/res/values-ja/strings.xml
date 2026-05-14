@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ This file is part of Sui.
+  ~
+  ~ Sui is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ Sui is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with Sui.  If not, see <https://www.gnu.org/licenses/>.
+  ~
+  ~ Copyright (c) 2026 Sui Contributors
+  -->
+<resources>
+  <string name="permission_warning_template"><![CDATA[%2$s に <b>%1$s</b> を許可しますか？]]></string>
+  <string name="permission_description">デバイスへの完全なアクセス権</string>
+  <string name="grant_dialog_button_allow_always">常に許可 (root)</string>
+  <string name="grant_dialog_button_allow_always_shell">常に許可 (シェル)</string>
+  <string name="grant_dialog_button_allow_one_time">今回のみ許可 (root)</string>
+  <string name="grant_dialog_button_deny">拒否</string>
+  <string name="grant_dialog_button_deny_and_dont_ask_again">拒否して今後は確認しない</string>
+  <string name="brackets_format">%1$s (%2$s)</string>
+  <string name="management_title">スーパーユーザーの管理</string>
+  <string name="close">閉じる</string>
+  <string name="permission_allowed">許可</string>
+  <string name="permission_allowed_shell">許可 (シェル)</string>
+  <string name="permission_denied">拒否</string>
+  <string name="permission_hidden">非表示</string>
+  <string name="permission_ask">確認する</string>
+  <string name="permission_default">デフォルト</string>
+  <string name="notification_channel_group_name">管理を表示</string>
+  <string name="notification_show_management_title">「開発者向けオプション」を開きました</string>
+  <string name="notification_show_management_text">タップでスーパーユーザーの管理を表示</string>
+  <string name="shortcut_is_out_dated">このショートカットは古くなっています。このショートカットを削除して、再度追加してください。</string>
+  <string name="action_search">検索</string>
+  <string name="action_add_shortcut">ホーム画面にショートカットを追加</string>
+  <string name="action_about">アプリについて</string>
+  <string name="about_author">作者: %1$s</string>
+  <string name="about_button_ok">OK</string>
+  <string name="action_batch_unconfigured">デフォルト値を変更</string>
+  <string name="action_filter_shizuku_apps">Shizuku アプリのみ表示</string>
+  <string name="action_monet">Monet ダナミックカラー</string>
+  <string name="about_version">v%1$s</string>
+  <string name="about_license_part1">このプロジェクトは GPLv3 に基づいています</string>
+  <string name="about_license_part2">GitHub</string>
+  <string name="about_license_part3">オープンソース\nCopyright (c) 2021-2026 Sui Contributors</string>
+  <string name="about_contributors">貢献者: %1$s</string>
+  <string name="toast_request_shortcut">作成しようとしています...</string>
+  <string name="toast_request_shortcut_failed">作成に失敗しました: %1$s</string>
+</resources>
