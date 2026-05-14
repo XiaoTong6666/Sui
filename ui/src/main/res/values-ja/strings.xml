@@ -18,7 +18,7 @@
   ~ Copyright (c) 2026 Sui Contributors
   -->
 <resources>
-  <string name="permission_warning_template"><![CDATA[%2$s に <b>%1$s</b> を許可しますか？]]></string>
+  <string name="permission_warning_template"><![CDATA[<b>%1$s</b> に「%2$s」を許可しますか？]]></string>
   <string name="permission_description">デバイスへの完全なアクセス権</string>
   <string name="grant_dialog_button_allow_always">常に許可 (root)</string>
   <string name="grant_dialog_button_allow_always_shell">常に許可 (シェル)</string>
