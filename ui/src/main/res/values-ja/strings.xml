@@ -40,7 +40,7 @@
   <string name="shortcut_is_out_dated">このショートカットは古くなっています。このショートカットを削除して、再度追加してください。</string>
   <string name="action_search">検索</string>
   <string name="action_add_shortcut">ホーム画面にショートカットを追加</string>
-  <string name="action_about">アプリについて</string>
+  <string name="action_about">情報</string>
   <string name="about_author">作者: %1$s</string>
   <string name="about_button_ok">OK</string>
   <string name="action_batch_unconfigured">デフォルト値を変更</string>
