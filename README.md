@@ -1,26 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `482`
-- **Commit:** [`c2d21cb`](https://github.com/XiaoTong6666/Sui/commit/c2d21cbaf267eb93170b7a7aa75d78077f9d1d71)
-- **Build time:** `3m 53s`
-- **SHA256:** `4c14c3b1f44e9e5d8c1fd8e5d4ae3859a50ac3db4445cb654a00f714f5860ab6`
+- **VersionCode:** `483`
+- **Commit:** [`9701510`](https://github.com/XiaoTong6666/Sui/commit/970151012844c0c420f3e57561e7cc48be963fea)
+- **Build time:** `2m 56s`
+- **SHA256:** `34033bdc696c5bdeb0a0554a0f0f06d8870c924ac90dfa77cf7ba18c06061d1c`
 
 ## Message
 
 ```text
-build(deps): bump com.diffplug.spotless from 8.5.0 to 8.5.1 (#63)
+docs: 添加可选的 adb root 支持相关说明
 
-Bumps com.diffplug.spotless from 8.5.0 to 8.5.1.
-
----
-updated-dependencies:
-- dependency-name: com.diffplug.spotless
-  dependency-version: 8.5.1
-  dependency-type: direct:production
-  update-type: version-update:semver-patch
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 ```
