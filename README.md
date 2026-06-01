@@ -1,14 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `490`
-- **Commit:** [`79a7a1d`](https://github.com/XiaoTong6666/Sui/commit/79a7a1de5028da137ba4bc6497a0b934120e69c6)
-- **Build time:** `1m 24s`
-- **SHA256:** `51a99057ca0b66c90f3d4414c18ffb13d8dcb8a9901a3aad738197dc57760718`
+- **VersionCode:** `491`
+- **Commit:** [`f07da10`](https://github.com/XiaoTong6666/Sui/commit/f07da10364b1cd3ee26a0c5e223c23b7ca3a5317)
+- **Build time:** `2m 57s`
+- **SHA256:** `36e002f391801860f8b15860e50fbdfc6076d452c9882db2e9980c97e6b02882`
 
 ## Message
 
 ```text
-build: 采用版本目录统一依赖管理并优化构建配置
+fix(build): 修复 ktlint rule 禁用格式以适配 ktlint 1.x
 
 ```
