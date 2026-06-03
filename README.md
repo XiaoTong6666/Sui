@@ -1,20 +1,29 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `492`
-- **Commit:** [`11af908`](https://github.com/XiaoTong6666/Sui/commit/11af908f644018a7ce6c00baf65ce814425af94c)
-- **Build time:** `3m 13s`
-- **SHA256:** `3e79057035436ee82678e3586e0c33822fe558b14baf18247397f40bc7187384`
+- **VersionCode:** `493`
+- **Commit:** [`7804f7b`](https://github.com/XiaoTong6666/Sui/commit/7804f7be47fc8f3b98b511c7feb9a435196d31e7)
+- **Build time:** `4m 06s`
+- **SHA256:** `b484a4f2056e6e6e1235a06ad12f581ba435cbfc7b33855637b3806c4512a021`
 
 ## Message
 
 ```text
-fix: 兼容 Android TV settings 包名回退 #65
+build(deps): bump org.jetbrains.kotlin.android from 2.3.21 to 2.4.0 (#67)
 
-- 新增 SettingsPackages，统一维护 TV settings 与普通 settings 的候选包名
-- 安装阶段优先解析实际存在的 settings 包，并将其应用信息写回原有 canonical 文件名
-- SuiService 改为支持多个 settings 包名候选，避免仅识别 com.android.settings
-- ManagerProcess 与 SuiShortcut 改为按候选包名选择 settings 目标
-- Uninstaller 卸载时同时清理两个 settings 包下的动态快捷方式
+Bumps [org.jetbrains.kotlin.android](https://github.com/JetBrains/kotlin) from 2.3.21 to 2.4.0.
+- [Release notes](https://github.com/JetBrains/kotlin/releases)
+- [Changelog](https://github.com/JetBrains/kotlin/blob/master/ChangeLog.md)
+- [Commits](https://github.com/JetBrains/kotlin/compare/v2.3.21...v2.4.0)
 
+---
+updated-dependencies:
+- dependency-name: org.jetbrains.kotlin.android
+  dependency-version: 2.4.0
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 ```
