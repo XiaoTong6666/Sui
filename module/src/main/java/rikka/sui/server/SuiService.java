@@ -132,33 +132,81 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     }
 
-    private void restartUnconfiguredRunningAppsForDefaultShellTransition() {
-        java.util.Set<String> restartedPackages = new java.util.LinkedHashSet<>();
+    private static boolean isAllowedByFlags(int flags) {
+        return (flags & (SuiConfig.FLAG_ALLOWED | SuiConfig.FLAG_ALLOWED_SHELL)) != 0;
+    }
+
+    private static boolean shouldAutoRestartAfterPermissionTransition(int oldFlags, int newFlags) {
+        return (oldFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0 || (newFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0;
+    }
+
+    private void updateClientAllowedStateForUid(int uid, int effectiveFlags) {
+        boolean allowed = isAllowedByFlags(effectiveFlags);
+        for (ClientRecord record : clientManager.findClients(uid)) {
+            record.allowed = allowed;
+        }
+    }
+
+    private void invalidatePackages(
+            int uid, @NonNull java.util.Collection<String> packageNames, boolean autoRestart, String reason) {
+        if (packageNames.isEmpty()) {
+            return;
+        }
+
+        long id = android.os.Binder.clearCallingIdentity();
+        try {
+            for (String packageName : packageNames) {
+                try {
+                    LOGGER.i("%s for %s (uid %d), force stopping to sever old binders...", reason, packageName, uid);
+                    ActivityManagerApis.forceStopPackageNoThrow(packageName, UserHandleCompat.getUserId(uid));
+                    getUserServiceManager().removeUserServicesForPackage(packageName);
+                    if (autoRestart) {
+                        LOGGER.i("Auto-restarting %s dynamically after %s", packageName, reason);
+                        AppLaunchUtils.startAppAsUser(packageName, UserHandleCompat.getUserId(uid));
+                    }
+                } catch (Throwable e) {
+                    LOGGER.w(e, "Failed to invalidate package %s", packageName);
+                }
+            }
+        } finally {
+            android.os.Binder.restoreCallingIdentity(id);
+        }
+    }
+
+    private void invalidatePackagesForUid(int uid, boolean autoRestart, String reason) {
+        List<String> packages = PackageManagerApis.getPackagesForUidNoThrow(uid);
+        invalidatePackages(uid, packages, autoRestart, reason);
+    }
+
+    private void refreshUnconfiguredClientsForDefaultPermissionTransition(int oldDefaultMode, int newDefaultMode) {
+        java.util.Map<Integer, java.util.Set<String>> affectedPackagesByUid = new java.util.LinkedHashMap<>();
         for (ClientRecord record : clientManager.getClients()) {
-            if (record.uid < 10000 || record.packageName == null) {
+            if (record.uid < 10000 || record.uid == systemUiUid || record.uid == settingsUid) {
                 continue;
             }
             if (configManager.findExplicit(record.uid) != null) {
                 continue;
             }
-            if (!restartedPackages.add(record.packageName)) {
+            if (record.packageName != null) {
+                affectedPackagesByUid
+                        .computeIfAbsent(record.uid, ignored -> new java.util.LinkedHashSet<>())
+                        .add(record.packageName);
+            } else {
+                affectedPackagesByUid.computeIfAbsent(record.uid, ignored -> new java.util.LinkedHashSet<>());
+            }
+        }
+
+        for (java.util.Map.Entry<Integer, java.util.Set<String>> entry : affectedPackagesByUid.entrySet()) {
+            int uid = entry.getKey();
+            updateClientAllowedStateForUid(uid, newDefaultMode);
+            if (oldDefaultMode == newDefaultMode) {
                 continue;
             }
-
-            try {
-                LOGGER.i("Force stopping %s to refresh binder after default shell transition", record.packageName);
-                long id = Binder.clearCallingIdentity();
-                try {
-                    ActivityManagerApis.forceStopPackageNoThrow(
-                            record.packageName, UserHandleCompat.getUserId(record.uid));
-                    getUserServiceManager().removeUserServicesForPackage(record.packageName);
-                    AppLaunchUtils.startAppAsUser(record.packageName, UserHandleCompat.getUserId(record.uid));
-                } finally {
-                    Binder.restoreCallingIdentity(id);
-                }
-            } catch (Throwable e) {
-                LOGGER.w(e, "Failed to restart unconfigured package %s", record.packageName);
-            }
+            invalidatePackages(
+                    uid,
+                    entry.getValue(),
+                    shouldAutoRestartAfterPermissionTransition(oldDefaultMode, newDefaultMode),
+                    "Default permission changed");
         }
     }
 
@@ -739,23 +787,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             }
 
             if (newEffectiveFlags != oldEffectiveFlags) {
-                long id = android.os.Binder.clearCallingIdentity();
-                try {
-                    List<String> packages = PackageManagerApis.getPackagesForUidNoThrow(uid);
-                    for (String packageName : packages) {
-                        try {
-                            LOGGER.i(
-                                    "Permission changed for %s (uid %d), force stopping to sever old binders...",
-                                    packageName, uid);
-                            ActivityManagerApis.forceStopPackageNoThrow(packageName, UserHandleCompat.getUserId(uid));
-                            getUserServiceManager().removeUserServicesForPackage(packageName);
-                        } catch (Throwable e) {
-                            LOGGER.w(e, "Failed to force stop package %s", packageName);
-                        }
-                    }
-                } finally {
-                    android.os.Binder.restoreCallingIdentity(id);
-                }
+                invalidatePackagesForUid(uid, false, "Permission changed");
             }
 
             if (!shellMode
@@ -930,11 +962,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 }
                 if (!shellMode) {
                     syncUidsToSystemServer();
-                    if (oldDefaultMode != targetMode
-                            && (oldDefaultMode == SuiConfig.FLAG_ALLOWED_SHELL
-                                    || targetMode == SuiConfig.FLAG_ALLOWED_SHELL)) {
-                        restartUnconfiguredRunningAppsForDefaultShellTransition();
-                    }
+                    refreshUnconfiguredClientsForDefaultPermissionTransition(oldDefaultMode, targetMode);
                 }
                 reply.writeNoException();
             } catch (Throwable e) {

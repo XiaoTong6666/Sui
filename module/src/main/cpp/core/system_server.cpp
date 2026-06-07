@@ -54,6 +54,7 @@ namespace SystemServer {
 
 static jclass mainClass = nullptr;
 static jmethodID my_execTransactMethodID;
+static jmethodID isUidHiddenEffectiveMethodID;
 
 static jclass javaBinderClass = nullptr;
 static jmethodID getCallingUidMethodID = nullptr;
@@ -131,6 +132,15 @@ static bool installDex(JNIEnv* env, Dex* dexFile) {
         env->GetStaticMethodID(loadedMainClass, "execTransact", "(Landroid/os/Binder;IJJI)Z");
     if (!my_execTransactMethodID) {
         LOGE("unable to find execTransact");
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        goto cleanup;
+    }
+
+    isUidHiddenEffectiveMethodID =
+        env->GetStaticMethodID(loadedMainClass, "isUidHiddenEffective", "(I)Z");
+    if (!isUidHiddenEffectiveMethodID) {
+        LOGE("unable to find isUidHiddenEffective");
         env->ExceptionDescribe();
         env->ExceptionClear();
         goto cleanup;
@@ -243,9 +253,24 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
                 return false;
             }
 
-            std::shared_lock lock(hiddenUidsMutex);
-            if (hiddenUids.find(uid) != hiddenUids.end()) {
-                return false;
+            {
+                std::shared_lock lock(hiddenUidsMutex);
+                if (hiddenUids.find(uid) != hiddenUids.end()) {
+                    return false;
+                }
+            }
+
+            if (isUidHiddenEffectiveMethodID
+                && env->CallStaticBooleanMethod(mainClass, isUidHiddenEffectiveMethodID, (jint)uid)) {
+                if (env->ExceptionCheck()) {
+                    env->ExceptionDescribe();
+                    env->ExceptionClear();
+                } else {
+                    return false;
+                }
+            } else if (env->ExceptionCheck()) {
+                env->ExceptionDescribe();
+                env->ExceptionClear();
             }
         }
 

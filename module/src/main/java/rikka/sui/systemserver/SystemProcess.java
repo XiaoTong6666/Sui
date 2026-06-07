@@ -129,6 +129,24 @@ public final class SystemProcess {
         return Arrays.binarySearch(uids, uid) >= 0;
     }
 
+    public static int getEffectivePermissionFlags(int uid) {
+        int flags = defaultPermissionFlags;
+        if (isHidden(uid)) {
+            flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_HIDDEN;
+        } else if (isDenied(uid)) {
+            flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_DENIED;
+        } else if (isRootAllowed(uid)) {
+            flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_ALLOWED;
+        } else if (isShellAllowed(uid)) {
+            flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_ALLOWED_SHELL;
+        }
+        return flags & SuiConfig.MASK_PERMISSION;
+    }
+
+    public static boolean isUidHiddenEffective(int uid) {
+        return (getEffectivePermissionFlags(uid) & SuiConfig.FLAG_HIDDEN) != 0;
+    }
+
     public static boolean isRootAllowed(int uid) {
         int[] uids = rootUids;
         return Arrays.binarySearch(uids, uid) >= 0;
