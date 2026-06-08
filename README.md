@@ -1,34 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `494`
-- **Commit:** [`fde2611`](https://github.com/XiaoTong6666/Sui/commit/fde261137a49a8b3b4f6c372ebd6a4db5aec94aa)
-- **Build time:** `3m 46s`
-- **SHA256:** `5516a7ab3c446d9e221aef49a1dbe5f9411aaa9f760a973c7df6271c351e1a15`
+- **VersionCode:** `495`
+- **Commit:** [`b3c27cc`](https://github.com/XiaoTong6666/Sui/commit/b3c27cca2ccdc5842a2a03071745dff0b8475a21)
+- **Build time:** `3m 20s`
+- **SHA256:** `1db7fe6a93f8158a7caa084515e419887082d869652484b8d96ea46542ab51f5`
 
 ## Message
 
 ```text
-build(deps): bump core from 1.18.0 to 1.19.0 (#66)
+fix: 修复默认隐藏未进入 binder 拦截链路 (#68)
 
-Bumps `core` from 1.18.0 to 1.19.0.
-
-Updates `androidx.core:core` from 1.18.0 to 1.19.0
-
-Updates `androidx.core:core-ktx` from 1.18.0 to 1.19.0
-
----
-updated-dependencies:
-- dependency-name: androidx.core:core
-  dependency-version: 1.19.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-- dependency-name: androidx.core:core-ktx
-  dependency-version: 1.19.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 ```
