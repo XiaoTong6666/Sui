@@ -1,30 +1,24 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `497`
-- **Commit:** [`d74a34e`](https://github.com/XiaoTong6666/Sui/commit/d74a34e7876a63e743d09115047f735c3579b4a6)
-- **Build time:** `3m 34s`
-- **SHA256:** `22687f005161811648a21aa400cb7622725876cfdac3573832867bec76426e9e`
+- **VersionCode:** `498`
+- **Commit:** [`e8e633d`](https://github.com/XiaoTong6666/Sui/commit/e8e633dbf6465d1d1c420a0cf7b8dff104e90d2c)
+- **Build time:** `4m 18s`
+- **SHA256:** `db5bb5cd441ff10396a64dcf43e4dba230f445f031df0d2155f14eb36103fb49`
 
 ## Message
 
 ```text
-build(deps): bump lifecycle from 2.10.0 to 2.11.0 (#70)
+build(deps): bump gradle-wrapper from 9.5.1 to 9.6.0 (#71)
 
-Bumps `lifecycle` from 2.10.0 to 2.11.0.
-
-Updates `androidx.lifecycle:lifecycle-viewmodel-ktx` from 2.10.0 to 2.11.0
-
-Updates `androidx.lifecycle:lifecycle-livedata-ktx` from 2.10.0 to 2.11.0
+Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.5.1 to 9.6.0.
+- [Release notes](https://github.com/gradle/gradle/releases)
+- [Commits](https://github.com/gradle/gradle/compare/v9.5.1...v9.6.0)
 
 ---
 updated-dependencies:
-- dependency-name: androidx.lifecycle:lifecycle-viewmodel-ktx
-  dependency-version: 2.11.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-- dependency-name: androidx.lifecycle:lifecycle-livedata-ktx
-  dependency-version: 2.11.0
+- dependency-name: gradle-wrapper
+  dependency-version: 9.6.0
   dependency-type: direct:production
   update-type: version-update:semver-minor
 ...
