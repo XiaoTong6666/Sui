@@ -1,19 +1,19 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `499`
-- **Commit:** [`5b16450`](https://github.com/XiaoTong6666/Sui/commit/5b164501e665e8102202c6ae83ab3df1a8eb278c)
-- **Build time:** `1m 13s`
-- **SHA256:** `23357b4fbc756167d786ddadab36d7e7d659a9a05eea6a2a4a0d8d15a34df8d1`
+- **VersionCode:** `500`
+- **Commit:** [`e3774bf`](https://github.com/XiaoTong6666/Sui/commit/e3774bfc7aefdbdc4e5917057bfc54f3e17d0d23)
+- **Build time:** `3m 00s`
+- **SHA256:** `87a276361bf33058465717fc4a8f5bce43bc8e1dae250b3a3cdc732e636400f7`
 
 ## Message
 
 ```text
-fix: 修复权限委托回调冲突并统一 effective flags 状态
+ui: 优化兼容性并清理资源
 
-- 将 delegated permission callback key 纳入 requestCode，避免相同 uid/pid 请求互相覆盖
-- 在 AppInfo 中保存实际生效权限状态，避免 UI 层重复推导权限逻辑
-- 保持 Parcelable 数据兼容旧版本权限字段格式
-- 同步管理页面状态更新逻辑，统一使用 effectiveFlags
+- 使用 AndroidX Compat 实现替换平台 API 调用
+- 修复旧版本 Android 上 Popup 动画资源兼容性问题
+- 清理无用资源并处理 lint 警告
+- 补充缺失的许可证头
 
 ```
