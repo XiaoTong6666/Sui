@@ -214,6 +214,35 @@ For example:
 ./gradlew :module:flashRelease
 ```
 
+## Troubleshooting
+
+### Repository cloned without submodules
+
+If the repository was cloned without the `--recurse-submodules` option, required submodules will be missing.
+
+Initialize them with:
+
+```bash
+git submodule update --init --recursive
+```
+
+### Cannot access the Sui management interface
+
+If you cannot access the Sui management interface after installation, check the following:
+
+- Your root environment is supported (Magisk with Zygisk enabled, or KernelSU/APatch with a compatible Zygisk implementation).
+- `SystemUI` and `Settings` are **not** included in the Zygisk DenyList.
+- The device has been rebooted after installing or updating Sui.
+
+### Sui shortcut does not appear
+
+On some Android systems, long-pressing the **Settings** icon may not display the Sui shortcut.
+
+You can still access the management interface by:
+
+- Entering `*#*#784784#*#*` in the default dialer.
+- Opening it from the **Action** button in your root manager.
+
 ## Internals
 
 Sui requires [Zygisk](https://github.com/topjohnwu/zygisk-module-sample). Zygisk allows us to inject into system_server, SystemUI, Settings and related app processes.
