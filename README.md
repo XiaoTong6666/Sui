@@ -1,14 +1,16 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `508`
-- **Commit:** [`a40ba51`](https://github.com/XiaoTong6666/Sui/commit/a40ba5199ba6dd02ce1ff31cbf126e7685c77093)
-- **Build time:** `3m 58s`
-- **SHA256:** `392c393b8242a4a45e75770884b84e254aed9e76e780a8b33da245861c33f5a8`
+- **VersionCode:** `505`
+- **Commit:** [`c7a1b79`](https://github.com/XiaoTong6666/Sui/commit/c7a1b79029b85535e91ff9aa0a842c177a950ced)
+- **Build time:** `4m 40s`
+- **SHA256:** `c930daa48a9ea215619d29f5aeff56d0e73c4c8a8fc589411a32884fc0afa64d`
 
 ## Message
 
 ```text
-fix(build): 修复安全依赖强制覆盖失效喵
+refactor(build): 迁移所有模块的构建脚本至 Kotlin DSL
+- 将 ui, module 模块的 `build.gradle` 重构为 `build.gradle.kts`
+- 重构 Groovy 语法为 Kotlin DSL
 
 ```
