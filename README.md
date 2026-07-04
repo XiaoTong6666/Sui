@@ -1,16 +1,19 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `505`
-- **Commit:** [`5508986`](https://github.com/XiaoTong6666/Sui/commit/5508986d18ed8c14182ca81be565170ea4a7c71a)
-- **Build time:** `4m 22s`
-- **SHA256:** `8119412f6c01590665c6be9795228b705cb6105b3d63276d365386d9cabdece5`
+- **VersionCode:** `506`
+- **Commit:** [`22e9a27`](https://github.com/XiaoTong6666/Sui/commit/22e9a27624c06cf5d2133c1f3d81b0e551a1c0cf)
+- **Build time:** `2m 59s`
+- **SHA256:** `cd12ee90f5b3b11fbfc3ef2531639daf808ab3d4be4847524b4ec011dfa1e2e1`
 
 ## Message
 
 ```text
-refactor(build): 迁移所有模块的构建脚本至 Kotlin DSL
-- 将 ui, module 模块的 `build.gradle` 重构为 `build.gradle.kts`
-- 重构 Groovy 语法为 Kotlin DSL
+docs: 完善 README 并新增同步 workflow
+
+- 新增故障排查与 README 自动同步，文档改动时跳过模块构建
+- 更新贡献者列表并优化日志标签
+
+Co-authored-by: XiaoTong6666 <XiaoTong6666@users.noreply.github.com>
 
 ```
