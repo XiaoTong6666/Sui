@@ -1,16 +1,28 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `505`
-- **Commit:** [`2d72948`](https://github.com/XiaoTong6666/Sui/commit/2d7294833e477d6a4d2db9035ba1baf2d778f0d0)
-- **Build time:** `4m 31s`
-- **SHA256:** `2555e36f090fb4c6302eac8b631f26246015a5e29e03aab2f20220c65a777a72`
+- **VersionCode:** `504`
+- **Commit:** [`65dbe41`](https://github.com/XiaoTong6666/Sui/commit/65dbe4146a3bde1254d27ed3d3b299e9111c90d3)
+- **Build time:** `4m 07s`
+- **SHA256:** `3b281381a93350259e2c2e0b730358c789573de8b16532af2f5031cc3a38a7a3`
 
 ## Message
 
 ```text
-refactor(build): 迁移所有模块的构建脚本至 Kotlin DSL
-- 将 ui, module 模块的 `build.gradle` 重构为 `build.gradle.kts`
-- 重构 Groovy 语法为 Kotlin DSL
+build(deps): bump com.diffplug.spotless from 8.7.0 to 8.8.0 (#74)
+
+Bumps com.diffplug.spotless from 8.7.0 to 8.8.0.
+
+---
+updated-dependencies:
+- dependency-name: com.diffplug.spotless
+  dependency-version: 8.8.0
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
 
 ```
