@@ -1,28 +1,16 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `504`
-- **Commit:** [`d3e2f61`](https://github.com/XiaoTong6666/Sui/commit/d3e2f614df9cc95a15fd27032335ccd380464155)
-- **Build time:** `1m 39s`
-- **SHA256:** `5b4cd3e30f3e6b2788f6520ed92b16aadd5446cf4bdbacac5efef229686b98dd`
+- **VersionCode:** `505`
+- **Commit:** [`2d72948`](https://github.com/XiaoTong6666/Sui/commit/2d7294833e477d6a4d2db9035ba1baf2d778f0d0)
+- **Build time:** `4m 31s`
+- **SHA256:** `2555e36f090fb4c6302eac8b631f26246015a5e29e03aab2f20220c65a777a72`
 
 ## Message
 
 ```text
-build(deps): bump com.diffplug.spotless from 8.7.0 to 8.8.0 (#74)
-
-Bumps com.diffplug.spotless from 8.7.0 to 8.8.0.
-
----
-updated-dependencies:
-- dependency-name: com.diffplug.spotless
-  dependency-version: 8.8.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
-Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
+refactor(build): 迁移所有模块的构建脚本至 Kotlin DSL
+- 将 ui, module 模块的 `build.gradle` 重构为 `build.gradle.kts`
+- 重构 Groovy 语法为 Kotlin DSL
 
 ```
