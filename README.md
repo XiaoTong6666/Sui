@@ -1,19 +1,20 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `506`
-- **Commit:** [`22e9a27`](https://github.com/XiaoTong6666/Sui/commit/22e9a27624c06cf5d2133c1f3d81b0e551a1c0cf)
-- **Build time:** `2m 59s`
-- **SHA256:** `cd12ee90f5b3b11fbfc3ef2531639daf808ab3d4be4847524b4ec011dfa1e2e1`
+- **VersionCode:** `507`
+- **Commit:** [`c4c6f50`](https://github.com/XiaoTong6666/Sui/commit/c4c6f504f040b84849151188aac842a4ad2ef884)
+- **Build time:** `3m 52s`
+- **SHA256:** `29c9f109b90759d019f4a06f1b06f47fd2b08ed8d660c0ad5598b6ced5ca65a5`
 
 ## Message
 
 ```text
-docs: 完善 README 并新增同步 workflow
+refactor: 移除冗余依赖以减小应用体积
 
-- 新增故障排查与 README 自动同步，文档改动时跳过模块构建
-- 更新贡献者列表并优化日志标签
-
-Co-authored-by: XiaoTong6666 <XiaoTong6666@users.noreply.github.com>
+- 移除 Rikkax，迁移至 AndroidX
+- 移除第三方 `fastscroll` ，新增 `EdgeDragFastScroller` 作为替代
+- 移除 `rikka.lifecycle.Resource`，新增本地 `Resource` 数据类
+- 优化并精简 ProGuard 混淆规则
+- 优化构建脚本打包逻辑
 
 ```
