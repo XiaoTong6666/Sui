@@ -67,7 +67,7 @@ import rikka.sui.widget.MiuixBottomSheetLayout;
 public class ConfirmationDialog {
 
     private static final IBinder TOKEN = new Binder();
-    private static final Logger LOGGER = new Logger("ConfirmationDialog");
+    private static final Logger LOGGER = new Logger("SuiConfirmationDialog");
 
     private final Context context;
     private final Resources resources;

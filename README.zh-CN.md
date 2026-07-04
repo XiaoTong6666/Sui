@@ -168,7 +168,7 @@ fun checkShizukuPermission() {
 
 ## 编译/构建（Build）
 
-使用 `git clone --recurse-submodules` 克隆项目。
+> **注意：** 请使用带 submodule 的方式克隆仓库，否则所需的 API 子项目会缺失。
 
 ```bash
 git clone --recurse-submodules https://github.com/XiaoTong6666/Sui.git
@@ -213,6 +213,63 @@ Gradle 任务：
 ./gradlew :module:zipRelease
 ./gradlew :module:flashRelease
 ```
+
+## 故障排查
+
+### 如何反馈问题
+
+如需反馈问题，请提供 **debug** 版本下复现得到的日志。
+
+推荐流程：
+
+- 先安装或刷入 **debug** 版 Sui，并复现问题。
+- 如果你使用的是 **KernelSU** 或 **APatch**，优先从 root 管理器中导出日志。这类日志通常对模块挂载、Zygisk 注入、SELinux 以及早期启动/运行阶段的问题更完整。
+- 同时抓取 Sui 日志：
+
+  ```sh
+  adb logcat -v time | grep -i sui
+  ```
+
+- 反馈时请附带基本环境信息：
+  - root 实现及版本
+  - Zygisk 实现及版本
+  - Android 版本 / ROM
+  - `SystemUI` 或 `Settings` 是否被加入 DenyList
+  - 明确的复现步骤
+
+如果问题只在 release 版本出现，也仍然建议先尝试在 debug 版本中复现，并同时附上 debug 日志以及对 release 特有现象的简短说明。
+
+### 无法进入 Sui 管理界面
+
+如果安装后无法打开 Sui 管理界面，请检查：
+
+- 你的 root 环境是否受支持（Magisk + Zygisk，或 KernelSU / APatch + 兼容的 Zygisk 实现）。
+- `SystemUI` 和 `Settings` **没有** 被加入 Zygisk DenyList。
+- 安装或更新 Sui 后设备已经重启。
+
+### Sui 快捷方式没有出现
+
+在某些 Android 系统上，长按 **设置** 图标可能不会显示 Sui 快捷方式。
+
+你仍然可以通过以下方式进入管理界面：
+
+- 在默认拨号器中输入 `*#*#784784#*#*`
+- 从 root 管理器中的 **Action** 按钮打开
+
+### 可选功能异常
+
+如果管理界面、快捷方式、`adb root` 等可选功能行为异常：
+
+- 修改 Sui 模块文件或 marker 文件后，先重启一次设备。
+- 确认 root 环境和 Zygisk 实现受支持。
+- 如果可用，优先导出 KernelSU / APatch 日志。
+- 同时抓取：
+
+  ```sh
+  adb logcat -v time | grep -i sui
+  ```
+
+- 必要时再检查 `/data/adb/sui/` 下的 marker 文件和生成文件是否存在。
 
 ## 内部实现（Internals）
 

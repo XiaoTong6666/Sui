@@ -163,6 +163,8 @@ Sui.init(packageName)
 
 ## ビルド
 
+> **注:** 必要な API サブプロジェクトを含めるため、submodule 付きでリポジトリを clone してください。
+
 ```bash
 git clone --recurse-submodules https://github.com/XiaoTong6666/Sui.git
 ```
@@ -184,6 +186,63 @@ Gradle タスク例（`BuildType` は `Debug` か `Release`）:
 ./gradlew :module:zipRelease
 ./gradlew :module:flashRelease
 ```
+
+## トラブルシューティング
+
+### 問題を報告する方法
+
+問題を報告する場合は、**debug** ビルドで再現したログを添付してください。
+
+推奨する手順:
+
+- まず **debug** 版の Sui をインストールまたはフラッシュし、問題を再現する。
+- **KernelSU** または **APatch** を使っている場合は、先に root マネージャー側のログを書き出してください。モジュールのマウント、Zygisk 注入、SELinux、起動初期段階の問題についてはこちらの方が情報量が多いことがあります。
+- 併せて Sui のログも取得してください:
+
+  ```sh
+  adb logcat -v time | grep -i sui
+  ```
+
+- さらに以下の環境情報も添えてください:
+  - root 実装とそのバージョン
+  - Zygisk 実装とそのバージョン
+  - Android バージョン / ROM
+  - `SystemUI` や `Settings` を DenyList に入れているかどうか
+  - 正確な再現手順
+
+問題が release ビルドでのみ発生する場合でも、可能であれば debug ビルドでも再現を試し、debug のログと release 特有の症状の説明を一緒に添付してください。
+
+### Sui 管理画面を開けない
+
+インストール後に Sui の管理画面へ入れない場合は、次を確認してください:
+
+- root 環境が対応していること（Magisk + Zygisk、または KernelSU / APatch + 互換 Zygisk 実装）。
+- `SystemUI` と `Settings` が Zygisk DenyList に入っていないこと。
+- Sui のインストールまたは更新後に端末を再起動していること。
+
+### Sui のショートカットが表示されない
+
+一部の Android 環境では、**設定** アイコンの長押しで Sui ショートカットが表示されないことがあります。
+
+その場合でも、次の方法で管理画面を開けます:
+
+- 標準ダイヤラーで `*#*#784784#*#*` を入力する
+- root マネージャーの **Action** ボタンから開く
+
+### オプション機能が期待通り動かない
+
+管理 UI、ショートカット、`adb root` などのオプション機能が正しく動かない場合:
+
+- Sui のモジュールファイルや marker ファイルを変更した後は、一度端末を再起動してください。
+- root 環境と Zygisk 実装が対応しているか確認してください。
+- 可能なら KernelSU / APatch のログを書き出してください。
+- 併せて次のログも取得してください:
+
+  ```sh
+  adb logcat -v time | grep -i sui
+  ```
+
+- 必要に応じて `/data/adb/sui/` 配下の marker ファイルや生成ファイルが存在するかも確認してください。
 
 ## 内部構成
 

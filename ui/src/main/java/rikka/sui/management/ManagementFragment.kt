@@ -452,6 +452,7 @@ class ManagementFragment : AppFragment() {
                 "Kr328" to "https://github.com/Kr328",
                 "binyaminyblatt" to "https://github.com/binyaminyblatt",
                 "Re*Index.(ot_inc)" to "https://github.com/reindex-ot",
+                "IshaParihariya" to "https://github.com/IshaParihariya",
             )
 
             val contributorsNamesString = githubLinks.keys.joinToString(", ")

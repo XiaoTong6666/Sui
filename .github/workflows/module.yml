@@ -10,12 +10,16 @@ on:
       - dev
     paths-ignore:
       - '.github/ISSUE_TEMPLATE'
-      - '**/README.md'
+      - 'README*.md'
+      - 'docs/**'
     tags:
       - '*'
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - 'README*.md'
+      - 'docs/**'
   workflow_dispatch:
 
 concurrency:

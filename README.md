@@ -168,7 +168,7 @@ Common APIs include:
 
 ## Build
 
-Clone with submodules:
+> **Note:** Clone the repository with submodules, otherwise required API projects will be missing.
 
 ```bash
 git clone --recurse-submodules https://github.com/XiaoTong6666/Sui.git
@@ -216,15 +216,28 @@ For example:
 
 ## Troubleshooting
 
-### Repository cloned without submodules
+### How to report problems
 
-If the repository was cloned without the `--recurse-submodules` option, required submodules will be missing.
+If you need to report a problem, please provide logs reproduced on a **debug** build.
 
-Initialize them with:
+Recommended workflow:
 
-```bash
-git submodule update --init --recursive
-```
+- Install or flash a **debug** build of Sui and reproduce the issue.
+- If you use **KernelSU** or **APatch**, export logs from the root manager first. These logs are usually more complete for module mounting, Zygisk injection, SELinux, and early boot/runtime issues.
+- Also capture Sui logs with:
+
+  ```sh
+  adb logcat -v time | grep -i sui
+  ```
+
+- Include basic environment information:
+  - root implementation and version
+  - Zygisk implementation and version
+  - Android version / ROM
+  - whether `SystemUI` or `Settings` is in DenyList
+  - exact reproduction steps
+
+If the issue only happens on release builds, please still try to reproduce it with the debug build and attach both the debug logs and a short note describing the release-only behavior.
 
 ### Cannot access the Sui management interface
 
@@ -242,6 +255,21 @@ You can still access the management interface by:
 
 - Entering `*#*#784784#*#*` in the default dialer.
 - Opening it from the **Action** button in your root manager.
+
+### Optional features do not work as expected
+
+If optional features such as the management UI, shortcuts, or `adb root` do not work correctly:
+
+- Reboot once after changing Sui module files or marker files.
+- Confirm your root environment and Zygisk implementation are supported.
+- Export logs from KernelSU / APatch if available.
+- Capture:
+
+  ```sh
+  adb logcat -v time | grep -i sui
+  ```
+
+- If needed, also inspect the files under `/data/adb/sui/` to confirm marker files and generated artifacts are present.
 
 ## Internals
 

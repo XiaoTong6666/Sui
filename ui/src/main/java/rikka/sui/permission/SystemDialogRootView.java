@@ -32,7 +32,7 @@ import rikka.sui.util.Logger;
 
 public class SystemDialogRootView extends FrameLayout {
 
-    private static final Logger LOGGER = new Logger("SystemDialogRootView");
+    private static final Logger LOGGER = new Logger("SuiSystemDialogRootView");
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
