@@ -216,20 +216,19 @@ For example:
 
 ## Troubleshooting
 
+### Capture Sui logs
+
+```sh
+adb logcat -v time | grep -i sui
+```
+
 ### How to report problems
 
 If you need to report a problem, please provide logs reproduced on a **debug** build.
 
-Recommended workflow:
-
 - Install or flash a **debug** build of Sui and reproduce the issue.
 - If you use **KernelSU** or **APatch**, export logs from the root manager first. These logs are usually more complete for module mounting, Zygisk injection, SELinux, and early boot/runtime issues.
-- Also capture Sui logs with:
-
-  ```sh
-  adb logcat -v time | grep -i sui
-  ```
-
+- Also [capture Sui logs](#capture-sui-logs).
 - Include basic environment information:
   - root implementation and version
   - Zygisk implementation and version
@@ -237,38 +236,18 @@ Recommended workflow:
   - whether `SystemUI` or `Settings` is in DenyList
   - exact reproduction steps
 
-If the issue only happens on release builds, please still try to reproduce it with the debug build and attach both the debug logs and a short note describing the release-only behavior.
+If the issue cannot be reproduced on the debug build and only happens on release builds, include a short description of the release-only behavior and the exact reproduction steps.
 
 ### Cannot access the Sui management interface
-
-If you cannot access the Sui management interface after installation, check the following:
 
 - Your root environment is supported (Magisk with Zygisk enabled, or KernelSU/APatch with a compatible Zygisk implementation).
 - `SystemUI` and `Settings` are **not** included in the Zygisk DenyList.
 - The device has been rebooted after installing or updating Sui.
 
-### Sui shortcut does not appear
-
-On some Android systems, long-pressing the **Settings** icon may not display the Sui shortcut.
-
-You can still access the management interface by:
-
-- Entering `*#*#784784#*#*` in the default dialer.
-- Opening it from the **Action** button in your root manager.
-
 ### Optional features do not work as expected
 
-If optional features such as the management UI, shortcuts, or `adb root` do not work correctly:
-
 - Reboot once after changing Sui module files or marker files.
-- Confirm your root environment and Zygisk implementation are supported.
-- Export logs from KernelSU / APatch if available.
-- Capture:
-
-  ```sh
-  adb logcat -v time | grep -i sui
-  ```
-
+- If needed, export logs from KernelSU / APatch and [capture Sui logs](#capture-sui-logs).
 - If needed, also inspect the files under `/data/adb/sui/` to confirm marker files and generated artifacts are present.
 
 ## Internals
