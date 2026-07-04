@@ -1,0 +1,63 @@
+name: README Sync
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'README*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sync-module-readmes:
+    name: Sync README files to module repo
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Checkout module repository
+        uses: actions/checkout@v6
+        with:
+          repository: KernelSU-Modules-Repo/zygisk-sui
+          token: ${{ secrets.KSU_REPO_TOKEN }}
+          path: module-repo
+          persist-credentials: true
+
+      - name: Sync README files
+        run: |
+          set -euo pipefail
+          cp README.md module-repo/README.md
+          cp README.zh-CN.md module-repo/README.zh-CN.md
+          cp README.ja.md module-repo/README.ja.md
+
+      - name: Commit and push if changed
+        run: |
+          set -euo pipefail
+          cd module-repo
+
+          if git diff --quiet -- README.md README.zh-CN.md README.ja.md; then
+            echo "No README changes to sync"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add README.md README.zh-CN.md README.ja.md
+          git commit -m "docs: sync README files from XiaoTong6666/Sui"
+          git push
