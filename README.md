@@ -1,14 +1,15 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `509`
-- **Commit:** [`7a063e8`](https://github.com/XiaoTong6666/Sui/commit/7a063e80f884e8cee377a8248ce126878f3bfa65)
-- **Build time:** `2m 41s`
-- **SHA256:** `8d53aea0b8635379ff22a9b722d21fd911ace002524b0217d7da78c11dacbbcb`
+- **VersionCode:** `510`
+- **Commit:** [`855fc84`](https://github.com/XiaoTong6666/Sui/commit/855fc8419858be2be28243a4b82416a773a65bc5)
+- **Build time:** `4m 22s`
+- **SHA256:** `8f79ba567eac9c269f4dd6d7d01db38f76856144ff98e48f74637380b0dacf31`
 
 ## Message
 
 ```text
-fix(ci): 模块仓库版发布前创建空提交，确保每个 Tag 指向独立 Commit
+build(deps): bump org.bouncycastle:bcutil-jdk18on from 1.84 to 1.85 (#78)
 
+Co-authored-by: xiaotong6666 <xiaotong6666@users.noreply.github.com>
 ```
