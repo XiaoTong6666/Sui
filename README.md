@@ -1,14 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `513`
-- **Commit:** [`7ca7d93`](https://github.com/XiaoTong6666/Sui/commit/7ca7d935f31039aac52c724adab6145b17a7305c)
-- **Build time:** `5m 37s`
-- **SHA256:** `1b95b6ea1cc1330aa1448ee018772d12d361aeec472c65448aeebedd07cc0dd4`
+- **VersionCode:** `514`
+- **Commit:** [`9c46ba7`](https://github.com/XiaoTong6666/Sui/commit/9c46ba79a4bfe0d013ff924f04a795453c9eacde)
+- **Build time:** `2m 41s`
+- **SHA256:** `6a03595583ae9a7b0e1847d6ebaadc65fc6bfb57c1d33db2c52e551164a3d000`
 
 ## Message
 
 ```text
-ci: 更新 GitHub Actions 依赖引用
+refactor: 重构 Shell 运行时部署流程并优化守护进程日志管理
 
 ```
