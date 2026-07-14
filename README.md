@@ -1,15 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `510`
-- **Commit:** [`855fc84`](https://github.com/XiaoTong6666/Sui/commit/855fc8419858be2be28243a4b82416a773a65bc5)
-- **Build time:** `4m 22s`
-- **SHA256:** `8f79ba567eac9c269f4dd6d7d01db38f76856144ff98e48f74637380b0dacf31`
+- **VersionCode:** `513`
+- **Commit:** [`7ca7d93`](https://github.com/XiaoTong6666/Sui/commit/7ca7d935f31039aac52c724adab6145b17a7305c)
+- **Build time:** `5m 37s`
+- **SHA256:** `1b95b6ea1cc1330aa1448ee018772d12d361aeec472c65448aeebedd07cc0dd4`
 
 ## Message
 
 ```text
-build(deps): bump org.bouncycastle:bcutil-jdk18on from 1.84 to 1.85 (#78)
+ci: 更新 GitHub Actions 依赖引用
 
-Co-authored-by: xiaotong6666 <xiaotong6666@users.noreply.github.com>
 ```
