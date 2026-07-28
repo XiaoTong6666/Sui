@@ -16,7 +16,7 @@ lifecycle = "2.11.0"
 material = "1.14.0"
 dynamicanimation = "1.1.0"
 appiconloader = "1.5.0"
-spotless = "8.8.0"
+spotless = "8.9.0"
 support-annotations = "28.0.0"
 
 [libraries]
