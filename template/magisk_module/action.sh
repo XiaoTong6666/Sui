@@ -1,10 +1,7 @@
 MODDIR=${0%/*}
-
-# SystemUI is not always com.android.systemui (Meta Horizon OS ships com.meta.systemui).
-# The installer resolves it and writes the package name here.
 SYSTEMUI_PACKAGE=com.android.systemui
-if [ -f "$MODDIR/systemui_package" ]; then
-  RESOLVED=$(cat "$MODDIR/systemui_package")
+if [ -r "$MODDIR/system_ui" ]; then
+  IFS= read -r RESOLVED < "$MODDIR/system_ui"
   [ -n "$RESOLVED" ] && SYSTEMUI_PACKAGE="$RESOLVED"
 fi
 

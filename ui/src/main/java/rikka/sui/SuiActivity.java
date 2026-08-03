@@ -20,6 +20,7 @@ package rikka.sui;
 
 import android.app.ActivityManager;
 import android.app.Application;
+import android.content.ComponentName;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.Bundle;
@@ -30,14 +31,8 @@ import rikka.sui.management.ManagementFragment;
 
 public class SuiActivity extends AppActivity {
 
-    public SuiActivity(Application application, Resources resources) {
-        super(application, resources);
-    }
-
-    @Override
-    public android.content.ComponentName getComponentName() {
-        return new android.content.ComponentName(
-                getPackageName(), "com.android.settings.Settings$WifiSettingsActivity");
+    public SuiActivity(Application application, Resources resources, ComponentName componentName) {
+        super(application, resources, componentName);
     }
 
     private int resolveThemeColor(@androidx.annotation.AttrRes int attrRes) {

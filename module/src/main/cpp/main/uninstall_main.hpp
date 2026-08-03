@@ -54,7 +54,8 @@ static int uninstall_main(int argc, char** argv) {
 
     wait_for_zygote();
 
-    app_process("/dev/sui.dex", "/dev", "rikka.sui.installer.Uninstaller", "sui_uninstaller");
+    app_process("/dev/sui.dex", "/dev", "rikka.sui.installer.Uninstaller", "sui_uninstaller",
+                root_path);
     unlink("/dev/sui.dex");
 
     return EXIT_SUCCESS;

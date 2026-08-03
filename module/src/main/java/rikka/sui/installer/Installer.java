@@ -19,74 +19,58 @@
 
 package rikka.sui.installer;
 
-import android.content.pm.ApplicationInfo;
+import android.app.ActivityThread;
+import android.content.Context;
+import android.os.Looper;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Locale;
-import rikka.hidden.compat.PackageManagerApis;
-import rikka.sui.util.SettingsPackages;
-import rikka.sui.util.SystemUiPackages;
+import rikka.sui.util.SystemPackages;
+import rikka.sui.util.SystemPackages.SystemPackage;
 
 public class Installer {
 
-    private static void saveApplicationInfoToFile(String path, String packageName, String fileName, String name)
-            throws IOException {
-        ApplicationInfo ai = PackageManagerApis.getApplicationInfoNoThrow(packageName, 0, 0);
-        if (ai == null) {
-            System.out.println("! Can't fetch application info for package " + packageName);
+    private static void saveApplicationInfoToFile(
+            String path, String fileName, String name, SystemPackage systemPackage) throws IOException {
+        File file = new File(path, fileName);
+        if (systemPackage == null) {
+            if (file.exists() && !file.delete()) {
+                System.out.println("! Can't delete stale " + file);
+            }
+            System.out.println("! Can't resolve the " + name + " package");
             return;
         }
-        int uid = ai.uid;
-        String processName = ai.processName != null ? ai.processName : packageName;
-        System.out.println("- " + name + ": uid=" + uid + ", processName=" + processName);
 
-        File file = new File(path, fileName);
+        System.out.println("- " + name + ": packageName=" + systemPackage.packageName + ", uid=" + systemPackage.uid
+                + ", processName=" + systemPackage.processName);
+
         if (!file.exists() && !file.createNewFile()) {
             System.out.println("! Can't create " + file);
             return;
         }
 
-        FileWriter writer = new FileWriter(file);
-        writer.write(String.format(Locale.ENGLISH, "%d\n%s", uid, processName));
-        writer.flush();
-        writer.close();
-    }
-
-    private static void savePackageNameToFile(String path, String fileName, String packageName) throws IOException {
-        File file = new File(path, fileName);
-        if (!file.exists() && !file.createNewFile()) {
-            System.out.println("! Can't create " + file);
-            return;
+        try (FileWriter writer = new FileWriter(file)) {
+            writer.write(String.format(
+                    Locale.ENGLISH,
+                    "%s\n%d\n%s",
+                    systemPackage.packageName,
+                    systemPackage.uid,
+                    systemPackage.processName));
         }
-
-        FileWriter writer = new FileWriter(file);
-        writer.write(packageName);
-        writer.flush();
-        writer.close();
     }
 
+    @SuppressWarnings("deprecation")
     public static void main(String[] args) throws IOException {
         System.out.println("- AppProcess: main");
 
-        String systemUiPackageName = SystemUiPackages.resolveInstalledSystemUiPackage();
-        if (systemUiPackageName == null) {
-            System.out.println("! Can't fetch application info for SystemUI packages "
-                    + java.util.Arrays.toString(SystemUiPackages.SYSTEM_UI_CANDIDATES));
-        } else {
-            // The file name stays com.android.systemui because the zygisk module uses it as a key.
-            saveApplicationInfoToFile(args[0], systemUiPackageName, SystemUiPackages.SYSTEM_UI, "SystemUI");
-            // action.sh sends the secret code broadcast to this package.
-            savePackageNameToFile(args[0], "systemui_package", systemUiPackageName);
+        if (Looper.getMainLooper() == null) {
+            Looper.prepareMainLooper();
         }
+        Context context = ActivityThread.systemMain().getSystemContext();
 
-        String settingsPackageName = SettingsPackages.resolveInstalledSettingsPackage();
-        if (settingsPackageName == null) {
-            System.out.println("! Can't fetch application info for settings packages "
-                    + java.util.Arrays.toString(SettingsPackages.SETTINGS_CANDIDATES));
-        } else {
-            saveApplicationInfoToFile(args[0], settingsPackageName, SettingsPackages.SETTINGS, "Settings");
-        }
+        saveApplicationInfoToFile(args[0], "system_ui", "SystemUI", SystemPackages.resolveSystemUi(context));
+        saveApplicationInfoToFile(args[0], "settings", "Settings", SystemPackages.resolveSettings(context));
         System.out.println("- AppProcess: exit");
     }
 }

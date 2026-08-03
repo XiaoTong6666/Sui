@@ -30,6 +30,8 @@ import static rikka.shizuku.ShizukuApiConstants.BIND_APPLICATION_SHOULD_SHOW_REQ
 import static rikka.shizuku.ShizukuApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED;
 import static rikka.shizuku.ShizukuApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME;
 
+import android.app.ActivityThread;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.net.Uri;
@@ -66,8 +68,8 @@ import rikka.sui.util.AppLaunchUtils;
 import rikka.sui.util.BridgeConstants;
 import rikka.sui.util.Logger;
 import rikka.sui.util.OsUtils;
-import rikka.sui.util.SettingsPackages;
-import rikka.sui.util.SystemUiPackages;
+import rikka.sui.util.SystemPackages;
+import rikka.sui.util.SystemPackages.SystemPackage;
 import rikka.sui.util.UserHandleCompat;
 
 @OptIn(markerClass = androidx.core.os.BuildCompat.PrereleaseSdkCheck.class)
@@ -226,7 +228,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         SuiService.shellMode = isShell;
 
         Looper.prepareMainLooper();
-        new SuiService();
+        Context context = ActivityThread.systemMain().getSystemContext();
+        new SuiService(context);
         Looper.loop();
 
         LOGGER.i("server exited");
@@ -237,6 +240,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     private final SuiConfigManager configManager;
     private final SuiUserServiceManager userServiceManager;
     private final String systemUiPackageName;
+    private final String settingsPackageName;
     private final int systemUiUid;
     private final int settingsUid;
     private IShizukuApplication systemUiApplication;
@@ -469,22 +473,21 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         return waitForPackage(new String[] {packageName}, forever);
     }
 
-    /**
-     * SystemUI is not always {@code com.android.systemui} (Meta Horizon OS uses
-     * {@code com.meta.systemui}), so resolve it instead of waiting forever for a package that will
-     * never be installed.
-     */
-    private String waitForSystemUiPackage() {
+    private interface PackageResolver {
+        SystemPackage resolve();
+    }
+
+    private SystemPackage waitForPackage(String name, PackageResolver resolver) {
         while (true) {
-            String packageName = SystemUiPackages.resolveInstalledSystemUiPackage();
-            if (packageName != null) {
-                LOGGER.i("SystemUI package is %s", packageName);
-                return packageName;
+            SystemPackage systemPackage = resolver.resolve();
+            if (systemPackage != null) {
+                LOGGER.i(
+                        "%s package is %s (uid=%d, process=%s)",
+                        name, systemPackage.packageName, systemPackage.uid, systemPackage.processName);
+                return systemPackage;
             }
 
-            LOGGER.w(
-                    "can't find SystemUI (%s), wait 1s",
-                    java.util.Arrays.toString(SystemUiPackages.SYSTEM_UI_CANDIDATES));
+            LOGGER.w("can't resolve %s package, wait 1s", name);
 
             try {
                 //noinspection BusyWait
@@ -514,15 +517,6 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             } catch (InterruptedException ignored) {
             }
         }
-    }
-
-    private static boolean isSettingsPackageName(String packageName) {
-        for (String candidate : SettingsPackages.SETTINGS_CANDIDATES) {
-            if (candidate.equals(packageName)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private int[] getRootUidsWithSystem() {
@@ -565,7 +559,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     };
 
-    public SuiService() {
+    public SuiService(Context context) {
         super();
 
         HandlerUtil.setMainHandler(mainHandler);
@@ -576,9 +570,12 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         clientManager = getClientManager();
         userServiceManager = getUserServiceManager();
 
-        systemUiPackageName = waitForSystemUiPackage();
-        systemUiUid = waitForPackage(systemUiPackageName, true);
-        settingsUid = waitForPackage(SettingsPackages.SETTINGS_CANDIDATES, true);
+        SystemPackage systemUi = waitForPackage("SystemUI", () -> SystemPackages.resolveSystemUi(context));
+        SystemPackage settings = waitForPackage("Settings", () -> SystemPackages.resolveSettings(context));
+        systemUiPackageName = systemUi.packageName;
+        systemUiUid = systemUi.uid;
+        settingsPackageName = settings.packageName;
+        settingsUid = settings.uid;
 
         // Skip root-only setup when running as shell server
         if (!shellMode) {
@@ -646,7 +643,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
 
         isManager = systemUiPackageName.equals(requestPackageName);
-        isSettings = isSettingsPackageName(requestPackageName);
+        isSettings = settingsPackageName.equals(requestPackageName);
 
         if (isManager) {
             IBinder binder = application.asBinder();

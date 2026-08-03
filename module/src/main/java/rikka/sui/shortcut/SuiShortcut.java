@@ -46,14 +46,28 @@ import android.provider.Settings;
 import androidx.annotation.RequiresApi;
 import java.util.ArrayList;
 import java.util.List;
-import rikka.sui.util.SettingsPackages;
+import rikka.sui.util.SystemPackages;
 
 public class SuiShortcut {
 
     private static final int FLAGS = Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK;
 
+    private static String getProcessName(ActivityInfo activityInfo) {
+        if (activityInfo.processName != null) {
+            return activityInfo.processName;
+        }
+        if (activityInfo.applicationInfo != null && activityInfo.applicationInfo.processName != null) {
+            return activityInfo.applicationInfo.processName;
+        }
+        return activityInfo.packageName;
+    }
+
     public static Intent getIntent(Context context, boolean requiresStandardLaunchMode, String token) {
-        String packageName = SettingsPackages.getPreferredSettingsPackage();
+        SystemPackages.SystemPackage settings = SystemPackages.resolveSettings(context);
+        if (settings == null) {
+            throw new IllegalStateException("Cannot resolve Settings package");
+        }
+        String packageName = settings.packageName;
         String[] actions = new String[] {
             Settings.ACTION_WIFI_SETTINGS,
             Settings.ACTION_NETWORK_OPERATOR_SETTINGS,
@@ -76,6 +90,7 @@ public class SuiShortcut {
                 if (resolveInfo != null
                         && resolveInfo.activityInfo != null
                         && resolveInfo.activityInfo.exported
+                        && settings.processName.equals(getProcessName(resolveInfo.activityInfo))
                         && (!requiresStandardLaunchMode
                                 || resolveInfo.activityInfo.launchMode == ActivityInfo.LAUNCH_MULTIPLE)) {
                     if (requiresStandardLaunchMode) {

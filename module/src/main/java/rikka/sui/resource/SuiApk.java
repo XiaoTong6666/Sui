@@ -24,6 +24,7 @@ import static rikka.sui.settings.SettingsConstants.LOGGER;
 import android.annotation.SuppressLint;
 import android.app.ActivityThread;
 import android.app.Application;
+import android.content.ComponentName;
 import android.content.pm.ApplicationInfo;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
@@ -162,7 +163,8 @@ public class SuiApk {
     private void loadSuiActivity() {
         try {
             suiActivityClass = classLoader.loadClass("rikka.sui.SuiActivity");
-            suiActivityConstructor = suiActivityClass.getDeclaredConstructor(Application.class, Resources.class);
+            suiActivityConstructor =
+                    suiActivityClass.getDeclaredConstructor(Application.class, Resources.class, ComponentName.class);
         } catch (Throwable e) {
             LOGGER.e(e, "Cannot load SuiActivity class");
         }
