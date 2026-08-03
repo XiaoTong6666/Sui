@@ -17,9 +17,12 @@
  * Copyright (c) 2026 Sui Contributors
  */
 
+import com.android.build.api.artifact.SingleArtifact
 import org.apache.tools.ant.filters.FixCrLfFilter
 import java.io.File
 import java.security.MessageDigest
+import rikka.sui.gradle.AdbModuleTask
+import rikka.sui.gradle.ModuleInstallerMode
 
 plugins {
     alias(libs.plugins.android.application)
@@ -136,10 +139,54 @@ androidComponents {
         val buildMetadata = "${moduleVersionCode}-${gitCommitId}-${buildTypeLowered}"
         val zipName = "Sui-${moduleVersion}_${buildMetadata}.zip"
         val magiskDir = file("$outDir/${buildTypeLowered}")
+        val moduleApkDir = variant.artifacts.get(SingleArtifact.APK)
+        val mergedDexDir = layout.buildDirectory.dir("intermediates/sui_dex/$variantLowered")
+        val mergeSuiDexTask = if (buildTypeLowered == "release") {
+            null
+        } else {
+            tasks.register<Exec>("mergeSuiDex${variantCapped}") {
+                inputs.dir(moduleApkDir)
+                outputs.file(mergedDexDir.map { it.file("classes.dex") })
+
+                doFirst {
+                    val apkFiles = moduleApkDir.get().asFile.walkTopDown()
+                        .filter { it.isFile && it.extension == "apk" }
+                        .toList()
+                    require(apkFiles.size == 1) {
+                        "Expected one ${variant.name} APK, found: ${apkFiles.joinToString()}"
+                    }
+
+                    val outputDir = mergedDexDir.get().asFile
+                    delete(outputDir)
+                    check(outputDir.mkdirs()) { "Cannot create $outputDir" }
+
+                    val executableName = if (System.getProperty("os.name").startsWith("Windows")) {
+                        "d8.bat"
+                    } else {
+                        "d8"
+                    }
+                    val d8 = androidComponents.sdkComponents.sdkDirectory.get().asFile.resolve(
+                        "build-tools/${android.buildToolsVersion}/$executableName"
+                    )
+                    check(d8.isFile) { "D8 does not exist: $d8" }
+
+                    val arguments = mutableListOf(
+                        d8.absolutePath,
+                        "--debug",
+                        "--min-api", variant.minSdk.apiLevel.toString()
+                    )
+                    androidComponents.sdkComponents.bootClasspath.get().forEach { library ->
+                        arguments += listOf("--lib", library.asFile.absolutePath)
+                    }
+                    arguments += listOf("--output", outputDir.absolutePath, apkFiles.single().absolutePath)
+                    commandLine(arguments)
+                }
+            }
+        }
         val dexDir = if (buildTypeLowered == "release") {
             layout.buildDirectory.dir("intermediates/dex/${variantLowered}/minify${variantCapped}WithR8")
         } else {
-            layout.buildDirectory.dir("intermediates/dex/${variantLowered}/mergeDex$variantCapped")
+            mergedDexDir
         }
         val strippedLibsDir = layout.buildDirectory.dir(
             "intermediates/stripped_native_libs/${variantLowered}/strip${variantCapped}DebugSymbols/out/lib"
@@ -147,6 +194,7 @@ androidComponents {
         val uiApkDir = uiProject.layout.buildDirectory.dir("outputs/apk/$buildTypeLowered")
 
         tasks.register<Sync>("prepareMagiskFiles${variantCapped}") {
+            mergeSuiDexTask?.let { dependsOn(it) }
             into(magiskDir)
             from(magiskTemplateDir) {
                 exclude("module.prop", "action.sh")
@@ -177,6 +225,10 @@ androidComponents {
                 rename { "sui.apk" }
             }
             doLast {
+                val suiDex = file("$magiskDir/sui.dex")
+                check(suiDex.isFile && suiDex.length() > 0) {
+                    "sui.dex was not produced for ${variant.name}"
+                }
                 fileTree(magiskDir)
                     .files
                     .asSequence()
@@ -187,39 +239,42 @@ androidComponents {
             }
         }
 
-        tasks.register<Zip>("zip${variantCapped}") {
+        val zipTask = tasks.register<Zip>("zip${variantCapped}") {
             dependsOn("prepareMagiskFiles${variantCapped}")
             from(magiskDir)
             archiveFileName.set(zipName)
             destinationDirectory.set(outDir)
         }
 
-        tasks.register<Exec>("push${variantCapped}") {
-            workingDir = outDir
-            commandLine("adb", "push", zipName, "/data/local/tmp/")
+        fun registerAdbTask(
+            name: String,
+            installerMode: ModuleInstallerMode? = null,
+            shouldReboot: Boolean = false
+        ) {
+            tasks.register<AdbModuleTask>(name) {
+                dependsOn(zipTask)
+                moduleZip.set(zipTask.flatMap { it.archiveFile })
+                installerMode?.let { installer.set(it) }
+                reboot.set(shouldReboot)
+                device.convention(providers.gradleProperty("device"))
+            }
         }
 
-        tasks.register<Exec>("flash${variantCapped}") {
-            dependsOn("push${variantCapped}")
-            commandLine("adb", "shell", "su", "-c", "magisk --install-module /data/local/tmp/${zipName}")
-        }
-
-        tasks.register<Exec>("flashWithKsud${variantCapped}") {
-            dependsOn("push${variantCapped}")
-            commandLine("adb", "shell", "su", "-c", "ksud module install /data/local/tmp/${zipName}")
-        }
-
-        tasks.register<Exec>("flashAndReboot${variantCapped}") {
-            dependsOn("flash${variantCapped}")
-            commandLine("adb", "shell", "reboot")
-            isIgnoreExitValue = true
-        }
-
-        tasks.register<Exec>("flashWithKsudAndReboot${variantCapped}") {
-            dependsOn("flashWithKsud${variantCapped}")
-            commandLine("adb", "shell", "reboot")
-            isIgnoreExitValue = true
-        }
+        registerAdbTask("push${variantCapped}")
+        registerAdbTask("flash${variantCapped}", ModuleInstallerMode.AUTO)
+        registerAdbTask("flashWithMagisk${variantCapped}", ModuleInstallerMode.MAGISK)
+        registerAdbTask("flashWithKsud${variantCapped}", ModuleInstallerMode.KERNEL_SU)
+        registerAdbTask("flashAndReboot${variantCapped}", ModuleInstallerMode.AUTO, shouldReboot = true)
+        registerAdbTask(
+            "flashWithMagiskAndReboot${variantCapped}",
+            ModuleInstallerMode.MAGISK,
+            shouldReboot = true
+        )
+        registerAdbTask(
+            "flashWithKsudAndReboot${variantCapped}",
+            ModuleInstallerMode.KERNEL_SU,
+            shouldReboot = true
+        )
     }
 }
 
@@ -235,10 +290,6 @@ afterEvaluate {
 
         tasks.named("assemble${buildType}").configure {
             finalizedBy("zip${buildType}")
-        }
-
-        tasks.named("push${buildType}").configure {
-            dependsOn("assemble${buildType}")
         }
     }
 }
