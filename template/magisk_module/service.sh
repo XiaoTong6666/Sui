@@ -42,6 +42,17 @@ is_sui_running() {
 }
 
 start_sui() {
+    print_log "Refreshing SystemUI and Settings package metadata..."
+    if ! /system/bin/app_process -Djava.class.path="$MODDIR"/sui.dex /system/bin \
+        --nice-name=sui_installer rikka.sui.installer.Installer "$MODDIR" >> "$LOG_FILE" 2>&1; then
+        print_log "Package metadata refresh failed, retrying Sui startup later"
+        return 1
+    fi
+    if [ ! -s "$MODDIR/system_ui" ] || [ ! -s "$MODDIR/settings" ]; then
+        print_log "Package metadata is unavailable, retrying Sui startup later"
+        return 1
+    fi
+
     chmod 700 "$MODDIR/bin/sui" 2>/dev/null
     nohup "$MODDIR/bin/sui" "$MODDIR" 0 >> "$LOG_FILE" 2>&1 &
 }

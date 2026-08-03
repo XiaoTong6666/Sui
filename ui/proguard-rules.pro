@@ -10,7 +10,7 @@
 }
 
 -keep class rikka.sui.SuiActivity {
-    public <init>(android.app.Application, android.content.res.Resources);
+    public <init>(android.app.Application, android.content.res.Resources, android.content.ComponentName);
 }
 
 -keep class rikka.sui.SuiRequestPermissionDialog {

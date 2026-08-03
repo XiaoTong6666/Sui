@@ -19,8 +19,8 @@
 
 #pragma once
 
-#define MANAGER_APPLICATION_ID "com.android.systemui"
-#define SETTINGS_APPLICATION_ID "com.android.settings"
+#define MANAGER_APPLICATION_INFO "system_ui"
+#define SETTINGS_APPLICATION_INFO "settings"
 
 #define DEX_NAME "sui.dex"
 #define SYSTEM_PROCESS_CLASSNAME "rikka/sui/systemserver/SystemProcess"

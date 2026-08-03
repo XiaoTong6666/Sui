@@ -141,7 +141,12 @@ public class SettingsInstrumentation extends Instrumentation {
                     LOGGER.v("creating SuiActivity");
                     reportShortcutUsedIfAvailable();
                     try {
-                        return (Activity) suiActivityConstructor.newInstance(application, suiApk.getResources());
+                        ComponentName component = intent.getComponent();
+                        if (component == null) {
+                            component = new ComponentName(application.getPackageName(), className);
+                        }
+                        return (Activity)
+                                suiActivityConstructor.newInstance(application, suiApk.getResources(), component);
                     } catch (InvocationTargetException e) {
                         LOGGER.e(e, "Cannot create activity");
                     }
@@ -388,7 +393,12 @@ public class SettingsInstrumentation extends Instrumentation {
                         LOGGER.v("creating SuiActivity from 10 args newActivity");
                         reportShortcutUsedIfAvailable();
                         try {
-                            return (Activity) suiActivityConstructor.newInstance(application, suiApk.getResources());
+                            ComponentName component = intent.getComponent();
+                            if (component == null) {
+                                component = new ComponentName(info.packageName, info.name);
+                            }
+                            return (Activity)
+                                    suiActivityConstructor.newInstance(application, suiApk.getResources(), component);
                         } catch (InvocationTargetException e) {
                             LOGGER.e(e, "Cannot create activity from 10 args");
                         }

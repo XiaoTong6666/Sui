@@ -44,7 +44,7 @@ import rikka.sui.resource.SuiApk;
 import rikka.sui.server.ServerConstants;
 import rikka.sui.shortcut.SuiShortcut;
 import rikka.sui.util.BridgeServiceClient;
-import rikka.sui.util.SettingsPackages;
+import rikka.sui.util.SystemPackages;
 
 public class ManagerProcess {
 
@@ -95,8 +95,13 @@ public class ManagerProcess {
                         Context context = ActivityThread.currentActivityThread().getApplication();
                         if (context != null) {
                             LOGGER.i("Sending shortcut creation broadcast...");
+                            SystemPackages.SystemPackage settings = SystemPackages.resolveSettings(context);
+                            if (settings == null) {
+                                LOGGER.w("Cannot resolve Settings package");
+                                return;
+                            }
                             Intent intent = new Intent("rikka.sui.ACTION_REQUEST_PINNED_SHORTCUT");
-                            intent.setPackage(SettingsPackages.getPreferredSettingsPackage());
+                            intent.setPackage(settings.packageName);
                             context.sendBroadcast(intent);
                         }
                     } catch (Throwable e) {
@@ -141,16 +146,16 @@ public class ManagerProcess {
         }
     };
 
-    private static void sendToService() {
+    private static void sendToService(String packageName) {
         IShizukuService service = BridgeServiceClient.getService();
         if (service == null) {
             LOGGER.w("service is null, wait 1s");
-            WorkerHandler.get().postDelayed(ManagerProcess::sendToService, 1000);
+            WorkerHandler.get().postDelayed(() -> sendToService(packageName), 1000);
             return;
         }
 
         Bundle args = new Bundle();
-        args.putString(ATTACH_APPLICATION_PACKAGE_NAME, "com.android.systemui");
+        args.putString(ATTACH_APPLICATION_PACKAGE_NAME, packageName);
         args.putInt(ATTACH_APPLICATION_API_VERSION, SERVER_VERSION);
 
         try {
@@ -159,13 +164,13 @@ public class ManagerProcess {
                     .linkToDeath(
                             () -> {
                                 LOGGER.w("Sui daemon died, schedule reconnection...");
-                                WorkerHandler.get().postDelayed(ManagerProcess::sendToService, 1000);
+                                WorkerHandler.get().postDelayed(() -> sendToService(packageName), 1000);
                             },
                             0);
             LOGGER.i("attachApplication and linkToDeath successfully");
         } catch (RemoteException e) {
             LOGGER.w(e, "attachApplication or linkToDeath failed");
-            WorkerHandler.get().postDelayed(ManagerProcess::sendToService, 1000);
+            WorkerHandler.get().postDelayed(() -> sendToService(packageName), 1000);
             return;
         }
 
@@ -190,7 +195,8 @@ public class ManagerProcess {
             return;
         }
 
-        WorkerHandler.get().post(ManagerProcess::sendToService);
+        String packageName = context.getPackageName();
+        WorkerHandler.get().post(() -> sendToService(packageName));
 
         IntentFilter intentFilter = new IntentFilter();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

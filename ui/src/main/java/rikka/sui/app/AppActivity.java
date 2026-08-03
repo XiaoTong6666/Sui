@@ -20,6 +20,7 @@
 package rikka.sui.app;
 
 import android.app.Application;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
@@ -45,13 +46,15 @@ public class AppActivity extends AppCompatActivity {
 
     private final Application application;
     private final Resources resources;
+    private final ComponentName componentName;
 
     private ViewGroup rootView;
     private ViewGroup toolbarContainer;
 
-    public AppActivity(Application application, Resources resources) {
+    public AppActivity(Application application, Resources resources, ComponentName componentName) {
         this.application = application;
         this.resources = resources;
+        this.componentName = componentName;
     }
 
     @Override
@@ -70,9 +73,8 @@ public class AppActivity extends AppCompatActivity {
     }
 
     @Override
-    public android.content.ComponentName getComponentName() {
-        return new android.content.ComponentName(
-                getPackageName(), "com.android.settings.Settings$WifiSettingsActivity");
+    public ComponentName getComponentName() {
+        return componentName;
     }
 
     @Override

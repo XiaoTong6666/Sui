@@ -1,6 +1,8 @@
 #include <zygisk.hpp>
+#include <cstdlib>
 #include <cstring>
 #include <cerrno>
+#include <limits>
 #include <logging.h>
 #include <cstdio>
 #include <sys/socket.h>
@@ -177,28 +179,78 @@ class ZygiskModule : public zygisk::ModuleBase {
 
 static int dex_mem_fd = -1;
 static size_t dex_size = 0;
-static uid_t manager_uid = -1, settings_uid = -1;
-static char manager_process[kProcessNameMax], settings_process[kProcessNameMax];
 
-static void ReadApplicationInfo(const char* package, uid_t& uid, char* process) {
+struct AppIdentity {
+    char package[kProcessNameMax]{};
+    uid_t uid = static_cast<uid_t>(-1);
+    char process[kProcessNameMax]{};
+};
+
+static AppIdentity manager, settings;
+
+static bool ReadLine(const uint8_t* bytes, size_t size, size_t& offset, char* value,
+                     size_t value_size) {
+    if (offset >= size || value_size == 0) {
+        return false;
+    }
+
+    size_t end = offset;
+    while (end < size && bytes[end] != '\r' && bytes[end] != '\n') {
+        ++end;
+    }
+
+    size_t length = end - offset;
+    if (length == 0 || length >= value_size) {
+        return false;
+    }
+    memcpy(value, bytes + offset, length);
+    value[length] = '\0';
+
+    while (end < size && (bytes[end] == '\r' || bytes[end] == '\n')) {
+        ++end;
+    }
+    offset = end;
+    return true;
+}
+
+static bool ReadApplicationInfo(const char* name, AppIdentity& identity) {
     char buf[PATH_MAX];
-    snprintf(buf, PATH_MAX, "/data/adb/modules/%s/%s", ZYGISK_MODULE_ID, package);
+    snprintf(buf, PATH_MAX, "/data/adb/modules/%s/%s", ZYGISK_MODULE_ID, name);
     auto file = Buffer(buf);
     auto bytes = file.data();
     auto size = file.size();
     if (bytes == nullptr || size == 0) {
         LOGW("ReadApplicationInfo: failed to read %s", buf);
-        return;
+        return false;
     }
-    for (int i = 0; i < size; ++i) {
-        if (bytes[i] == '\n') {
-            memset(process, 0, kProcessNameMax);
-            size_t process_size = std::min<size_t>(size - i - 1, kProcessNameMax - 1);
-            memcpy(process, bytes + i + 1, process_size);
-            bytes[i] = 0;
-            uid = atoi((char*)bytes);
-            break;
-        }
+
+    char uid_string[32]{};
+    size_t offset = 0;
+    if (!ReadLine(bytes, size, offset, identity.package, sizeof(identity.package)) ||
+        !ReadLine(bytes, size, offset, uid_string, sizeof(uid_string)) ||
+        !ReadLine(bytes, size, offset, identity.process, sizeof(identity.process))) {
+        LOGW("ReadApplicationInfo: invalid data in %s", buf);
+        return false;
+    }
+
+    char* end = nullptr;
+    errno = 0;
+    unsigned long uid = strtoul(uid_string, &end, 10);
+    if (errno != 0 || end == uid_string || *end != '\0' ||
+        uid > std::numeric_limits<uid_t>::max()) {
+        LOGW("ReadApplicationInfo: invalid uid in %s", buf);
+        return false;
+    }
+    identity.uid = static_cast<uid_t>(uid);
+    return true;
+}
+
+static void RefreshApplicationInfo() {
+    if (manager.uid == static_cast<uid_t>(-1)) {
+        ReadApplicationInfo(MANAGER_APPLICATION_INFO, manager);
+    }
+    if (settings.uid == static_cast<uid_t>(-1)) {
+        ReadApplicationInfo(SETTINGS_APPLICATION_INFO, settings);
     }
 }
 
@@ -236,11 +288,11 @@ static bool PrepareCompanion() {
 
     LOGI("Companion: dex fd is %d", dex_mem_fd);
 
-    ReadApplicationInfo(MANAGER_APPLICATION_ID, manager_uid, manager_process);
-    ReadApplicationInfo(SETTINGS_APPLICATION_ID, settings_uid, settings_process);
+    ReadApplicationInfo(MANAGER_APPLICATION_INFO, manager);
+    ReadApplicationInfo(SETTINGS_APPLICATION_INFO, settings);
 
-    LOGI("Companion: SystemUI %d %s", manager_uid, manager_process);
-    LOGI("Companion: Settings %d %s", settings_uid, settings_process);
+    LOGI("Companion: SystemUI %s %d %s", manager.package, manager.uid, manager.process);
+    LOGI("Companion: Settings %s %d %s", settings.package, settings.uid, settings.process);
 
     result = true;
 
@@ -259,6 +311,8 @@ static void CompanionEntry(int socket) {
         return;
     }
 
+    RefreshApplicationInfo();
+
     char process_name[kProcessNameMax]{0};
     Identity whoami;
 
@@ -270,10 +324,10 @@ static void CompanionEntry(int socket) {
         read_full(socket, process_name, kProcessNameMax);
 
         LOGI("SuiCompanion: Checking app: uid=%d, process=%s", uid, process_name);
-        if (uid == manager_uid && strcmp(process_name, manager_process) == 0) {
+        if (uid == manager.uid && strcmp(process_name, manager.process) == 0) {
             whoami = Identity::SYSTEM_UI;
             LOGI("SuiCompanion: Matched SYSTEM_UI!");
-        } else if (uid == settings_uid && strcmp(process_name, settings_process) == 0) {
+        } else if (uid == settings.uid && strcmp(process_name, settings.process) == 0) {
             whoami = Identity::SETTINGS;
             LOGI("SuiCompanion: Matched SETTINGS!");
         } else {
