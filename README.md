@@ -1,14 +1,29 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `519`
-- **Commit:** [`39e4089`](https://github.com/XiaoTong6666/Sui/commit/39e40899e8bbe8ce7e0382af923c914b03363df9)
-- **Build time:** `3m 42s`
-- **SHA256:** `62104bb20e9c733c6fda4bd0fb92738b5364e625b5ba4d5c224c39deda63c754`
+- **VersionCode:** `520`
+- **Commit:** [`36ec596`](https://github.com/XiaoTong6666/Sui/commit/36ec5969c7faa949e99db5dc17d109bb1327ec01)
+- **Build time:** `2m 42s`
+- **SHA256:** `2b27490acfb3afa1abf8148ba70169f62623a5015570ee5c2dafb1e2bf51d6fb`
 
 ## Message
 
 ```text
-fix(build): 修复 Debug 打包并支持多设备刷入
+refactor(module): dynamically resolve system packages (#85)
 
+* fix(module): resolve SystemUI package instead of hardcoding com.android.systemui
+
+* fix(module): resolve SystemUI and Settings packages dynamically
+
+* ui: add contributor
+
+* fix: remove SystemUI package fallback
+
+* restore legacy system package fallback
+
+* fix: refresh package metadata
+
+---------
+
+Co-authored-by: XiaoTong6666 <xiaotong6666666666@gmail.com>
 ```
