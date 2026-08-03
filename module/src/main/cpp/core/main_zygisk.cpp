@@ -245,6 +245,15 @@ static bool ReadApplicationInfo(const char* name, AppIdentity& identity) {
     return true;
 }
 
+static void RefreshApplicationInfo() {
+    if (manager.uid == static_cast<uid_t>(-1)) {
+        ReadApplicationInfo(MANAGER_APPLICATION_INFO, manager);
+    }
+    if (settings.uid == static_cast<uid_t>(-1)) {
+        ReadApplicationInfo(SETTINGS_APPLICATION_INFO, settings);
+    }
+}
+
 static bool PrepareCompanion() {
     bool result = false;
 
@@ -301,6 +310,8 @@ static void CompanionEntry(int socket) {
         close(socket);
         return;
     }
+
+    RefreshApplicationInfo();
 
     char process_name[kProcessNameMax]{0};
     Identity whoami;

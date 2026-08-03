@@ -31,26 +31,25 @@ import rikka.sui.util.SystemPackages.SystemPackage;
 
 public class Installer {
 
-    private static void saveApplicationInfoToFile(
+    private static final int PACKAGE_INFO_RETRY_COUNT = 120;
+
+    private static boolean saveApplicationInfoToFile(
             String path, String fileName, String name, SystemPackage systemPackage) throws IOException {
-        File file = new File(path, fileName);
         if (systemPackage == null) {
-            if (file.exists() && !file.delete()) {
-                System.out.println("! Can't delete stale " + file);
-            }
             System.out.println("! Can't resolve the " + name + " package");
-            return;
+            return false;
         }
 
         System.out.println("- " + name + ": packageName=" + systemPackage.packageName + ", uid=" + systemPackage.uid
                 + ", processName=" + systemPackage.processName);
 
-        if (!file.exists() && !file.createNewFile()) {
-            System.out.println("! Can't create " + file);
-            return;
+        File file = new File(path, fileName);
+        File temporaryFile = new File(path, fileName + ".new");
+        if (temporaryFile.exists() && !temporaryFile.delete()) {
+            throw new IOException("Can't delete " + temporaryFile);
         }
 
-        try (FileWriter writer = new FileWriter(file)) {
+        try (FileWriter writer = new FileWriter(temporaryFile)) {
             writer.write(String.format(
                     Locale.ENGLISH,
                     "%s\n%d\n%s",
@@ -58,19 +57,61 @@ public class Installer {
                     systemPackage.uid,
                     systemPackage.processName));
         }
+
+        if (!temporaryFile.renameTo(file)) {
+            temporaryFile.delete();
+            throw new IOException("Can't replace " + file);
+        }
+        return true;
+    }
+
+    private static SystemPackage[] resolvePackages(Context context) throws InterruptedException {
+        SystemPackage systemUi = null;
+        SystemPackage settings = null;
+
+        for (int attempt = 0; attempt < PACKAGE_INFO_RETRY_COUNT; ++attempt) {
+            if (systemUi == null) {
+                systemUi = SystemPackages.resolveSystemUi(context);
+            }
+            if (settings == null) {
+                settings = SystemPackages.resolveSettings(context);
+            }
+            if (systemUi != null && settings != null) {
+                break;
+            }
+
+            if (attempt == 0 || (attempt + 1) % 10 == 0) {
+                System.out.println(
+                        "- Waiting for PackageManager (" + (attempt + 1) + "/" + PACKAGE_INFO_RETRY_COUNT + ")");
+            }
+            Thread.sleep(1000);
+        }
+
+        return new SystemPackage[] {systemUi, settings};
     }
 
     @SuppressWarnings("deprecation")
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         System.out.println("- AppProcess: main");
 
         if (Looper.getMainLooper() == null) {
             Looper.prepareMainLooper();
         }
         Context context = ActivityThread.systemMain().getSystemContext();
+        SystemPackage[] packages = resolvePackages(context);
 
-        saveApplicationInfoToFile(args[0], "system_ui", "SystemUI", SystemPackages.resolveSystemUi(context));
-        saveApplicationInfoToFile(args[0], "settings", "Settings", SystemPackages.resolveSettings(context));
+        if (packages[0] == null || packages[1] == null) {
+            System.out.println("! PackageManager did not resolve all required packages");
+            System.exit(1);
+            return;
+        }
+
+        if (!saveApplicationInfoToFile(args[0], "system_ui", "SystemUI", packages[0])
+                || !saveApplicationInfoToFile(args[0], "settings", "Settings", packages[1])) {
+            System.out.println("! Failed to save package metadata");
+            System.exit(1);
+            return;
+        }
         System.out.println("- AppProcess: exit");
     }
 }
