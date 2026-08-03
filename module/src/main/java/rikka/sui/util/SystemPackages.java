@@ -35,11 +35,6 @@ import rikka.hidden.compat.PackageManagerApis;
 
 public final class SystemPackages {
 
-    private static final String SYSTEM_UI = "com.android.systemui";
-    private static final String SETTINGS = "com.android.settings";
-    private static final String TV_SETTINGS = "com.android.tv.settings";
-    private static final String[] SETTINGS_FALLBACKS = {TV_SETTINGS, SETTINGS};
-
     public static final class SystemPackage {
 
         public final String packageName;
@@ -64,14 +59,10 @@ public final class SystemPackages {
         return applicationInfo != null && isSystemApplication(applicationInfo) ? applicationInfo : null;
     }
 
-    private static @Nullable SystemPackage getSystemPackage(
-            Context context, String packageName, @Nullable String processName, boolean requirePlatformSignature) {
+    private static @Nullable SystemPackage getSystemPackage(String packageName, @Nullable String processName) {
         try {
             ApplicationInfo applicationInfo = getSystemApplication(packageName);
-            if (applicationInfo == null
-                    || (requirePlatformSignature
-                            && context.getPackageManager().checkSignatures("android", packageName)
-                                    != PackageManager.SIGNATURE_MATCH)) {
+            if (applicationInfo == null) {
                 return null;
             }
 
@@ -87,10 +78,8 @@ public final class SystemPackages {
         }
     }
 
-    private static @Nullable SystemPackage getSystemPackage(
-            Context context, ComponentInfo componentInfo, boolean requirePlatformSignature) {
-        return getSystemPackage(
-                context, componentInfo.packageName, componentInfo.processName, requirePlatformSignature);
+    private static @Nullable SystemPackage getSystemPackage(ComponentInfo componentInfo) {
+        return getSystemPackage(componentInfo.packageName, componentInfo.processName);
     }
 
     @SuppressLint("DiscouragedApi")
@@ -102,7 +91,7 @@ public final class SystemPackages {
                         ComponentName.unflattenFromString(context.getResources().getString(id));
                 if (component != null) {
                     ServiceInfo serviceInfo = context.getPackageManager().getServiceInfo(component, 0);
-                    SystemPackage systemPackage = getSystemPackage(context, serviceInfo, false);
+                    SystemPackage systemPackage = getSystemPackage(serviceInfo);
                     if (systemPackage != null) {
                         return systemPackage;
                     }
@@ -111,31 +100,33 @@ public final class SystemPackages {
         } catch (PackageManager.NameNotFoundException | RuntimeException ignored) {
         }
 
-        return getSystemPackage(context, SYSTEM_UI, null, false);
+        return null;
     }
 
-    private static @Nullable SystemPackage getSettingsPackage(Context context, ResolveInfo resolveInfo) {
+    private static @Nullable SystemPackage getSettingsPackage(ResolveInfo resolveInfo) {
         if (resolveInfo == null || resolveInfo.activityInfo == null) {
             return null;
         }
-        return getSystemPackage(context, resolveInfo.activityInfo, true);
+        return getSystemPackage(resolveInfo.activityInfo);
     }
 
     @SuppressLint("InlinedApi")
     public static @Nullable SystemPackage resolveSettings(Context context) {
         PackageManager packageManager = context.getPackageManager();
         Intent intent = new Intent(Settings.ACTION_SETTINGS);
-        int flags = PackageManager.MATCH_SYSTEM_ONLY;
+        int flags = PackageManager.MATCH_DEFAULT_ONLY
+                | PackageManager.MATCH_DIRECT_BOOT_AWARE
+                | PackageManager.MATCH_DIRECT_BOOT_UNAWARE;
 
         try {
-            SystemPackage systemPackage = getSettingsPackage(context, packageManager.resolveActivity(intent, flags));
+            SystemPackage systemPackage = getSettingsPackage(packageManager.resolveActivity(intent, flags));
             if (systemPackage != null && !"android".equals(systemPackage.packageName)) {
                 return systemPackage;
             }
 
             List<ResolveInfo> resolveInfos = packageManager.queryIntentActivities(intent, flags);
             for (ResolveInfo resolveInfo : resolveInfos) {
-                systemPackage = getSettingsPackage(context, resolveInfo);
+                systemPackage = getSettingsPackage(resolveInfo);
                 if (systemPackage != null && !"android".equals(systemPackage.packageName)) {
                     return systemPackage;
                 }
@@ -143,12 +134,6 @@ public final class SystemPackages {
         } catch (RuntimeException ignored) {
         }
 
-        for (String packageName : SETTINGS_FALLBACKS) {
-            SystemPackage systemPackage = getSystemPackage(context, packageName, null, true);
-            if (systemPackage != null) {
-                return systemPackage;
-            }
-        }
         return null;
     }
 }

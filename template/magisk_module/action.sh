@@ -1,8 +1,13 @@
 MODDIR=${0%/*}
-SYSTEMUI_PACKAGE=com.android.systemui
-if [ -r "$MODDIR/system_ui" ]; then
-  IFS= read -r RESOLVED < "$MODDIR/system_ui"
-  [ -n "$RESOLVED" ] && SYSTEMUI_PACKAGE="$RESOLVED"
+if [ ! -r "$MODDIR/system_ui" ]; then
+  log -t Sui "SystemUI package metadata is missing"
+  exit 1
+fi
+
+IFS= read -r SYSTEMUI_PACKAGE < "$MODDIR/system_ui"
+if [ -z "$SYSTEMUI_PACKAGE" ]; then
+  log -t Sui "SystemUI package metadata is empty"
+  exit 1
 fi
 
 API=$(getprop ro.build.version.sdk)
