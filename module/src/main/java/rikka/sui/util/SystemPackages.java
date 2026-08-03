@@ -28,12 +28,18 @@ import android.content.pm.ComponentInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.pm.ServiceInfo;
+import android.os.Build;
 import android.provider.Settings;
 import androidx.annotation.Nullable;
 import java.util.List;
 import rikka.hidden.compat.PackageManagerApis;
 
 public final class SystemPackages {
+
+    private static final String LEGACY_SYSTEM_UI_PACKAGE = "com.android.systemui";
+    private static final String LEGACY_SYSTEM_UI_SERVICE = "com.android.systemui.SystemUIService";
+    private static final String LEGACY_SETTINGS_PACKAGE = "com.android.settings";
+    private static final String LEGACY_TV_SETTINGS_PACKAGE = "com.android.tv.settings";
 
     public static final class SystemPackage {
 
@@ -82,6 +88,15 @@ public final class SystemPackages {
         return getSystemPackage(componentInfo.packageName, componentInfo.processName);
     }
 
+    private static @Nullable SystemPackage resolveLegacySystemUi(Context context) {
+        try {
+            ComponentName component = new ComponentName(LEGACY_SYSTEM_UI_PACKAGE, LEGACY_SYSTEM_UI_SERVICE);
+            return getSystemPackage(context.getPackageManager().getServiceInfo(component, 0));
+        } catch (PackageManager.NameNotFoundException | RuntimeException ignored) {
+            return getSystemPackage(LEGACY_SYSTEM_UI_PACKAGE, null);
+        }
+    }
+
     @SuppressLint("DiscouragedApi")
     public static @Nullable SystemPackage resolveSystemUi(Context context) {
         try {
@@ -100,7 +115,7 @@ public final class SystemPackages {
         } catch (PackageManager.NameNotFoundException | RuntimeException ignored) {
         }
 
-        return null;
+        return resolveLegacySystemUi(context);
     }
 
     private static @Nullable SystemPackage getSettingsPackage(ResolveInfo resolveInfo) {
@@ -110,13 +125,30 @@ public final class SystemPackages {
         return getSystemPackage(resolveInfo.activityInfo);
     }
 
+    private static @Nullable SystemPackage resolveLegacySettings(Context context) {
+        boolean isTelevision =
+                (context.getResources().getConfiguration().uiMode & android.content.res.Configuration.UI_MODE_TYPE_MASK)
+                        == android.content.res.Configuration.UI_MODE_TYPE_TELEVISION;
+        String[] packageNames = isTelevision
+                ? new String[] {LEGACY_TV_SETTINGS_PACKAGE, LEGACY_SETTINGS_PACKAGE}
+                : new String[] {LEGACY_SETTINGS_PACKAGE, LEGACY_TV_SETTINGS_PACKAGE};
+        for (String packageName : packageNames) {
+            SystemPackage systemPackage = getSystemPackage(packageName, null);
+            if (systemPackage != null) {
+                return systemPackage;
+            }
+        }
+        return null;
+    }
+
     @SuppressLint("InlinedApi")
     public static @Nullable SystemPackage resolveSettings(Context context) {
         PackageManager packageManager = context.getPackageManager();
         Intent intent = new Intent(Settings.ACTION_SETTINGS);
-        int flags = PackageManager.MATCH_DEFAULT_ONLY
-                | PackageManager.MATCH_DIRECT_BOOT_AWARE
-                | PackageManager.MATCH_DIRECT_BOOT_UNAWARE;
+        int flags = PackageManager.MATCH_DEFAULT_ONLY;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            flags |= PackageManager.MATCH_DIRECT_BOOT_AWARE | PackageManager.MATCH_DIRECT_BOOT_UNAWARE;
+        }
 
         try {
             SystemPackage systemPackage = getSettingsPackage(packageManager.resolveActivity(intent, flags));
@@ -134,6 +166,6 @@ public final class SystemPackages {
         } catch (RuntimeException ignored) {
         }
 
-        return null;
+        return resolveLegacySettings(context);
     }
 }
