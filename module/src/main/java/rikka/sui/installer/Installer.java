@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Locale;
 import rikka.hidden.compat.PackageManagerApis;
 import rikka.sui.util.SettingsPackages;
+import rikka.sui.util.SystemUiPackages;
 
 public class Installer {
 
@@ -52,9 +53,32 @@ public class Installer {
         writer.close();
     }
 
+    private static void savePackageNameToFile(String path, String fileName, String packageName) throws IOException {
+        File file = new File(path, fileName);
+        if (!file.exists() && !file.createNewFile()) {
+            System.out.println("! Can't create " + file);
+            return;
+        }
+
+        FileWriter writer = new FileWriter(file);
+        writer.write(packageName);
+        writer.flush();
+        writer.close();
+    }
+
     public static void main(String[] args) throws IOException {
         System.out.println("- AppProcess: main");
-        saveApplicationInfoToFile(args[0], "com.android.systemui", "com.android.systemui", "SystemUI");
+
+        String systemUiPackageName = SystemUiPackages.resolveInstalledSystemUiPackage();
+        if (systemUiPackageName == null) {
+            System.out.println("! Can't fetch application info for SystemUI packages "
+                    + java.util.Arrays.toString(SystemUiPackages.SYSTEM_UI_CANDIDATES));
+        } else {
+            // The file name stays com.android.systemui because the zygisk module uses it as a key.
+            saveApplicationInfoToFile(args[0], systemUiPackageName, SystemUiPackages.SYSTEM_UI, "SystemUI");
+            // action.sh sends the secret code broadcast to this package.
+            savePackageNameToFile(args[0], "systemui_package", systemUiPackageName);
+        }
 
         String settingsPackageName = SettingsPackages.resolveInstalledSettingsPackage();
         if (settingsPackageName == null) {

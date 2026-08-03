@@ -45,6 +45,7 @@ import rikka.sui.server.ServerConstants;
 import rikka.sui.shortcut.SuiShortcut;
 import rikka.sui.util.BridgeServiceClient;
 import rikka.sui.util.SettingsPackages;
+import rikka.sui.util.SystemUiPackages;
 
 public class ManagerProcess {
 
@@ -149,8 +150,22 @@ public class ManagerProcess {
             return;
         }
 
+        // Not always com.android.systemui: Meta Horizon OS ships com.meta.systemui.
+        String packageName = null;
+        try {
+            Context context = ActivityThread.currentActivityThread().getApplication();
+            if (context != null) {
+                packageName = context.getPackageName();
+            }
+        } catch (Throwable e) {
+            LOGGER.w(e, "getApplication");
+        }
+        if (packageName == null) {
+            packageName = SystemUiPackages.getPreferredSystemUiPackage();
+        }
+
         Bundle args = new Bundle();
-        args.putString(ATTACH_APPLICATION_PACKAGE_NAME, "com.android.systemui");
+        args.putString(ATTACH_APPLICATION_PACKAGE_NAME, packageName);
         args.putInt(ATTACH_APPLICATION_API_VERSION, SERVER_VERSION);
 
         try {

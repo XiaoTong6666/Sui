@@ -67,6 +67,7 @@ import rikka.sui.util.BridgeConstants;
 import rikka.sui.util.Logger;
 import rikka.sui.util.OsUtils;
 import rikka.sui.util.SettingsPackages;
+import rikka.sui.util.SystemUiPackages;
 import rikka.sui.util.UserHandleCompat;
 
 @OptIn(markerClass = androidx.core.os.BuildCompat.PrereleaseSdkCheck.class)
@@ -232,11 +233,10 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         System.exit(0);
     }
 
-    private static final String MANAGER_APPLICATION_ID = "com.android.systemui";
-
     private final SuiClientManager clientManager;
     private final SuiConfigManager configManager;
     private final SuiUserServiceManager userServiceManager;
+    private final String systemUiPackageName;
     private final int systemUiUid;
     private final int settingsUid;
     private IShizukuApplication systemUiApplication;
@@ -469,6 +469,31 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         return waitForPackage(new String[] {packageName}, forever);
     }
 
+    /**
+     * SystemUI is not always {@code com.android.systemui} (Meta Horizon OS uses
+     * {@code com.meta.systemui}), so resolve it instead of waiting forever for a package that will
+     * never be installed.
+     */
+    private String waitForSystemUiPackage() {
+        while (true) {
+            String packageName = SystemUiPackages.resolveInstalledSystemUiPackage();
+            if (packageName != null) {
+                LOGGER.i("SystemUI package is %s", packageName);
+                return packageName;
+            }
+
+            LOGGER.w(
+                    "can't find SystemUI (%s), wait 1s",
+                    java.util.Arrays.toString(SystemUiPackages.SYSTEM_UI_CANDIDATES));
+
+            try {
+                //noinspection BusyWait
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {
+            }
+        }
+    }
+
     private int waitForPackage(String[] packageNames, boolean forever) {
         while (true) {
             for (String packageName : packageNames) {
@@ -551,7 +576,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         clientManager = getClientManager();
         userServiceManager = getUserServiceManager();
 
-        systemUiUid = waitForPackage(MANAGER_APPLICATION_ID, true);
+        systemUiPackageName = waitForSystemUiPackage();
+        systemUiUid = waitForPackage(systemUiPackageName, true);
         settingsUid = waitForPackage(SettingsPackages.SETTINGS_CANDIDATES, true);
 
         // Skip root-only setup when running as shell server
@@ -619,7 +645,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     "Request package " + requestPackageName + "does not belong to uid " + callingUid);
         }
 
-        isManager = MANAGER_APPLICATION_ID.equals(requestPackageName);
+        isManager = systemUiPackageName.equals(requestPackageName);
         isSettings = isSettingsPackageName(requestPackageName);
 
         if (isManager) {
