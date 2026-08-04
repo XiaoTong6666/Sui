@@ -1,14 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `521`
-- **Commit:** [`b207af3`](https://github.com/XiaoTong6666/Sui/commit/b207af366a6f6705419080482fb1450a823698aa)
-- **Build time:** `2m 46s`
-- **SHA256:** `d2b0fffdb84259ae63b95ed2c5676ee3e144e0ee7b4ab952be6177a15bd62662`
+- **VersionCode:** `522`
+- **Commit:** [`b96436d`](https://github.com/XiaoTong6666/Sui/commit/b96436d45581fb404a9ef1c5235d798dab3026b4)
+- **Build time:** `2m 51s`
+- **SHA256:** `154af92c9295308a3f66ee96a6f557dfdd950a14335ae9175080427d215fab93`
 
 ## Message
 
 ```text
-fix: 修复卸载解析和元数据刷新
+fix(module): add SQLite corruption recovery
 
 ```
