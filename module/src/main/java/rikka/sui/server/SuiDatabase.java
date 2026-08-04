@@ -22,6 +22,7 @@ package rikka.sui.server;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseCorruptException;
 import androidx.annotation.Nullable;
 import java.io.File;
 import rikka.sui.server.SuiConfig.PackageEntry;
@@ -36,22 +37,106 @@ public class SuiDatabase {
     }
 
     private static final String DATABASE_PATH;
+    private static final String[] DATABASE_FILE_SUFFIXES = {"", "-journal", "-shm", "-wal"};
     private static final String UID_CONFIG_TABLE = "uid_configs";
     private static SQLiteDatabase databaseInternal;
 
-    private static SQLiteDatabase createDatabase(boolean allowRetry) {
-        SQLiteDatabase database;
+    private static void checkDatabase(SQLiteDatabase database) {
+        String result;
+        try (Cursor cursor = database.rawQuery("PRAGMA quick_check(1)", null)) {
+            result = cursor.moveToFirst() ? cursor.getString(0) : null;
+        }
+        if (!"ok".equalsIgnoreCase(result)) {
+            throw new SQLiteDatabaseCorruptException("quick_check failed: " + result);
+        }
+    }
+
+    private static boolean isDatabaseCorrupt(Throwable error) {
+        while (error != null) {
+            if (error instanceof SQLiteDatabaseCorruptException) {
+                return true;
+            }
+            error = error.getCause();
+        }
+        return false;
+    }
+
+    private static void closeDatabase(SQLiteDatabase database) {
+        if (database == null) {
+            return;
+        }
+        try {
+            database.close();
+        } catch (Throwable e) {
+            ServerConstants.LOGGER.w(e, "close database after failed initialization");
+        }
+    }
+
+    private static boolean hasOrphanedDatabaseFiles() {
+        if ((new File(DATABASE_PATH)).exists()) {
+            return false;
+        }
+        for (int i = 1; i < DATABASE_FILE_SUFFIXES.length; ++i) {
+            if ((new File(DATABASE_PATH + DATABASE_FILE_SUFFIXES[i])).exists()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Nullable private static File createBackupDirectory(String reason) {
+        File parent = (new File(DATABASE_PATH)).getParentFile();
+        if (parent == null) {
+            return null;
+        }
+
+        String name = "database-" + reason + "-" + System.currentTimeMillis();
+        File directory = new File(parent, name);
+        for (int index = 1; directory.exists(); ++index) {
+            directory = new File(parent, name + "-" + index);
+        }
+        return directory.mkdir() ? directory : null;
+    }
+
+    private static void quarantineDatabaseFiles(String reason) {
+        File databaseFile = new File(DATABASE_PATH);
+        File backupDirectory = createBackupDirectory(reason);
+        for (String suffix : DATABASE_FILE_SUFFIXES) {
+            File source = new File(DATABASE_PATH + suffix);
+            if (!source.exists()) {
+                continue;
+            }
+            if (backupDirectory == null || !source.renameTo(new File(backupDirectory, source.getName()))) {
+                ServerConstants.LOGGER.w("Cannot back up database file %s", source);
+            }
+        }
+
+        if (backupDirectory != null) {
+            ServerConstants.LOGGER.w("Quarantined database files to %s", backupDirectory);
+        }
+        SQLiteDatabase.deleteDatabase(databaseFile);
+    }
+
+    private static SQLiteDatabase createDatabase(boolean allowRecovery) {
+        if (allowRecovery && hasOrphanedDatabaseFiles()) {
+            ServerConstants.LOGGER.w("Main database is missing; quarantining orphaned auxiliary files");
+            quarantineDatabaseFiles("orphaned");
+        }
+
+        SQLiteDatabase database = null;
         try {
             database = SQLiteDataBaseRemoteCompat.openDatabase(DATABASE_PATH, null);
+            checkDatabase(database);
             database.execSQL("CREATE TABLE IF NOT EXISTS uid_configs(uid INTEGER PRIMARY KEY, flags INTEGER);");
         } catch (Throwable e) {
-            ServerConstants.LOGGER.e(e, "create database");
-            if (allowRetry && (new File(DATABASE_PATH)).delete()) {
-                ServerConstants.LOGGER.i("delete database and retry");
-                database = createDatabase(false);
-            } else {
-                database = null;
+            boolean corrupt = isDatabaseCorrupt(e);
+            ServerConstants.LOGGER.e(e, corrupt ? "database corrupted" : "create database");
+            closeDatabase(database);
+            if (allowRecovery && corrupt) {
+                quarantineDatabaseFiles("corrupt");
+                return createDatabase(false);
             }
+            return null;
         }
 
         return database;
@@ -62,6 +147,10 @@ public class SuiDatabase {
             databaseInternal = createDatabase(true);
         }
         return databaseInternal;
+    }
+
+    static boolean initialize() {
+        return getDatabase() != null;
     }
 
     @Nullable public static SuiConfig readConfig() {

@@ -228,6 +228,11 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         SuiService.shellMode = isShell;
 
         Looper.prepareMainLooper();
+        // Frameworks without the SQLite isolated-process fix may query SettingsProvider through
+        // systemMain's unregistered Application, so initialize SQLite first.
+        if (!isShell && !SuiDatabase.initialize()) {
+            throw new IllegalStateException("database unavailable");
+        }
         Context context = ActivityThread.systemMain().getSystemContext();
         new SuiService(context);
         Looper.loop();
