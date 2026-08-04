@@ -68,6 +68,15 @@ public class Uninstaller {
         }
     }
 
+    private static @Nullable String findRootPath(String[] args) {
+        for (String arg : args) {
+            if (!arg.startsWith("--")) {
+                return arg;
+            }
+        }
+        return null;
+    }
+
     private static void removeShortcuts(Context context, @Nullable String rootPath)
             throws InterruptedException, RemoteException {
         IShortcutService shortcutService = null;
@@ -131,7 +140,7 @@ public class Uninstaller {
             Looper.prepare();
         }
         Context context = ActivityThread.systemMain().getSystemContext();
-        String rootPath = args.length > 0 ? args[0] : null;
+        String rootPath = findRootPath(args);
 
         new Handler(Looper.myLooper()).post(() -> {
             try {

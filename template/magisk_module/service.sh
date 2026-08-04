@@ -41,21 +41,31 @@ is_sui_running() {
     [ -n "$(get_sui_pids)" ]
 }
 
-start_sui() {
+refresh_metadata() {
     print_log "Refreshing SystemUI and Settings package metadata..."
     if ! /system/bin/app_process -Djava.class.path="$MODDIR"/sui.dex /system/bin \
         --nice-name=sui_installer rikka.sui.installer.Installer "$MODDIR" >> "$LOG_FILE" 2>&1; then
-        print_log "Package metadata refresh failed, retrying Sui startup later"
+        print_log "Package metadata refresh failed"
         return 1
     fi
     if [ ! -s "$MODDIR/system_ui" ] || [ ! -s "$MODDIR/settings" ]; then
-        print_log "Package metadata is unavailable, retrying Sui startup later"
+        print_log "Package metadata is unavailable"
+        return 1
+    fi
+    return 0
+}
+
+start_sui() {
+    if ! refresh_metadata; then
+        print_log "Retrying Sui startup later"
         return 1
     fi
 
     chmod 700 "$MODDIR/bin/sui" 2>/dev/null
     nohup "$MODDIR/bin/sui" "$MODDIR" 0 >> "$LOG_FILE" 2>&1 &
 }
+
+refresh_metadata
 
 LOCK_DIR="/data/adb/sui/watchdog.lock"
 LOCK_PID="$LOCK_DIR/pid"
