@@ -17,6 +17,7 @@
 #include <fcntl.h>
 #include <cinttypes>
 #include <memory>
+#include <mutex>
 #include <algorithm>
 #include <socket.h>
 #include <sys/system_properties.h>
@@ -179,6 +180,8 @@ class ZygiskModule : public zygisk::ModuleBase {
 
 static int dex_mem_fd = -1;
 static size_t dex_size = 0;
+static std::mutex companion_prepare_mutex;
+static bool companion_prepared = false;
 
 struct AppIdentity {
     char package[kProcessNameMax]{};
@@ -187,6 +190,7 @@ struct AppIdentity {
 };
 
 static AppIdentity manager, settings;
+static std::mutex identity_mutex;
 
 static bool ReadLine(const uint8_t* bytes, size_t size, size_t& offset, char* value,
                      size_t value_size) {
@@ -245,21 +249,31 @@ static bool ReadApplicationInfo(const char* name, AppIdentity& identity) {
     return true;
 }
 
-static void RefreshApplicationInfo() {
-    if (manager.uid == static_cast<uid_t>(-1)) {
-        ReadApplicationInfo(MANAGER_APPLICATION_INFO, manager);
+static void RefreshApplicationInfo(AppIdentity& manager_snapshot, AppIdentity& settings_snapshot) {
+    std::lock_guard lock(identity_mutex);
+
+    AppIdentity identity;
+    if (ReadApplicationInfo(MANAGER_APPLICATION_INFO, identity)) {
+        manager = identity;
     }
-    if (settings.uid == static_cast<uid_t>(-1)) {
-        ReadApplicationInfo(SETTINGS_APPLICATION_INFO, settings);
+    identity = {};
+    if (ReadApplicationInfo(SETTINGS_APPLICATION_INFO, identity)) {
+        settings = identity;
     }
+
+    manager_snapshot = manager;
+    settings_snapshot = settings;
 }
 
 static bool PrepareCompanion() {
     bool result = false;
+    void* addr = MAP_FAILED;
 
     auto path = "/data/adb/modules/" ZYGISK_MODULE_ID "/" DEX_NAME;
     int fd = open(path, O_RDONLY);
-    ssize_t size;
+    int prepared_fd = -1;
+    ssize_t size = -1;
+    AppIdentity manager_snapshot, settings_snapshot;
 
     if (fd == -1) {
         PLOGE("open %s", path);
@@ -267,51 +281,81 @@ static bool PrepareCompanion() {
     }
 
     size = lseek(fd, 0, SEEK_END);
-    if (size == -1) {
+    if (size <= 0) {
         PLOGE("lseek %s", path);
         goto cleanup;
     }
-    lseek(fd, 0, SEEK_SET);
+    if (lseek(fd, 0, SEEK_SET) != 0) {
+        PLOGE("lseek %s", path);
+        goto cleanup;
+    }
 
     LOGD("Companion: dex size is %" PRIdPTR, size);
 
-    dex_mem_fd = CreateSharedMem("sui.dex", size);
-    if (dex_mem_fd >= 0) {
-        auto addr = (uint8_t*)mmap(nullptr, size, PROT_WRITE, MAP_SHARED, dex_mem_fd, 0);
-        if (addr != MAP_FAILED) {
-            read_full(fd, addr, size);
-            dex_size = size;
-            munmap(addr, size);
-        }
-        SetSharedMemProt(dex_mem_fd, PROT_READ);
+    prepared_fd = CreateSharedMem("sui.dex", size);
+    if (prepared_fd == -1) {
+        PLOGE("CreateSharedMem %s", path);
+        goto cleanup;
     }
+    addr = mmap(nullptr, size, PROT_WRITE, MAP_SHARED, prepared_fd, 0);
+    if (addr == MAP_FAILED) {
+        PLOGE("mmap %s", path);
+        goto cleanup;
+    }
+    if (read_full(fd, addr, size) != 0) {
+        PLOGE("read %s", path);
+        goto cleanup;
+    }
+    munmap(addr, size);
+    addr = MAP_FAILED;
+    if (SetSharedMemProt(prepared_fd, PROT_READ) != 0) {
+        PLOGE("SetSharedMemProt %s", path);
+        goto cleanup;
+    }
+
+    dex_mem_fd = prepared_fd;
+    dex_size = size;
+    prepared_fd = -1;
 
     LOGI("Companion: dex fd is %d", dex_mem_fd);
 
-    ReadApplicationInfo(MANAGER_APPLICATION_INFO, manager);
-    ReadApplicationInfo(SETTINGS_APPLICATION_INFO, settings);
+    RefreshApplicationInfo(manager_snapshot, settings_snapshot);
 
-    LOGI("Companion: SystemUI %s %d %s", manager.package, manager.uid, manager.process);
-    LOGI("Companion: Settings %s %d %s", settings.package, settings.uid, settings.process);
+    LOGI("Companion: SystemUI %s %d %s", manager_snapshot.package, manager_snapshot.uid,
+         manager_snapshot.process);
+    LOGI("Companion: Settings %s %d %s", settings_snapshot.package, settings_snapshot.uid,
+         settings_snapshot.process);
 
     result = true;
 
 cleanup:
     if (fd != -1)
         close(fd);
+    if (prepared_fd != -1)
+        close(prepared_fd);
+    if (addr != MAP_FAILED)
+        munmap(addr, size);
 
     return result;
 }
 
 static void CompanionEntry(int socket) {
-    static auto prepare = PrepareCompanion();
-    if (!prepare) {
+    bool prepared;
+    {
+        std::lock_guard lock(companion_prepare_mutex);
+        if (!companion_prepared) {
+            companion_prepared = PrepareCompanion();
+        }
+        prepared = companion_prepared;
+    }
+    if (!prepared) {
         LOGE("PrepareCompanion failed, dropping connection");
         close(socket);
         return;
     }
 
-    RefreshApplicationInfo();
+    AppIdentity manager_snapshot, settings_snapshot;
+    RefreshApplicationInfo(manager_snapshot, settings_snapshot);
 
     char process_name[kProcessNameMax]{0};
     Identity whoami;
@@ -324,10 +368,11 @@ static void CompanionEntry(int socket) {
         read_full(socket, process_name, kProcessNameMax);
 
         LOGI("SuiCompanion: Checking app: uid=%d, process=%s", uid, process_name);
-        if (uid == manager.uid && strcmp(process_name, manager.process) == 0) {
+        if (uid == manager_snapshot.uid && strcmp(process_name, manager_snapshot.process) == 0) {
             whoami = Identity::SYSTEM_UI;
             LOGI("SuiCompanion: Matched SYSTEM_UI!");
-        } else if (uid == settings.uid && strcmp(process_name, settings.process) == 0) {
+        } else if (uid == settings_snapshot.uid &&
+                   strcmp(process_name, settings_snapshot.process) == 0) {
             whoami = Identity::SETTINGS;
             LOGI("SuiCompanion: Matched SETTINGS!");
         } else {

@@ -44,7 +44,7 @@ public class Installer {
                 + ", processName=" + systemPackage.processName);
 
         File file = new File(path, fileName);
-        File temporaryFile = new File(path, fileName + ".new");
+        File temporaryFile = new File(path, fileName + ".new." + android.os.Process.myPid());
         if (temporaryFile.exists() && !temporaryFile.delete()) {
             throw new IOException("Can't delete " + temporaryFile);
         }

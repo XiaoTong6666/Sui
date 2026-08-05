@@ -174,7 +174,7 @@ public class SuiShortcut {
 
         if (hasLegacy) {
             List<String> shortcutsToRemove = new ArrayList<>();
-            shortcutsToRemove.add("rikka.sui.SUI");
+            shortcutsToRemove.add(ShortcutConstants.LEGACY_SHORTCUT_ID);
             shortcutManager.removeDynamicShortcuts(shortcutsToRemove);
 
             @SuppressLint("DiscouragedApi")
