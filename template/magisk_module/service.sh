@@ -28,7 +28,7 @@ print_log() {
     log -p i -t "$TAG" "$1"
 }
 
-get_sui_pids() {
+get_sui_root_pids() {
     if command -v pidof >/dev/null 2>&1; then
         pidof sui 2>/dev/null
         return
@@ -37,8 +37,60 @@ get_sui_pids() {
     ps -A 2>/dev/null | awk '$NF == "sui" { print $2 }'
 }
 
-is_sui_running() {
-    [ -n "$(get_sui_pids)" ]
+get_sui_shell_pids() {
+    if command -v pidof >/dev/null 2>&1; then
+        pidof sui_shell 2>/dev/null
+        return
+    fi
+
+    ps -A 2>/dev/null | awk '$NF == "sui_shell" { print $2 }'
+}
+
+count_pids() {
+    pids="$1"
+    if [ -z "$pids" ]; then
+        echo 0
+        return
+    fi
+    set -- $pids
+    echo $#
+}
+
+collect_sui_state() {
+    sui_root_pids="$(get_sui_root_pids)"
+    sui_shell_pids="$(get_sui_shell_pids)"
+    sui_root_count="$(count_pids "$sui_root_pids")"
+    sui_shell_count="$(count_pids "$sui_shell_pids")"
+}
+
+is_sui_pair_healthy() {
+    collect_sui_state
+    [ "$sui_root_count" -eq 1 ] && [ "$sui_shell_count" -eq 1 ]
+}
+
+kill_pid_list() {
+    pids="$1"
+    signal="$2"
+
+    if [ -z "$pids" ]; then
+        return 0
+    fi
+
+    # shellcheck disable=SC2086
+    kill "$signal" $pids 2>/dev/null
+}
+
+stop_sui_pair() {
+    collect_sui_state
+
+    kill_pid_list "$sui_shell_pids" -TERM
+    kill_pid_list "$sui_root_pids" -TERM
+    sleep 1
+
+    collect_sui_state
+    kill_pid_list "$sui_shell_pids" -KILL
+    kill_pid_list "$sui_root_pids" -KILL
+    sleep 1
 }
 
 read_metadata() {
@@ -210,7 +262,7 @@ backoff_max=60
 interval=5
 
 while true; do
-    if is_sui_running; then
+    if is_sui_pair_healthy; then
         if [ "$metadata_ready" -eq 0 ] && refresh_metadata; then
             metadata_ready=1
         fi
@@ -219,7 +271,13 @@ while true; do
         continue
     fi
 
-    print_log "Sui daemon is not running, restarting..."
+    case "$sui_root_count:$sui_shell_count" in
+        0:0) print_log "Sui root and shell servers are not running, restarting..." ;;
+        0:*) print_log "Sui root server is not running, restarting pair..." ;;
+        *:0) print_log "Sui shell server is not running, restarting pair..." ;;
+        *) print_log "Sui process pair is inconsistent (root=$sui_root_pids shell=$sui_shell_pids), restarting..." ;;
+    esac
+    stop_sui_pair
     if [ "$metadata_ready" -eq 1 ] || refresh_metadata; then
         metadata_ready=1
         start_sui
@@ -228,9 +286,8 @@ while true; do
     fi
     sleep 2
 
-    if is_sui_running; then
-        pids="$(get_sui_pids)"
-        print_log "Sui daemon is running (pid: $pids)"
+    if is_sui_pair_healthy; then
+        print_log "Sui process pair is running (root=$sui_root_pids shell=$sui_shell_pids)"
         backoff=1
         sleep "$interval"
         continue

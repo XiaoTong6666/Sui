@@ -19,12 +19,14 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <csignal>
 #include <logging.h>
 #include <unistd.h>
 #include <sched.h>
 #include <app_process.h>
 #include <misc.h>
 #include <sys/stat.h>
+#include <sys/prctl.h>
 #include <fcntl.h>
 #include <selinux.h>
 #include <string>
@@ -283,6 +285,15 @@ static int sui_main(int argc, char** argv) {
 
     if (pid == 0) {
         // Child process -> Shell Server
+        if (prctl(PR_SET_PDEATHSIG, SIGKILL) != 0) {
+            PLOGE("prctl PR_SET_PDEATHSIG");
+            exit(EXIT_FAILURE);
+        }
+        if (getppid() == 1) {
+            LOGW("shell server parent already exited");
+            exit(EXIT_FAILURE);
+        }
+
         // uid 2000 cannot read /data/adb/modules/zygisk-sui/sui.dex or .so libraries
         const char* shell_dir = shell_dir_path.c_str();
         ensure_dir(shell_dir, 0755);
