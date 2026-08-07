@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <cstring>
 #include <chrono>
+#include <atomic>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/vfs.h>
@@ -49,6 +50,15 @@ namespace Settings {
 static jclass mainClass = nullptr;
 static jmethodID my_execTransactMethodID;
 static jint bindApplicationTransactionCode = -1;
+// OriginOS 6 adds Vivo's IApplicationThread$Stub.TRANSACTION_bindApplicationCust = 0x48.
+// Settings may bind through it before the standard path, so match both codes.
+static jint bindApplicationCustTransactionCode = -1;
+static std::atomic_int execTransactLogCount{0};
+static std::atomic_int bindApplicationLogCount{0};
+
+static bool isBindApplicationTransactionCode(jint code) {
+    return code == bindApplicationTransactionCode || code == bindApplicationCustTransactionCode;
+}
 
 static bool installDex(JNIEnv* env, const char* appDataDir, Dex* dexFile) {
     bool success = false;
@@ -154,8 +164,13 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
     jlong replyObj;
     jint flags;
 
-    if (bindApplicationTransactionCode == -1)
+    if (bindApplicationTransactionCode == -1 && bindApplicationCustTransactionCode == -1) {
+        static std::atomic_bool warned{false};
+        if (!warned.exchange(true, std::memory_order_relaxed)) {
+            LOGW("ExecTransact: bindApplication transaction codes are unavailable");
+        }
         return false;
+    }
 
     va_list copy;
     va_copy(copy, args);
@@ -165,13 +180,42 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
     flags = va_arg(copy, jint);
     va_end(copy);
 
-    if (code == bindApplicationTransactionCode) {
+    int logCount = execTransactLogCount.fetch_add(1, std::memory_order_relaxed);
+    bool isBindApplicationCode = isBindApplicationTransactionCode(code);
+    bool shouldLogBindApplication = false;
+    if (isBindApplicationCode) {
+        int bindLogCount = bindApplicationLogCount.fetch_add(1, std::memory_order_relaxed);
+        shouldLogBindApplication = bindLogCount < 8;
+    }
+    if (logCount < 32 || shouldLogBindApplication) {
+        LOGI(
+            "ExecTransact: code=%d expected_bindApplication=%d expected_bindApplicationCust=%d "
+            "flags=%d",
+            code, bindApplicationTransactionCode, bindApplicationCustTransactionCode, flags);
+    }
+
+    if (isBindApplicationCode) {
         if (!mainClass) {
             LOGW("ExecTransact: mainClass is null, dex not ready yet?");
             return false;
         }
+        if (shouldLogBindApplication) {
+            LOGI(
+                "ExecTransact: forwarding bindApplication transaction %d to "
+                "SettingsProcess.execTransact",
+                code);
+        }
         *res = env->CallStaticBooleanMethod(mainClass, my_execTransactMethodID, obj, code, dataObj,
                                             replyObj, flags);
+        if (env->ExceptionCheck()) {
+            LOGE("ExecTransact: SettingsProcess.execTransact raised an exception");
+            env->ExceptionDescribe();
+            env->ExceptionClear();
+            return false;
+        }
+        if (shouldLogBindApplication) {
+            LOGI("ExecTransact: SettingsProcess.execTransact returned %d", *res);
+        }
         if (*res)
             return true;
     }
@@ -193,16 +237,37 @@ void main(JNIEnv* env, const char* appDataDir, Dex* dexFile) {
         if (applicationThreadClass) {
             jfieldID bindApplicationId =
                 env->GetStaticFieldID(applicationThreadClass, "TRANSACTION_bindApplication", "I");
-            if (bindApplicationId) {
-                bindApplicationTransactionCode =
+            if (bindApplicationId && !env->ExceptionCheck()) {
+                jint transactionCode =
                     env->GetStaticIntField(applicationThreadClass, bindApplicationId);
+                if (!env->ExceptionCheck()) {
+                    bindApplicationTransactionCode = transactionCode;
+                }
             }
+            env->ExceptionClear();
+
+            // Read the vendor transaction from the runtime framework instead of hardcoding 0x48.
+            jfieldID bindApplicationCustId = env->GetStaticFieldID(
+                applicationThreadClass, "TRANSACTION_bindApplicationCust", "I");
+            if (bindApplicationCustId && !env->ExceptionCheck()) {
+                jint transactionCode =
+                    env->GetStaticIntField(applicationThreadClass, bindApplicationCustId);
+                if (!env->ExceptionCheck()) {
+                    bindApplicationCustTransactionCode = transactionCode;
+                }
+            }
+            env->ExceptionClear();
+        } else {
+            LOGW("main: cannot find android/app/IApplicationThread$Stub");
             env->ExceptionClear();
         }
     } else if (android_get_device_api_level() <= 25) {
         bindApplicationTransactionCode = 13;
         LOGI("main: set bindApplicationTransactionCode to 13 for API <= 25");
     }
+
+    LOGI("main: bindApplicationTransactionCode=%d bindApplicationCustTransactionCode=%d",
+         bindApplicationTransactionCode, bindApplicationCustTransactionCode);
 
     JavaVM* javaVm;
     env->GetJavaVM(&javaVm);

@@ -17,6 +17,7 @@
  * Copyright (c) 2021-2026 Sui Contributors
  */
 
+#include <atomic>
 #include <cstring>
 #include <nativehelper/scoped_local_ref.h>
 #include <pthread.h>
@@ -43,11 +44,16 @@ using GetEnv_t = jint(JavaVM*, void**, jint);
 static GetEnv_t* old_GetEnv;
 static CallBooleanMethodV_t* old_CallBooleanMethodV;
 static BinderHook::ExecTransact_t* my_ExecTransact;
+static std::atomic_int execTransactDispatchLogCount{0};
 
 using SetTableOverride_t = void(JNINativeInterface*);
 
 static jboolean new_CallBooleanMethodV(JNIEnv* env, jobject obj, jmethodID methodId, va_list args) {
     if (methodId == original_execTransactMethodID) {
+        int logCount = execTransactDispatchLogCount.fetch_add(1, std::memory_order_relaxed);
+        if (logCount < 16) {
+            LOGI("BinderHook: intercepted Binder.execTransact (sample=%d)", logCount + 1);
+        }
         jboolean res = false;
         if (my_ExecTransact(&res, env, obj, args))
             return res;
@@ -96,7 +102,18 @@ void BinderHook::Install(JavaVM* javaVm, JNIEnv* env, ExecTransact_t* callback) 
 
     // Binder
     ScopedLocalRef<jclass> binderClass(env, env->FindClass("android/os/Binder"));
+    if (binderClass.get() == nullptr) {
+        LOGE("BinderHook: cannot find android/os/Binder");
+        env->ExceptionClear();
+        return;
+    }
     original_execTransactMethodID = env->GetMethodID(binderClass.get(), "execTransact", "(IJJI)Z");
+    if (!original_execTransactMethodID) {
+        LOGE("BinderHook: cannot resolve Binder.execTransact(IJJI)Z");
+        env->ExceptionClear();
+        return;
+    }
+    LOGI("BinderHook: Binder.execTransact resolved");
 
     // JNIEnv
     old_JNINativeInterface = env->functions;

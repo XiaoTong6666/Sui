@@ -198,12 +198,15 @@ public class SettingsProcess {
     @SuppressLint("DiscouragedPrivateApi")
     public static boolean execTransact(@NonNull Binder binder, int code, long dataObj, long replyObj, int flags) {
         if (!reflection) {
+            LOGGER.w("execTransact: reflection is not initialized, code=%d", code);
             return false;
         }
 
         String descriptor = binder.getInterfaceDescriptor();
+        LOGGER.i("execTransact: code=%d flags=%d descriptor=%s", code, flags, descriptor);
 
         if (!"android.app.IApplicationThread".equals(descriptor)) {
+            LOGGER.w("execTransact: unexpected descriptor=%s", descriptor);
             return false;
         }
 
@@ -217,11 +220,20 @@ public class SettingsProcess {
         int bindApplicationCode = ActivityThreadUtil.getBindApplication();
 
         Handler.Callback original = HandlerUtil.getCallback(handler);
-        HandlerUtil.setCallback(handler, msg -> {
-            if (msg.what == bindApplicationCode && ActivityThreadUtil.isAppBindData(msg.obj)) {
-                LOGGER.v("call original bindApplication");
+        Handler.Callback callback = msg -> {
+            if (msg.what == bindApplicationCode) {
+                boolean isBindData = ActivityThreadUtil.isAppBindData(msg.obj);
+                LOGGER.i("bindApplication message received: what=%d isAppBindData=%s", msg.what, isBindData);
+                if (!isBindData) {
+                    if (original != null) {
+                        return original.handleMessage(msg);
+                    }
+                    return false;
+                }
+
+                LOGGER.i("call original bindApplication");
                 handler.handleMessage(msg);
-                LOGGER.v("bindApplication finished");
+                LOGGER.i("bindApplication finished");
                 postBindApplication(activityThread);
                 return true;
             }
@@ -229,7 +241,11 @@ public class SettingsProcess {
                 return original.handleMessage(msg);
             }
             return false;
-        });
+        };
+        HandlerUtil.setCallback(handler, callback);
+        LOGGER.i(
+                "execTransact: installed bindApplication callback, expected=%d installed=%s",
+                bindApplicationCode, HandlerUtil.getCallback(handler) == callback);
 
         return false;
     }
@@ -241,7 +257,9 @@ public class SettingsProcess {
             ActivityThreadUtil.init();
             HandlerUtil.init();
             reflection = true;
-            LOGGER.d("SettingsProcess.main: Reflection utils initialized successfully.");
+            LOGGER.i(
+                    "SettingsProcess.main: Reflection utils initialized successfully, bindApplicationCode=%d",
+                    ActivityThreadUtil.getBindApplication());
         } catch (Throwable e) {
             LOGGER.e(Log.getStackTraceString(e));
         }
