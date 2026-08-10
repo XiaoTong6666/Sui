@@ -1,14 +1,30 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `525`
-- **Commit:** [`3c32576`](https://github.com/XiaoTong6666/Sui/commit/3c3257665d103c7a59e508209ea39f113bc802b7)
-- **Build time:** `2m 50s`
-- **SHA256:** `130847959e88e1e2dd6c059a8daaf8208b7794f7e3e6ef48fcaf3a131885517c`
+- **VersionCode:** `526`
+- **Commit:** [`e0a1a19`](https://github.com/XiaoTong6666/Sui/commit/e0a1a19b1f0f2b2d30b04415d2c26a68b5277d87)
+- **Build time:** `4m 54s`
+- **SHA256:** `0a9f5e94223434065e4c5b2f9bb150fee534c166247ff7bcf72552a263f54255`
 
 ## Message
 
 ```text
-fix(settings): support OriginOS 6 IApplicationThread.Stub TRANSACTION_bindApplicationCust(0x48) (#86)
+build(deps): bump gradle-wrapper from 9.6.1 to 9.7.0 (#88)
+
+Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.6.1 to 9.7.0.
+- [Release notes](https://github.com/gradle/gradle/releases)
+- [Commits](https://github.com/gradle/gradle/compare/v9.6.1...v9.7.0)
+
+---
+updated-dependencies:
+- dependency-name: gradle-wrapper
+  dependency-version: 9.7.0
+  dependency-type: direct:production
+  update-type: version-update:semver-minor
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
 
 ```
