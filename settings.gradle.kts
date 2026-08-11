@@ -40,7 +40,7 @@ buildscript {
             force("org.jdom:jdom2:2.0.6.1")
             force("org.apache.commons:commons-lang3:3.20.0")
             force("org.bouncycastle:bcpkix-jdk18on:1.85")
-            force("org.bouncycastle:bcprov-jdk18on:1.85")
+            force("org.bouncycastle:bcprov-jdk18on:1.85.2")
             force("org.bouncycastle:bcutil-jdk18on:1.85")
         }
     }
