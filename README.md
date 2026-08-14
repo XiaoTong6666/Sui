@@ -1,30 +1,29 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `526`
-- **Commit:** [`e0a1a19`](https://github.com/XiaoTong6666/Sui/commit/e0a1a19b1f0f2b2d30b04415d2c26a68b5277d87)
-- **Build time:** `4m 54s`
-- **SHA256:** `0a9f5e94223434065e4c5b2f9bb150fee534c166247ff7bcf72552a263f54255`
+- **VersionCode:** `527`
+- **Commit:** [`dc8cfd0`](https://github.com/XiaoTong6666/Sui/commit/dc8cfd0d6ecaf39cf28b076b8bd7e40b7c6c2481)
+- **Build time:** `3m 19s`
+- **SHA256:** `9ec89afb8679f3c00e702d0a45f8975608a88c5f464014dd1cb487bacd87112d`
 
 ## Message
 
 ```text
-build(deps): bump gradle-wrapper from 9.6.1 to 9.7.0 (#88)
+build(deps): bump org.bouncycastle:bcprov-jdk18on from 1.85 to 1.85.2
 
-Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.6.1 to 9.7.0.
-- [Release notes](https://github.com/gradle/gradle/releases)
-- [Commits](https://github.com/gradle/gradle/compare/v9.6.1...v9.7.0)
+Bumps [org.bouncycastle:bcprov-jdk18on](https://github.com/bcgit/bc-java) from 1.85 to 1.85.2.
+- [Changelog](https://github.com/bcgit/bc-java/blob/main/docs/releasenotes.html)
+- [Commits](https://github.com/bcgit/bc-java/commits)
 
 ---
 updated-dependencies:
-- dependency-name: gradle-wrapper
-  dependency-version: 9.7.0
+- dependency-name: org.bouncycastle:bcprov-jdk18on
+  dependency-version: 1.85.2
   dependency-type: direct:production
-  update-type: version-update:semver-minor
+  update-type: version-update:semver-patch
 ...
 
 Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
-Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
+Signed-off-by: XiaoTong6666 <xiaotong6666666666@gmail.com>
 
 ```
