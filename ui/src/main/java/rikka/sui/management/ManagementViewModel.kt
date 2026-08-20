@@ -44,6 +44,7 @@ class ManagementViewModel : ViewModel() {
     private val fullList = ArrayList<AppInfo>()
     var showOnlyShizukuApps = false
     var isMonetEnabled = false
+    var isLegacyShizukuBinderCompatEnabled = false
     private var hasLoadedGlobalSettings = false
     val appList = MutableLiveData<Resource<List<AppInfo>?>?>(null)
     private var currentQuery: String? = null
@@ -119,6 +120,27 @@ class ManagementViewModel : ViewModel() {
         }
     }
 
+    fun toggleLegacyShizukuBinderCompat(onResult: (Boolean) -> Unit) {
+        val newState = !isLegacyShizukuBinderCompatEnabled
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentFlags = BridgeServiceClient.getGlobalSettings()
+            val newFlags = if (newState) {
+                currentFlags or BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT
+            } else {
+                currentFlags and BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT.inv()
+            }
+            val success = BridgeServiceClient.setGlobalSettings(newFlags)
+
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    isLegacyShizukuBinderCompatEnabled = newState
+                }
+                onResult(success)
+            }
+        }
+    }
+
     fun batchUpdate(targetMode: Int, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             if (uiDebugMode) {
@@ -159,6 +181,8 @@ class ManagementViewModel : ViewModel() {
                     val flags = BridgeServiceClient.getGlobalSettings()
                     showOnlyShizukuApps = (flags and BridgeServiceClient.FLAG_SHOW_ONLY_SHIZUKU_APPS) != 0
                     isMonetEnabled = (flags and BridgeServiceClient.FLAG_MONET_DISABLED) == 0
+                    isLegacyShizukuBinderCompatEnabled =
+                        (flags and BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT) != 0
                     hasLoadedGlobalSettings = true
                 }
 

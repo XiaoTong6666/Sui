@@ -60,6 +60,8 @@ static jclass javaBinderClass = nullptr;
 static jmethodID getCallingUidMethodID = nullptr;
 
 static jint startShortcutTransactionCode = -1;
+static jint broadcastIntentTransactionCode = -1;
+static jint broadcastIntentWithFeatureTransactionCode = -1;
 
 static std::unordered_set<uid_t> hiddenUids;
 static std::shared_mutex hiddenUidsMutex;
@@ -83,6 +85,35 @@ static void setHiddenUids(JNIEnv* env, jclass, jintArray uids) {
     }
     env->ReleaseIntArrayElements(uids, body, JNI_ABORT);
     LOGD("updated %zu hidden uids", hiddenUids.size());
+}
+
+static jint getIActivityManagerTransactionCode(JNIEnv* env, jclass stubClass, const char* name) {
+    jfieldID field = env->GetStaticFieldID(stubClass, name, "I");
+    if (!field) {
+        env->ExceptionClear();
+        return -1;
+    }
+    return env->GetStaticIntField(stubClass, field);
+}
+
+static void resolveIActivityManagerTransactionCodes(JNIEnv* env) {
+    jclass stubClass = env->FindClass("android/app/IActivityManager$Stub");
+    if (!stubClass) {
+        LOGW("unable to find IActivityManager$Stub for legacy Shizuku compatibility");
+        env->ExceptionClear();
+        return;
+    }
+
+    broadcastIntentTransactionCode =
+        getIActivityManagerTransactionCode(env, stubClass, "TRANSACTION_broadcastIntent");
+    broadcastIntentWithFeatureTransactionCode = getIActivityManagerTransactionCode(
+        env, stubClass, "TRANSACTION_broadcastIntentWithFeature");
+    env->DeleteLocalRef(stubClass);
+
+    LOGI(
+        "legacy Shizuku broadcast transaction codes: broadcastIntent=%d "
+        "broadcastIntentWithFeature=%d",
+        broadcastIntentTransactionCode, broadcastIntentWithFeatureTransactionCode);
 }
 
 static bool installDex(JNIEnv* env, Dex* dexFile) {
@@ -198,6 +229,7 @@ static bool installDex(JNIEnv* env, Dex* dexFile) {
     loadedMainClass = nullptr;
     javaBinderClass = loadedBinderClass;
     loadedBinderClass = nullptr;
+    resolveIActivityManagerTransactionCodes(env);
     success = true;
 
 cleanup:
@@ -277,6 +309,19 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
         *res = env->CallStaticBooleanMethod(mainClass, my_execTransactMethodID, obj, code, dataObj,
                                             replyObj, flags);
         return true;
+    }
+
+    if (code == broadcastIntentTransactionCode ||
+        code == broadcastIntentWithFeatureTransactionCode) {
+        *res = env->CallStaticBooleanMethod(mainClass, my_execTransactMethodID, obj, code, dataObj,
+                                            replyObj, flags);
+        if (env->ExceptionCheck()) {
+            LOGE("legacy Shizuku compatibility hook raised an exception");
+            env->ExceptionDescribe();
+            env->ExceptionClear();
+            return false;
+        }
+        return *res;
     } /* else if (startShortcutTransactionCode != -1 && code == startShortcutTransactionCode) {
          *res = env->CallStaticBooleanMethod(mainClass, my_execTransactMethodID, obj, code, dataObj,
      replyObj, flags); if (*res) return true;

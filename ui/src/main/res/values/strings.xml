@@ -40,6 +40,7 @@
     <string name="action_batch_unconfigured">Modify default value</string>
     <string name="action_filter_shizuku_apps">Show only Shizuku apps</string>
     <string name="action_monet">Monet dynamic color</string>
+    <string name="action_legacy_shizuku_binder_compat">Legacy Shizuku support</string>
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">This project is licensed under GPLv3 and open source on </string>
     <string name="about_license_part2">GitHub</string>
@@ -47,4 +48,5 @@
     <string name="about_contributors">Contributors: %1$s</string>
     <string name="toast_request_shortcut">Trying to create...</string>
     <string name="toast_request_shortcut_failed">Failed to create: %1$s</string>
+    <string name="toast_legacy_shizuku_binder_compat_failed">Failed to update compatibility mode</string>
 </resources>

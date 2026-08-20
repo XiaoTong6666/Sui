@@ -304,6 +304,26 @@ class ManagementFragment : AppFragment() {
             }
         }
 
+        val legacyCompatItem = popupMenu.menu.findItem(R.id.action_legacy_shizuku_binder_compat)
+        val isLegacyCompatEnabled = viewModel.isLegacyShizukuBinderCompatEnabled
+        legacyCompatItem?.isChecked = isLegacyCompatEnabled
+
+        legacyCompatItem?.title?.let { title ->
+            val plainTitle = title.toString()
+            legacyCompatItem.title = if (isLegacyCompatEnabled) {
+                val ssb = SpannableString(plainTitle)
+                ssb.setSpan(
+                    ForegroundColorSpan(highlightColor),
+                    0,
+                    plainTitle.length,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+                ssb
+            } else {
+                plainTitle
+            }
+        }
+
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_filter_shizuku -> {
@@ -345,6 +365,20 @@ class ManagementFragment : AppFragment() {
                             activity?.recreate()
                         } else {
                             android.widget.Toast.makeText(context, "Failed to toggle Monet", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    true
+                }
+
+                R.id.action_legacy_shizuku_binder_compat -> {
+                    val context = requireContext()
+                    viewModel.toggleLegacyShizukuBinderCompat { success ->
+                        if (!success) {
+                            Toast.makeText(
+                                context,
+                                R.string.toast_legacy_shizuku_binder_compat_failed,
+                                Toast.LENGTH_SHORT,
+                            ).show()
                         }
                     }
                     true

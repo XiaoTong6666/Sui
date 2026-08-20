@@ -45,10 +45,6 @@ public final class SystemProcess {
     }
 
     public static boolean execTransact(@NonNull Binder binder, int code, long dataObj, long replyObj, int flags) {
-        if (!SERVICE.isServiceTransaction(code)) {
-            return false;
-        }
-
         Parcel data = ParcelUtils.fromNativePointer(dataObj);
         Parcel reply = ParcelUtils.fromNativePointer(replyObj);
 
@@ -58,7 +54,13 @@ public final class SystemProcess {
 
         boolean res;
         try {
-            res = execActivityTransaction(binder, code, data, reply, flags);
+            if (LegacyShizukuBinderCompat.handle(binder, code, data, reply)) {
+                res = true;
+            } else if (SERVICE.isServiceTransaction(code)) {
+                res = execActivityTransaction(binder, code, data, reply, flags);
+            } else {
+                res = false;
+            }
         } catch (Exception e) {
             if ((flags & IBinder.FLAG_ONEWAY) != 0) {
                 LOGGER.w(e, "Caught a Exception from the binder stub implementation.");

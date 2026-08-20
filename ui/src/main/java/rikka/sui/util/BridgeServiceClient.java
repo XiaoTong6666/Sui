@@ -35,6 +35,7 @@ public class BridgeServiceClient {
 
     public static final int FLAG_SHOW_ONLY_SHIZUKU_APPS = 1 << 0;
     public static final int FLAG_MONET_DISABLED = 1 << 1;
+    public static final int FLAG_LEGACY_SHIZUKU_BINDER_COMPAT = 1 << 2;
 
     private static final int BINDER_TRANSACTION_getApplications = 10001;
     private static final int BINDER_TRANSACTION_REQUEST_PINNED_SHORTCUT_FROM_UI = 10005;

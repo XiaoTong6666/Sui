@@ -111,6 +111,21 @@ public class BridgeService {
         return code == BridgeConstants.TRANSACTION_CODE;
     }
 
+    @Nullable public static IBinder getBinderForUid(int uid) {
+        int permissionFlags = Bridge.getPermissionFlags(uid);
+        if ((permissionFlags & SuiConfig.FLAG_HIDDEN) != 0) {
+            return null;
+        }
+        if ((permissionFlags & SuiConfig.FLAG_ALLOWED) != 0) {
+            return rootServiceBinder;
+        }
+        if ((permissionFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0) {
+            return shellServiceBinder;
+        }
+        // Ask and deny both need the root service for their normal result flows.
+        return rootServiceBinder;
+    }
+
     public boolean onTransact(int code, @NonNull Parcel data, @Nullable Parcel reply, int flags) {
         data.enforceInterface(BridgeConstants.SERVICE_DESCRIPTOR);
 
@@ -161,14 +176,8 @@ public class BridgeService {
                         requestedBinder = requestedServerUid == BridgeConstants.SERVER_UID_ROOT
                                 ? rootServiceBinder
                                 : shellServiceBinder;
-                    } else if ((permissionFlags & SuiConfig.FLAG_ALLOWED) != 0) {
-                        requestedBinder = rootServiceBinder;
-                    } else if ((permissionFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0) {
-                        requestedBinder = shellServiceBinder;
                     } else {
-                        // Ask/deny still need the root service binder so the client can attach and receive
-                        // normal permission request or denial results. Hidden is handled above.
-                        requestedBinder = rootServiceBinder;
+                        requestedBinder = getBinderForUid(targetUid);
                     }
 
                     if (requestedBinder != null) break;
