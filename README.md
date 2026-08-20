@@ -1,26 +1,22 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `529`
-- **Commit:** [`1ba0827`](https://github.com/XiaoTong6666/Sui/commit/1ba08279cda2731b3d4afa2aba7c7ad4c9d6d268)
-- **Build time:** `3m 31s`
-- **SHA256:** `016a14198de04c6ee5c075671ecd36e960f7a838775a7cb0a4dd899a25d3e3f9`
+- **VersionCode:** `530`
+- **Commit:** [`c5d70ba`](https://github.com/XiaoTong6666/Sui/commit/c5d70baee97e5f53a9cafd83ba6db800571ff9ef)
+- **Build time:** `2m 59s`
+- **SHA256:** `ab7a6a70cbc9bddc0351ea351d341d4d4e45d4912ea7ad35597869a782fce240`
 
 ## Message
 
 ```text
-build(deps): bump androidx.appcompat:appcompat from 1.7.1 to 1.8.0 (#91)
+feat: 添加旧版 Shizuku Binder 广播兼容
 
-Bumps androidx.appcompat:appcompat from 1.7.1 to 1.8.0.
+为仍通过旧版显式广播协议请求 Shizuku Binder 的应用添加可选兼容支持。
 
----
-updated-dependencies:
-- dependency-name: androidx.appcompat:appcompat
-  dependency-version: 1.8.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-...
+- 在管理界面新增多语言“旧版 Shizuku 兼容”全局开关。
+- 在 system_server 中拦截 IActivityManager 的 broadcastIntent / broadcastIntentWithFeature 事务，识别旧版 REQUEST_BINDER 请求。
+- 通过调用方提供的回调 Binder 返回 Sui 现有服务 Binder，并复用原有权限路由及隐藏 UID 行为。
+- 动态解析广播事务码和 Intent 前的 String 参数数量，以适配不同 Android 版本的 IActivityManager 接口变化。
+- 兼容关闭、已安装 Shizuku、请求无效或处理失败时，继续交由 AMS 正常处理。
 
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
 ```
