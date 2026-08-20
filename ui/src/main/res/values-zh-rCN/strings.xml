@@ -38,8 +38,9 @@
     <string name="action_about">关于</string>
     <string name="about_button_ok">确定</string>
     <string name="action_batch_unconfigured">修改默认值</string>
-    <string name="action_filter_shizuku_apps">仅显示Shizuku应用</string>
+    <string name="action_filter_shizuku_apps">仅显示 Shizuku 应用</string>
     <string name="action_monet">动态取色</string>
+    <string name="action_legacy_shizuku_binder_compat">旧版 Shizuku 兼容</string>
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">本项目遵循 GPLv3 在 </string>
     <string name="about_license_part2">GitHub</string>
@@ -47,4 +48,5 @@
     <string name="about_contributors">贡献者: %1$s</string>
     <string name="toast_request_shortcut">在尝试创建喵...</string>
     <string name="toast_request_shortcut_failed">创建失败喵: %1$s</string>
+    <string name="toast_legacy_shizuku_binder_compat_failed">兼容模式更新失败</string>
 </resources>

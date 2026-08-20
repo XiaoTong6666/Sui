@@ -38,12 +38,14 @@
   <string name="about_button_ok">OK</string>
   <string name="action_batch_unconfigured">デフォルト値を変更</string>
   <string name="action_filter_shizuku_apps">Shizuku アプリのみ表示</string>
-  <string name="action_monet">Monet ダナミックカラー</string>
+   <string name="action_monet">Monet ダナミックカラー</string>
+   <string name="action_legacy_shizuku_binder_compat">旧式 Shizuku 互換</string>
   <string name="about_version">v%1$s</string>
   <string name="about_license_part1">このプロジェクトは GPLv3 に基づいています</string>
   <string name="about_license_part2">GitHub</string>
   <string name="about_license_part3">オープンソース\nCopyright (c) 2021-2026 Sui Contributors</string>
   <string name="about_contributors">貢献者: %1$s</string>
   <string name="toast_request_shortcut">作成しようとしています...</string>
-  <string name="toast_request_shortcut_failed">作成に失敗しました: %1$s</string>
+   <string name="toast_request_shortcut_failed">作成に失敗しました: %1$s</string>
+   <string name="toast_legacy_shizuku_binder_compat_failed">互換モードの更新に失敗しました</string>
 </resources>
