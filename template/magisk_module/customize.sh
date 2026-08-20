@@ -25,8 +25,8 @@ check_magisk_version
 check_android_version
 check_arch
 
-mkdir $ROOT_PATH
-set_perm "$ROOT_PATH" 0 0 0600
+mkdir -p "$ROOT_PATH"
+set_perm "$ROOT_PATH" 0 0 0700
 
 # Extract libs
 ui_print "- Extracting module files"
