@@ -2,26 +2,21 @@
 
 - **Version:** `v13.5.4.3`
 - **VersionCode:** `531`
-- **Commit:** [`95cf2f6`](https://github.com/XiaoTong6666/Sui/commit/95cf2f6b020b480491706c5edc374c3793103437)
-- **Build time:** `1m 31s`
-- **SHA256:** `f040b79b80b4ea0ba10a4c493ac46b03d40f0c6983183e9d8e592fe2b1027f56`
+- **Commit:** [`5791682`](https://github.com/XiaoTong6666/Sui/commit/5791682375729ff1ada7aad44999fdecaca91c92)
+- **Build time:** `1m 26s`
+- **SHA256:** `101beacbbd4a73ae5a0c9b92425342147ee3365153c2890c7aa731da7e28fefa`
 
 ## Message
 
 ```text
-build(deps): bump com.diffplug.spotless from 8.9.0 to 8.10.0 (#92)
+feat: 添加旧版 Shizuku Binder 广播兼容
 
-Bumps com.diffplug.spotless from 8.9.0 to 8.10.0.
+为仍通过旧版显式广播协议请求 Shizuku Binder 的应用添加可选兼容支持。
 
----
-updated-dependencies:
-- dependency-name: com.diffplug.spotless
-  dependency-version: 8.10.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
+- 在管理界面新增多语言“旧版 Shizuku 兼容”全局开关。
+- 在 system_server 中拦截 IActivityManager 的 broadcastIntent / broadcastIntentWithFeature 事务，识别旧版 REQUEST_BINDER 请求。
+- 通过调用方提供的回调 Binder 返回 Sui 现有服务 Binder，并复用原有权限路由及隐藏 UID 行为。
+- 动态解析广播事务码和 Intent 前的 String 参数数量，以适配不同 Android 版本的 IActivityManager 接口变化。
+- 兼容关闭、已安装 Shizuku、请求无效或处理失败时，继续交由 AMS 正常处理。
 
 ```
