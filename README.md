@@ -1,22 +1,22 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `535`
-- **Commit:** [`914498f`](https://github.com/XiaoTong6666/Sui/commit/914498fcee5aff31120de5613e94ab9b0d734353)
-- **Build time:** `3m 26s`
-- **SHA256:** `25985557dd35fd0d5b0e30597ebd9ff132693f54631591bec88ce7c2c92e36ef`
+- **VersionCode:** `536`
+- **Commit:** [`7be5335`](https://github.com/XiaoTong6666/Sui/commit/7be5335b6b2dbbb5fb433113675df1f0a60e1412)
+- **Build time:** `3m 59s`
+- **SHA256:** `998981b992bf1f138ec3cb22ac1a84c1203b003619fe8a802ef66a31c9ab84a8`
 
 ## Message
 
 ```text
-build(deps): bump com.diffplug.spotless from 8.10.0 to 8.10.1 (#95)
+build(deps): bump com.diffplug.spotless from 8.10.1 to 8.10.2 (#97)
 
-Bumps com.diffplug.spotless from 8.10.0 to 8.10.1.
+Bumps com.diffplug.spotless from 8.10.1 to 8.10.2.
 
 ---
 updated-dependencies:
 - dependency-name: com.diffplug.spotless
-  dependency-version: 8.10.1
+  dependency-version: 8.10.2
   dependency-type: direct:production
   update-type: version-update:semver-patch
 ...
