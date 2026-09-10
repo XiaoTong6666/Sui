@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <csignal>
+#include <grp.h>
 #include <logging.h>
 #include <unistd.h>
 #include <sched.h>
@@ -37,6 +38,19 @@ static constexpr const char* LEGACY_SHELL_DIR = "/data/local/tmp/sui_shell";
 static constexpr const char* SHELL_BASE_DIR = "/data/local/tmp";
 static constexpr const char* SHELL_DIR_PREFIX = "sui_shell_";
 static constexpr const char* SHELL_DIR_MARKER = "/data/adb/sui/shell_dir_name";
+static constexpr gid_t SHELL_SUPPLEMENTARY_GROUPS[] = {
+    1004, 1007, 1011, 1015, 1028, 1078, 1079, 3001, 3002, 3003, 3006, 3009, 3011, 3012,
+};
+
+static void log_context(const char* stage) {
+    char* con = nullptr;
+    if (getcon(&con) == 0 && con != nullptr) {
+        LOGI("%s: uid=%d gid=%d context=%s", stage, getuid(), getgid(), con);
+    } else {
+        PLOGE("getcon(%s)", stage);
+    }
+    freecon(con);
+}
 
 static std::string trim_copy(const std::string& input) {
     size_t begin = 0;
@@ -285,6 +299,12 @@ static int sui_main(int argc, char** argv) {
 
     if (pid == 0) {
         // Child process -> Shell Server
+        if (!init_selinux()) {
+            LOGE("init_selinux failed");
+            exit(EXIT_FAILURE);
+        }
+        log_context("initial");
+
         if (prctl(PR_SET_PDEATHSIG, SIGKILL) != 0) {
             PLOGE("prctl PR_SET_PDEATHSIG");
             exit(EXIT_FAILURE);
@@ -325,9 +345,10 @@ static int sui_main(int argc, char** argv) {
             chown(shell_libsui_path, 2000, 2000);
         }
 
-        // Set SELinux context to shell BEFORE dropping UID/GID (requires root privileges)
-        if (setcon("u:r:shell:s0") != 0) {
-            PLOGE("setcon u:r:shell:s0");
+        // Match adbd's supplementary groups before dropping root credentials.
+        if (setgroups(sizeof(SHELL_SUPPLEMENTARY_GROUPS) / sizeof(SHELL_SUPPLEMENTARY_GROUPS[0]),
+                      SHELL_SUPPLEMENTARY_GROUPS) != 0) {
+            PLOGE("setgroups shell");
             exit(EXIT_FAILURE);
         }
 
@@ -336,13 +357,24 @@ static int sui_main(int argc, char** argv) {
             PLOGE("setresgid 2000");
             exit(EXIT_FAILURE);
         }
+        log_context("after setresgid");
 
         // Set UID to shell (2000)
         if (setresuid(2000, 2000, 2000) != 0) {
             PLOGE("setresuid 2000");
             exit(EXIT_FAILURE);
         }
+        log_context("after setresuid");
 
+        // Switch domains after dropping UID/GID while the current KSU domain can still perform
+        // the credential changes above.
+        if (setcon("u:r:shell:s0") != 0) {
+            PLOGE("setcon u:r:shell:s0");
+            exit(EXIT_FAILURE);
+        }
+        log_context("after setcon");
+
+        log_context("before app_process");
         app_process(shell_dex_path, shell_dir, "rikka.sui.server.Starter", "sui_shell", "--shell");
         exit(EXIT_FAILURE);
     } else {

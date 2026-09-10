@@ -21,6 +21,7 @@ package rikka.sui.server;
 
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Process;
 import androidx.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
@@ -443,7 +444,9 @@ public class SuiConfigManager extends ConfigManager {
     private int[] buildUidsByFlagLocked(int flag) {
         List<Integer> uids = new ArrayList<>();
         for (SuiConfig.PackageEntry entry : config.packages) {
-            if (entry.uid >= 10000 && (entry.flags & flag) != 0) {
+            boolean routableUid =
+                    entry.uid >= 10000 || (flag == SuiConfig.FLAG_ALLOWED_SHELL && entry.uid == Process.SHELL_UID);
+            if (routableUid && (entry.flags & flag) != 0) {
                 uids.add(entry.uid);
             }
         }
