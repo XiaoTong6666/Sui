@@ -2,9 +2,9 @@
 
 - **Version:** `v13.5.4.3`
 - **VersionCode:** `539`
-- **Commit:** [`7fc5400`](https://github.com/XiaoTong6666/Sui/commit/7fc540036da579b1431c00052e03355d32875838)
-- **Build time:** `1m 48s`
-- **SHA256:** `5f0b663d1b0dc8b2baabfc715da1ecd4a2c9cccd71207b3e0f92425552ffae1b`
+- **Commit:** [`c83e85a`](https://github.com/XiaoTong6666/Sui/commit/c83e85a55482c25f517212309c20d02e52b66472)
+- **Build time:** `2m 35s`
+- **SHA256:** `d70652b19f863359bf05a89525f171374bdfb841c9e497d59fe08ee93eec005c`
 
 ## Message
 
