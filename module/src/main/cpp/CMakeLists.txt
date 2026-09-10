@@ -29,6 +29,7 @@ add_library(util STATIC
         util/misc.cpp
         util/dex_file.cpp
         util/android.cpp
+        util/ksu.cpp
         util/plt.c
         util/selinux.cpp
         util/memory.cpp

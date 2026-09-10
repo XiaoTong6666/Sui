@@ -39,7 +39,9 @@
   <string name="action_batch_unconfigured">デフォルト値を変更</string>
   <string name="action_filter_shizuku_apps">Shizuku アプリのみ表示</string>
    <string name="action_monet">Monet ダナミックカラー</string>
-   <string name="action_legacy_shizuku_binder_compat">旧式 Shizuku 互換</string>
+    <string name="action_legacy_shizuku_binder_compat">旧式 Shizuku 互換</string>
+    <string name="action_ksu_no_escape">Shell の昇格を禁止 (KSU)</string>
+    <string name="toast_ksu_no_escape_failed">KSU 昇格保護の設定に失敗しました</string>
     <string name="action_adb_root">ADB Root</string>
     <string name="adb_root_off">無効</string>
     <string name="adb_root_once">次回起動時のみ有効</string>

@@ -324,6 +324,26 @@ class ManagementFragment : AppFragment() {
             }
         }
 
+        val ksuNoEscapeItem = popupMenu.menu.findItem(R.id.action_ksu_no_escape)
+        val isKsuNoEscapeEnabled = viewModel.isKsuNoEscapeEnabled
+        ksuNoEscapeItem?.isChecked = isKsuNoEscapeEnabled
+
+        ksuNoEscapeItem?.title?.let { title ->
+            val plainTitle = title.toString()
+            ksuNoEscapeItem.title = if (isKsuNoEscapeEnabled) {
+                val ssb = SpannableString(plainTitle)
+                ssb.setSpan(
+                    ForegroundColorSpan(highlightColor),
+                    0,
+                    plainTitle.length,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+                ssb
+            } else {
+                plainTitle
+            }
+        }
+
         val adbRootItem = popupMenu.menu.findItem(R.id.action_adb_root)
         adbRootItem?.title?.let { title ->
             val plainTitle = title.toString()
@@ -401,6 +421,22 @@ class ManagementFragment : AppFragment() {
                     true
                 }
 
+                R.id.action_ksu_no_escape -> {
+                    val context = requireContext()
+                    viewModel.toggleKsuNoEscape { success ->
+                        Toast.makeText(
+                            context,
+                            if (success) {
+                                R.string.toast_restart_device
+                            } else {
+                                R.string.toast_ksu_no_escape_failed
+                            },
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                    true
+                }
+
                 R.id.action_adb_root -> {
                     showAdbRootOptionsMenu(anchorView)
                     true
@@ -411,6 +447,7 @@ class ManagementFragment : AppFragment() {
         }
         popupMenu.applyMiuixPopupStyle()
     }
+
     private fun showAdbRootOptionsMenu(anchorView: View) {
         val contextWrapper = ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu_OverflowRightOffset)
         val popupMenu = PopupMenu(contextWrapper, anchorView, Gravity.END)

@@ -39,8 +39,10 @@ public class SuiConfigManager extends ConfigManager {
     public static final int DEFAULT_UID = -1;
     private static final int FLAG_GLOBAL_SETTINGS_INITIALIZED = 1 << 30;
     private static final int FLAG_MONET_DISABLED = 1 << 1;
+    private static final int FLAG_KSU_NO_ESCAPE = 1 << 3;
     private static final int FLAG_ADB_ROOT_ONCE = 1 << 4;
     private static final int FLAG_ADB_ROOT_ALWAYS = 1 << 5;
+    private static final File KSU_NO_ESCAPE_MARKER = new File("/data/adb/sui/ksu_no_escape");
     private static final File ADB_ROOT_ONCE_MARKER = new File("/data/adb/sui/enable_adb_root_once");
     private static final File ADB_ROOT_ALWAYS_MARKER = new File("/data/adb/sui/enable_adb_root");
     private static final String LEGACY_SHELL_DIR = "/data/local/tmp/sui_shell";
@@ -303,6 +305,15 @@ public class SuiConfigManager extends ConfigManager {
             if (entry == null || (entry.flags & FLAG_GLOBAL_SETTINGS_INITIALIZED) == 0) {
                 flags |= FLAG_MONET_DISABLED;
             }
+            // The marker is authoritative for this boot-time native option. In
+            // particular, native removes it when the running KernelSU does not
+            // implement DISABLE_ESCAPE_TO_ROOT, which makes the UI automatically
+            // fall back to the disabled state without making sui_shell unavailable.
+            if (KSU_NO_ESCAPE_MARKER.exists()) {
+                flags |= FLAG_KSU_NO_ESCAPE;
+            } else {
+                flags &= ~FLAG_KSU_NO_ESCAPE;
+            }
             flags &= ~(FLAG_ADB_ROOT_ONCE | FLAG_ADB_ROOT_ALWAYS);
             if (ADB_ROOT_ALWAYS_MARKER.exists()) {
                 flags |= FLAG_ADB_ROOT_ALWAYS;
@@ -314,6 +325,24 @@ public class SuiConfigManager extends ConfigManager {
     }
 
     public void setGlobalSettings(int flags) {
+        boolean enableKsuNoEscape = (flags & FLAG_KSU_NO_ESCAPE) != 0;
+        try {
+            if (enableKsuNoEscape) {
+                File parent = KSU_NO_ESCAPE_MARKER.getParentFile();
+                if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                    throw new java.io.IOException("cannot create " + parent);
+                }
+                if (!KSU_NO_ESCAPE_MARKER.exists() && !KSU_NO_ESCAPE_MARKER.createNewFile()) {
+                    throw new java.io.IOException("cannot create " + KSU_NO_ESCAPE_MARKER);
+                }
+                android.system.Os.chmod(KSU_NO_ESCAPE_MARKER.getAbsolutePath(), 0600);
+            } else if (KSU_NO_ESCAPE_MARKER.exists() && !KSU_NO_ESCAPE_MARKER.delete()) {
+                throw new java.io.IOException("cannot delete " + KSU_NO_ESCAPE_MARKER);
+            }
+        } catch (java.io.IOException | android.system.ErrnoException e) {
+            throw new IllegalStateException("Failed to update KernelSU no-escape setting", e);
+        }
+
         boolean enableAdbRootOnce = (flags & FLAG_ADB_ROOT_ONCE) != 0;
         boolean enableAdbRootAlways = (flags & FLAG_ADB_ROOT_ALWAYS) != 0;
         try {

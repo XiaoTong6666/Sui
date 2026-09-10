@@ -41,6 +41,8 @@
     <string name="action_filter_shizuku_apps">僅顯示 Shizuku 應用</string>
     <string name="action_monet">動態取色</string>
     <string name="action_legacy_shizuku_binder_compat">舊版 Shizuku 相容</string>
+    <string name="action_ksu_no_escape">禁止 Shell 提權 (KSU)</string>
+    <string name="toast_ksu_no_escape_failed">KSU 提權保護設定失敗</string>
     <string name="action_adb_root">ADB Root</string>
     <string name="adb_root_off">關閉</string>
     <string name="adb_root_once">下次啟動啟用一次</string>

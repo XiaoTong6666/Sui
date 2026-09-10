@@ -33,8 +33,10 @@
 #include <selinux.h>
 #include <string>
 #include <dirent.h>
+#include <ksu.h>
 
 static constexpr const char* SUI_DATA_DIR = "/data/adb/sui";
+static constexpr const char* KSU_NO_ESCAPE_MARKER = "/data/adb/sui/ksu_no_escape";
 static constexpr const char* LEGACY_SHELL_DIR = "/data/local/tmp/sui_shell";
 static constexpr const char* SHELL_BASE_DIR = "/data/local/tmp";
 static constexpr const char* SHELL_DIR_PREFIX = "sui_shell_";
@@ -335,6 +337,23 @@ static int sui_main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         }
         log_context("initial");
+
+        if (access(KSU_NO_ESCAPE_MARKER, F_OK) == 0) {
+            LOGI("KernelSU no-escape protection requested for shell server");
+            KsuNoEscapeResult result = ksu_disable_escape_to_root();
+            if (result == KsuNoEscapeResult::Enabled) {
+                LOGI("KernelSU no-escape protection enabled for shell server");
+            } else if (result == KsuNoEscapeResult::Unsupported) {
+                LOGW("KernelSU no-escape is unsupported; disabling the option and continuing");
+                if (unlink(KSU_NO_ESCAPE_MARKER) != 0 && errno != ENOENT) {
+                    LOGW("failed to disable KernelSU no-escape marker with %d: %s", errno,
+                         strerror(errno));
+                }
+            } else {
+                LOGW("KernelSU no-escape setup failed with %d: %s; continuing without protection",
+                     errno, strerror(errno));
+            }
+        }
 
         // uid 2000 cannot read /data/adb/modules/zygisk-sui/sui.dex or .so libraries
         const char* shell_dir = shell_dir_path.c_str();

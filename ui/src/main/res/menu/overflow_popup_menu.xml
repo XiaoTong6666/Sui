@@ -37,6 +37,10 @@
         android:title="@string/action_legacy_shizuku_binder_compat"
         android:checkable="true" />
     <item
+        android:id="@+id/action_ksu_no_escape"
+        android:title="@string/action_ksu_no_escape"
+        android:checkable="true" />
+    <item
         android:id="@+id/action_adb_root"
         android:title="@string/action_adb_root" />
     <item

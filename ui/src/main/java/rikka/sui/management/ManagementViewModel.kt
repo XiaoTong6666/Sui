@@ -45,6 +45,7 @@ class ManagementViewModel : ViewModel() {
     var showOnlyShizukuApps = false
     var isMonetEnabled = false
     var isLegacyShizukuBinderCompatEnabled = false
+    var isKsuNoEscapeEnabled = false
     var adbRootMode = ADB_ROOT_OFF
     private var hasLoadedGlobalSettings = false
     val appList = MutableLiveData<Resource<List<AppInfo>?>?>(null)
@@ -142,6 +143,27 @@ class ManagementViewModel : ViewModel() {
         }
     }
 
+    fun toggleKsuNoEscape(onResult: (Boolean) -> Unit) {
+        val newState = !isKsuNoEscapeEnabled
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentFlags = BridgeServiceClient.getGlobalSettings()
+            val newFlags = if (newState) {
+                currentFlags or BridgeServiceClient.FLAG_KSU_NO_ESCAPE
+            } else {
+                currentFlags and BridgeServiceClient.FLAG_KSU_NO_ESCAPE.inv()
+            }
+            val success = BridgeServiceClient.setGlobalSettings(newFlags)
+
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    isKsuNoEscapeEnabled = newState
+                }
+                onResult(success)
+            }
+        }
+    }
+
     fun setAdbRootMode(mode: Int, onResult: (Boolean) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             val currentFlags = BridgeServiceClient.getGlobalSettings()
@@ -205,6 +227,7 @@ class ManagementViewModel : ViewModel() {
                     isMonetEnabled = (flags and BridgeServiceClient.FLAG_MONET_DISABLED) == 0
                     isLegacyShizukuBinderCompatEnabled =
                         (flags and BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT) != 0
+                    isKsuNoEscapeEnabled = (flags and BridgeServiceClient.FLAG_KSU_NO_ESCAPE) != 0
                     adbRootMode = when {
                         (flags and BridgeServiceClient.FLAG_ADB_ROOT_ALWAYS) != 0 -> ADB_ROOT_ALWAYS
                         (flags and BridgeServiceClient.FLAG_ADB_ROOT_ONCE) != 0 -> ADB_ROOT_ONCE
