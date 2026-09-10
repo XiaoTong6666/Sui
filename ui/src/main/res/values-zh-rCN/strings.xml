@@ -45,7 +45,7 @@
     <string name="adb_root_off">关闭</string>
     <string name="adb_root_once">下次启动启用一次</string>
     <string name="adb_root_always">始终启用</string>
-    <string name="toast_adb_root_restart">重启设备后应用 ADB Root 设置</string>
+    <string name="toast_restart_device">重启设备后生效喵</string>
     <string name="toast_adb_root_failed">更新 ADB Root 设置失败</string>
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">本项目遵循 GPLv3 在 </string>

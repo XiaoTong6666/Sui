@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
-    <group android:checkableBehavior="single">
-        <item
-            android:id="@+id/adb_root_off"
-            android:title="@string/adb_root_off" />
-        <item
-            android:id="@+id/adb_root_once"
-            android:title="@string/adb_root_once" />
-        <item
-            android:id="@+id/adb_root_always"
-            android:title="@string/adb_root_always" />
-    </group>
+    <item
+        android:id="@+id/adb_root_off"
+        android:title="@string/adb_root_off"
+        android:checkable="true" />
+    <item
+        android:id="@+id/adb_root_once"
+        android:title="@string/adb_root_once"
+        android:checkable="true" />
+    <item
+        android:id="@+id/adb_root_always"
+        android:title="@string/adb_root_always"
+        android:checkable="true" />
 </menu>

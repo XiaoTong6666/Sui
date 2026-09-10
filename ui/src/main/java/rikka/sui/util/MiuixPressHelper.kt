@@ -22,7 +22,6 @@ package rikka.sui.util
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Rect
@@ -37,7 +36,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
-import android.widget.CompoundButton
 import android.widget.ListView
 import android.widget.PopupWindow
 import androidx.appcompat.widget.ListPopupWindow
@@ -47,7 +45,6 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.graphics.toColorInt
 import androidx.core.view.get
 import androidx.core.view.size
-import androidx.core.widget.CompoundButtonCompat
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import rikka.sui.R
@@ -113,13 +110,11 @@ class MiuixPressHelper : View.OnTouchListener {
 }
 
 fun PopupMenu.applyMiuixPopupStyle() {
-    var anchorContext: Context? = null
     try {
         val mAnchorField = this.javaClass.getDeclaredField("mAnchor")
         mAnchorField.isAccessible = true
         val anchor = mAnchorField.get(this) as? View
         if (anchor != null) {
-            anchorContext = anchor.context
             val loc = IntArray(2)
             anchor.getLocationOnScreen(loc)
             MiuixPopupState.anchorX = loc[0]
@@ -171,26 +166,6 @@ fun PopupMenu.applyMiuixPopupStyle() {
             it.clipToOutline = false
             it.isVerticalScrollBarEnabled = false
             it.overScrollMode = View.OVER_SCROLL_NEVER
-
-            val primaryColor = (anchorContext ?: it.context).theme.resolveColor(R.attr.colorPrimary)
-            val tint = ColorStateList.valueOf(primaryColor)
-            it.post {
-                fun tintCompoundButtons(view: View) {
-                    when (view) {
-                        is CompoundButton -> CompoundButtonCompat.setButtonTintList(view, tint)
-
-                        is ViewGroup -> {
-                            for (i in 0 until view.childCount) {
-                                tintCompoundButtons(view.getChildAt(i))
-                            }
-                        }
-                    }
-                }
-
-                for (i in 0 until it.childCount) {
-                    tintCompoundButtons(it.getChildAt(i))
-                }
-            }
 
             val padding = (8 * it.resources.displayMetrics.density).toInt()
             it.setPadding(0, padding, 0, padding)

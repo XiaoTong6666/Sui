@@ -45,7 +45,7 @@
     <string name="adb_root_off">Off</string>
     <string name="adb_root_once">Enable for next boot once</string>
     <string name="adb_root_always">Always enable</string>
-    <string name="toast_adb_root_restart">ADB Root setting will apply after reboot</string>
+    <string name="toast_restart_device">Takes effect after reboot, meow</string>
     <string name="toast_adb_root_failed">Failed to update ADB Root setting</string>
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">This project is licensed under GPLv3 and open source on </string>

@@ -429,6 +429,23 @@ class ManagementFragment : AppFragment() {
             else -> popupMenu.menu.findItem(R.id.adb_root_off)?.isChecked = true
         }
 
+        val highlightColor = requireContext().theme.resolveColor(R.attr.colorPrimary)
+        val menu = popupMenu.menu
+        for (i in 0 until menu.size()) {
+            val item = menu.getItem(i)
+            if (item.isChecked) {
+                val title = item.title?.toString() ?: continue
+                val spannableTitle = SpannableString(title)
+                spannableTitle.setSpan(
+                    ForegroundColorSpan(highlightColor),
+                    0,
+                    spannableTitle.length,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+                item.title = spannableTitle
+            }
+        }
+
         popupMenu.setOnMenuItemClickListener { item ->
             val mode = when (item.itemId) {
                 R.id.adb_root_once -> ManagementViewModel.ADB_ROOT_ONCE
@@ -440,7 +457,7 @@ class ManagementFragment : AppFragment() {
             viewModel.setAdbRootMode(mode) { success ->
                 Toast.makeText(
                     context,
-                    if (success) R.string.toast_adb_root_restart else R.string.toast_adb_root_failed,
+                    if (success) R.string.toast_restart_device else R.string.toast_adb_root_failed,
                     Toast.LENGTH_SHORT,
                 ).show()
             }

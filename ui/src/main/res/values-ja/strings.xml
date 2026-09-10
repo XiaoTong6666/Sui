@@ -44,7 +44,7 @@
     <string name="adb_root_off">無効</string>
     <string name="adb_root_once">次回起動時のみ有効</string>
     <string name="adb_root_always">常に有効</string>
-    <string name="toast_adb_root_restart">再起動後に ADB Root 設定が適用されます</string>
+    <string name="toast_restart_device">端末の再起動後に有効になりますにゃ</string>
     <string name="toast_adb_root_failed">ADB Root 設定を更新できませんでした</string>
   <string name="about_version">v%1$s</string>
   <string name="about_license_part1">このプロジェクトは GPLv3 に基づいています</string>
