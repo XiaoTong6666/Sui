@@ -1,17 +1,17 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `540`
-- **Commit:** [`d2626f7`](https://github.com/XiaoTong6666/Sui/commit/d2626f7372f6ec03b1e92f5e198633b03e2743cd)
-- **Build time:** `3m 03s`
-- **SHA256:** `4b269063d32325912cabc5bbf5bfaccd5a45ea32de278c124385a71b3eca3932`
+- **VersionCode:** `541`
+- **Commit:** [`c5984e4`](https://github.com/XiaoTong6666/Sui/commit/c5984e4ff2690b524b2d9e664280b41363a91761)
+- **Build time:** `2m 59s`
+- **SHA256:** `c96b1b6af5d0d734795dc798dae6b71c1a3b11b97900a3fe3d720cfa6da0337e`
 
 ## Message
 
 ```text
-fix(ui): align ADB Root selection styling
+feat(shell): prevent KernelSU re-escalation
 
-将 ADB Root 子菜单从单选 RadioButton 路径调整为与一级菜单一致的 checkable item。
-移除对 PopupMenu CompoundButton 的全局 tint workaround，统一文案，避免子菜单样式与其他菜单项分叉。
+为 Sui Shell 增加可选的 KernelSU no-escape 保护，在 shell child 降到 UID 2000 前通过 KernelSU driver ioctl 设置 DISABLE_ESCAPE_TO_ROOT，并让该限制随进程树继承，阻止 Rish、shell 模式 Shizuku API 与 UserService 再次通过 KernelSU 获取 root。
+新增右上角开关、marker 持久化与状态同步；当目前的 KernelSU 不支持这个 UAPI 时自动移除 marker。
 
 ```
