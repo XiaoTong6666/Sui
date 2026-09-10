@@ -324,6 +324,23 @@ class ManagementFragment : AppFragment() {
             }
         }
 
+        val adbRootItem = popupMenu.menu.findItem(R.id.action_adb_root)
+        adbRootItem?.title?.let { title ->
+            val plainTitle = title.toString()
+            adbRootItem.title = if (viewModel.adbRootMode != ManagementViewModel.ADB_ROOT_OFF) {
+                val ssb = SpannableString(plainTitle)
+                ssb.setSpan(
+                    ForegroundColorSpan(highlightColor),
+                    0,
+                    plainTitle.length,
+                    Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                )
+                ssb
+            } else {
+                plainTitle
+            }
+        }
+
         popupMenu.setOnMenuItemClickListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.action_filter_shizuku -> {
@@ -384,11 +401,54 @@ class ManagementFragment : AppFragment() {
                     true
                 }
 
+                R.id.action_adb_root -> {
+                    showAdbRootOptionsMenu(anchorView)
+                    true
+                }
+
                 else -> false
             }
         }
         popupMenu.applyMiuixPopupStyle()
     }
+    private fun showAdbRootOptionsMenu(anchorView: View) {
+        val contextWrapper = ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu_OverflowRightOffset)
+        val popupMenu = PopupMenu(contextWrapper, anchorView, Gravity.END)
+        popupMenu.inflate(R.menu.adb_root_options_menu)
+
+        anchorView.isActivated = true
+        popupMenu.setOnDismissListener {
+            MiuixPopupDimOverlay.hide()
+            anchorView.isActivated = false
+        }
+        MiuixPopupDimOverlay.show(requireActivity())
+
+        when (viewModel.adbRootMode) {
+            ManagementViewModel.ADB_ROOT_ONCE -> popupMenu.menu.findItem(R.id.adb_root_once)?.isChecked = true
+            ManagementViewModel.ADB_ROOT_ALWAYS -> popupMenu.menu.findItem(R.id.adb_root_always)?.isChecked = true
+            else -> popupMenu.menu.findItem(R.id.adb_root_off)?.isChecked = true
+        }
+
+        popupMenu.setOnMenuItemClickListener { item ->
+            val mode = when (item.itemId) {
+                R.id.adb_root_once -> ManagementViewModel.ADB_ROOT_ONCE
+                R.id.adb_root_always -> ManagementViewModel.ADB_ROOT_ALWAYS
+                R.id.adb_root_off -> ManagementViewModel.ADB_ROOT_OFF
+                else -> return@setOnMenuItemClickListener false
+            }
+            val context = requireContext()
+            viewModel.setAdbRootMode(mode) { success ->
+                Toast.makeText(
+                    context,
+                    if (success) R.string.toast_adb_root_restart else R.string.toast_adb_root_failed,
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            true
+        }
+        popupMenu.applyMiuixPopupStyle()
+    }
+
     private fun showBatchOptionsMenu(anchorView: View) {
         val contextWrapper = ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu_OverflowRightOffset)
         val popupMenu = PopupMenu(contextWrapper, anchorView, Gravity.END)

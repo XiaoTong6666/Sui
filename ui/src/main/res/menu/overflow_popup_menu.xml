@@ -37,6 +37,9 @@
         android:title="@string/action_legacy_shizuku_binder_compat"
         android:checkable="true" />
     <item
+        android:id="@+id/action_adb_root"
+        android:title="@string/action_adb_root" />
+    <item
         android:id="@+id/action_about"
         android:title="@string/action_about" />
 </menu>

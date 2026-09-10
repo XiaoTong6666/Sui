@@ -45,6 +45,7 @@ class ManagementViewModel : ViewModel() {
     var showOnlyShizukuApps = false
     var isMonetEnabled = false
     var isLegacyShizukuBinderCompatEnabled = false
+    var adbRootMode = ADB_ROOT_OFF
     private var hasLoadedGlobalSettings = false
     val appList = MutableLiveData<Resource<List<AppInfo>?>?>(null)
     private var currentQuery: String? = null
@@ -141,6 +142,27 @@ class ManagementViewModel : ViewModel() {
         }
     }
 
+    fun setAdbRootMode(mode: Int, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentFlags = BridgeServiceClient.getGlobalSettings()
+            var newFlags = currentFlags and
+                (BridgeServiceClient.FLAG_ADB_ROOT_ONCE or BridgeServiceClient.FLAG_ADB_ROOT_ALWAYS).inv()
+            newFlags = when (mode) {
+                ADB_ROOT_ONCE -> newFlags or BridgeServiceClient.FLAG_ADB_ROOT_ONCE
+                ADB_ROOT_ALWAYS -> newFlags or BridgeServiceClient.FLAG_ADB_ROOT_ALWAYS
+                else -> newFlags
+            }
+            val success = BridgeServiceClient.setGlobalSettings(newFlags)
+
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    adbRootMode = mode
+                }
+                onResult(success)
+            }
+        }
+    }
+
     fun batchUpdate(targetMode: Int, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             if (uiDebugMode) {
@@ -183,6 +205,11 @@ class ManagementViewModel : ViewModel() {
                     isMonetEnabled = (flags and BridgeServiceClient.FLAG_MONET_DISABLED) == 0
                     isLegacyShizukuBinderCompatEnabled =
                         (flags and BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT) != 0
+                    adbRootMode = when {
+                        (flags and BridgeServiceClient.FLAG_ADB_ROOT_ALWAYS) != 0 -> ADB_ROOT_ALWAYS
+                        (flags and BridgeServiceClient.FLAG_ADB_ROOT_ONCE) != 0 -> ADB_ROOT_ONCE
+                        else -> ADB_ROOT_OFF
+                    }
                     hasLoadedGlobalSettings = true
                 }
 
@@ -248,5 +275,11 @@ class ManagementViewModel : ViewModel() {
                 defaultFlags = 0
             }
         }
+    }
+
+    companion object {
+        const val ADB_ROOT_OFF = 0
+        const val ADB_ROOT_ONCE = 1
+        const val ADB_ROOT_ALWAYS = 2
     }
 }

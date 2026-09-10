@@ -39,6 +39,10 @@ public class SuiConfigManager extends ConfigManager {
     public static final int DEFAULT_UID = -1;
     private static final int FLAG_GLOBAL_SETTINGS_INITIALIZED = 1 << 30;
     private static final int FLAG_MONET_DISABLED = 1 << 1;
+    private static final int FLAG_ADB_ROOT_ONCE = 1 << 4;
+    private static final int FLAG_ADB_ROOT_ALWAYS = 1 << 5;
+    private static final File ADB_ROOT_ONCE_MARKER = new File("/data/adb/sui/enable_adb_root_once");
+    private static final File ADB_ROOT_ALWAYS_MARKER = new File("/data/adb/sui/enable_adb_root");
     private static final String LEGACY_SHELL_DIR = "/data/local/tmp/sui_shell";
     private static final String SHELL_BASE_DIR = "/data/local/tmp";
     private static final String SHELL_DIR_MARKER = "/data/adb/sui/shell_dir_name";
@@ -295,18 +299,55 @@ public class SuiConfigManager extends ConfigManager {
     public int getGlobalSettings() {
         synchronized (this) {
             SuiConfig.PackageEntry entry = findLocked(UID_GLOBAL_SETTINGS);
-            if (entry == null) {
-                return FLAG_MONET_DISABLED;
-            }
-            int flags = entry.flags & ~FLAG_GLOBAL_SETTINGS_INITIALIZED;
-            if ((entry.flags & FLAG_GLOBAL_SETTINGS_INITIALIZED) == 0) {
+            int flags = entry != null ? entry.flags & ~FLAG_GLOBAL_SETTINGS_INITIALIZED : FLAG_MONET_DISABLED;
+            if (entry == null || (entry.flags & FLAG_GLOBAL_SETTINGS_INITIALIZED) == 0) {
                 flags |= FLAG_MONET_DISABLED;
+            }
+            flags &= ~(FLAG_ADB_ROOT_ONCE | FLAG_ADB_ROOT_ALWAYS);
+            if (ADB_ROOT_ALWAYS_MARKER.exists()) {
+                flags |= FLAG_ADB_ROOT_ALWAYS;
+            } else if (ADB_ROOT_ONCE_MARKER.exists()) {
+                flags |= FLAG_ADB_ROOT_ONCE;
             }
             return flags;
         }
     }
 
     public void setGlobalSettings(int flags) {
+        boolean enableAdbRootOnce = (flags & FLAG_ADB_ROOT_ONCE) != 0;
+        boolean enableAdbRootAlways = (flags & FLAG_ADB_ROOT_ALWAYS) != 0;
+        try {
+            File parent = ADB_ROOT_ALWAYS_MARKER.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                throw new java.io.IOException("cannot create " + parent);
+            }
+            if (enableAdbRootAlways) {
+                if (ADB_ROOT_ONCE_MARKER.exists() && !ADB_ROOT_ONCE_MARKER.delete()) {
+                    throw new java.io.IOException("cannot delete " + ADB_ROOT_ONCE_MARKER);
+                }
+                if (!ADB_ROOT_ALWAYS_MARKER.exists() && !ADB_ROOT_ALWAYS_MARKER.createNewFile()) {
+                    throw new java.io.IOException("cannot create " + ADB_ROOT_ALWAYS_MARKER);
+                }
+                android.system.Os.chmod(ADB_ROOT_ALWAYS_MARKER.getAbsolutePath(), 0600);
+            } else if (enableAdbRootOnce) {
+                if (ADB_ROOT_ALWAYS_MARKER.exists() && !ADB_ROOT_ALWAYS_MARKER.delete()) {
+                    throw new java.io.IOException("cannot delete " + ADB_ROOT_ALWAYS_MARKER);
+                }
+                if (!ADB_ROOT_ONCE_MARKER.exists() && !ADB_ROOT_ONCE_MARKER.createNewFile()) {
+                    throw new java.io.IOException("cannot create " + ADB_ROOT_ONCE_MARKER);
+                }
+                android.system.Os.chmod(ADB_ROOT_ONCE_MARKER.getAbsolutePath(), 0600);
+            } else {
+                if (ADB_ROOT_ONCE_MARKER.exists() && !ADB_ROOT_ONCE_MARKER.delete()) {
+                    throw new java.io.IOException("cannot delete " + ADB_ROOT_ONCE_MARKER);
+                }
+                if (ADB_ROOT_ALWAYS_MARKER.exists() && !ADB_ROOT_ALWAYS_MARKER.delete()) {
+                    throw new java.io.IOException("cannot delete " + ADB_ROOT_ALWAYS_MARKER);
+                }
+            }
+        } catch (java.io.IOException | android.system.ErrnoException e) {
+            throw new IllegalStateException("Failed to update adb root setting", e);
+        }
         update(UID_GLOBAL_SETTINGS, 0xFFFFFFFF, flags | FLAG_GLOBAL_SETTINGS_INITIALIZED);
     }
 

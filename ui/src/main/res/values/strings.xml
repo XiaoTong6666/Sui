@@ -41,6 +41,12 @@
     <string name="action_filter_shizuku_apps">Show only Shizuku apps</string>
     <string name="action_monet">Monet dynamic color</string>
     <string name="action_legacy_shizuku_binder_compat">Legacy Shizuku support</string>
+    <string name="action_adb_root">ADB Root</string>
+    <string name="adb_root_off">Off</string>
+    <string name="adb_root_once">Enable for next boot once</string>
+    <string name="adb_root_always">Always enable</string>
+    <string name="toast_adb_root_restart">ADB Root setting will apply after reboot</string>
+    <string name="toast_adb_root_failed">Failed to update ADB Root setting</string>
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">This project is licensed under GPLv3 and open source on </string>
     <string name="about_license_part2">GitHub</string>

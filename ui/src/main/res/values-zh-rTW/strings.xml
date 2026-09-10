@@ -41,6 +41,12 @@
     <string name="action_filter_shizuku_apps">僅顯示 Shizuku 應用</string>
     <string name="action_monet">動態取色</string>
     <string name="action_legacy_shizuku_binder_compat">舊版 Shizuku 相容</string>
+    <string name="action_adb_root">ADB Root</string>
+    <string name="adb_root_off">關閉</string>
+    <string name="adb_root_once">下次啟動啟用一次</string>
+    <string name="adb_root_always">始終啟用</string>
+    <string name="toast_adb_root_restart">重新啟動裝置後套用 ADB Root 設定</string>
+    <string name="toast_adb_root_failed">更新 ADB Root 設定失敗</string>
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">本專案遵循 GPLv3 協議，並於 </string>
     <string name="about_license_part2">GitHub</string>
