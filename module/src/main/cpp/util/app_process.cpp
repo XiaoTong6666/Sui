@@ -31,7 +31,7 @@
 #endif
 
 void app_process(const char* dex_path, const char* files_path, const char* main_class,
-                 const char* process_name, const char* extra_arg) {
+                 const char* process_name, const char* extra_arg, bool log_exec) {
     if (setenv("CLASSPATH", dex_path, true)) {
         LOGE("can't set CLASSPATH");
         exit(EXIT_FAILURE);
@@ -96,7 +96,9 @@ void app_process(const char* dex_path, const char* files_path, const char* main_
     }
     ARG_END(argv)
 
-    LOGI("exec app_process...");
+    if (log_exec) {
+        LOGI("exec app_process...");
+    }
     if (execvp((const char*)argv[0], argv)) {
         PLOGE("execvp %s", argv[0]);
         exit(EXIT_FAILURE);

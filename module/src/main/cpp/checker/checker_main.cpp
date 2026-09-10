@@ -18,12 +18,14 @@
  */
 
 #include <selinux.h>
+#include <android/api-level.h>
 #include <logging.h>
 #include <cstring>
 #include <unistd.h>
 
 bool check() {
     bool success = false;
+    const int api = android_get_device_api_level();
     char *curr_con = nullptr, *data_adb_con = nullptr;
     char *sui_dir_con = nullptr, *seclabel_con = nullptr;
 
@@ -37,7 +39,17 @@ bool check() {
         goto cleanup;
     }
 
-    if (getfilecon_raw("/data/adb", &data_adb_con) != 0) {
+    if (selinux_check_access(curr_con, curr_con, "process", "setcurrent", nullptr) != 0) {
+        PLOGE("%s %s process setcurrent not allowed", curr_con, curr_con);
+        goto cleanup;
+    }
+
+    if (selinux_check_access(curr_con, "u:r:shell:s0", "process", "dyntransition", nullptr) != 0) {
+        PLOGE("%s u:r:shell:s0 process dyntransition not allowed", curr_con);
+        goto cleanup;
+    }
+
+    if (getfilecon_raw("/data/adb", &data_adb_con) < 0) {
         PLOGE("getfilecon_raw");
         goto cleanup;
     }
@@ -76,8 +88,8 @@ bool check() {
         goto cleanup;
     }
 
-    if (selinux_check_access("u:r:init:s0", "u:r:adbd:s0", "process2", "nosuid_transition",
-                             nullptr) != 0) {
+    if (api >= 29 && selinux_check_access("u:r:init:s0", "u:r:adbd:s0", "process2",
+                                          "nosuid_transition", nullptr) != 0) {
         PLOGE("u:r:init:s0 u:r:adbd:s0 process2 nosuid_transition not allowed");
         goto cleanup;
     }
@@ -112,7 +124,8 @@ bool check() {
         goto cleanup;
     }
 
-    if (selinux_check_access("u:r:adbd:s0", data_adb_con, "file", "map", nullptr) != 0) {
+    if (api >= 27 &&
+        selinux_check_access("u:r:adbd:s0", data_adb_con, "file", "map", nullptr) != 0) {
         PLOGE("u:r:adbd:s0 %s file map not allowed", data_adb_con);
         goto cleanup;
     }
@@ -124,7 +137,7 @@ bool check() {
     }
 
     if (access("/data/adb/sui", F_OK) == 0) {
-        if (getfilecon_raw("/data/adb/sui", &sui_dir_con) != 0) {
+        if (getfilecon_raw("/data/adb/sui", &sui_dir_con) < 0) {
             PLOGE("getfilecon_raw /data/adb/sui");
             goto cleanup;
         }
@@ -141,7 +154,7 @@ bool check() {
     }
 
     if (access("/data/adb/sui/seclabel", F_OK) == 0) {
-        if (getfilecon_raw("/data/adb/sui/seclabel", &seclabel_con) != 0) {
+        if (getfilecon_raw("/data/adb/sui/seclabel", &seclabel_con) < 0) {
             PLOGE("getfilecon_raw /data/adb/sui/seclabel");
             goto cleanup;
         }
@@ -173,5 +186,9 @@ cleanup:
 }
 
 int main(int argc, char* argv[]) {
+    if (!init_selinux()) {
+        LOGE("init_selinux failed");
+        return 1;
+    }
     return check() ? 0 : 1;
 }

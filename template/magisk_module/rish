@@ -1,6 +1,6 @@
 #!/system/bin/sh
 BASEDIR=$(dirname "$0")
-DEX="$BASEDIR"/rish.dex
+DEX="$BASEDIR"/sui.dex
 
 if [ ! -f "$DEX" ]; then
   echo "Cannot find $DEX, please check post-install.sh"

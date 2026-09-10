@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <csignal>
+#include <android/api-level.h>
 #include <grp.h>
 #include <logging.h>
 #include <unistd.h>
@@ -38,10 +39,6 @@ static constexpr const char* LEGACY_SHELL_DIR = "/data/local/tmp/sui_shell";
 static constexpr const char* SHELL_BASE_DIR = "/data/local/tmp";
 static constexpr const char* SHELL_DIR_PREFIX = "sui_shell_";
 static constexpr const char* SHELL_DIR_MARKER = "/data/adb/sui/shell_dir_name";
-static constexpr gid_t SHELL_SUPPLEMENTARY_GROUPS[] = {
-    1004, 1007, 1011, 1015, 1028, 1078, 1079, 3001, 3002, 3003, 3006, 3009, 3011, 3012,
-};
-
 static void log_context(const char* stage) {
     char* con = nullptr;
     if (getcon(&con) == 0 && con != nullptr) {
@@ -50,6 +47,40 @@ static void log_context(const char* stage) {
         PLOGE("getcon(%s)", stage);
     }
     freecon(con);
+}
+
+static int set_shell_supplementary_groups() {
+    gid_t groups[14];
+    size_t count = 0;
+    const int api = android_get_device_api_level();
+
+    // Android 6 / API 23 baseline from AOSP adbd.
+    groups[count++] = 1011;  // adb
+    groups[count++] = 1007;  // log
+    groups[count++] = 1004;  // input
+    groups[count++] = 3003;  // inet
+    groups[count++] = 3002;  // net_bt
+    groups[count++] = 3001;  // net_bt_admin
+    groups[count++] = 1028;  // sdcard_r
+    groups[count++] = 1015;  // sdcard_rw
+    groups[count++] = 3006;  // net_bw_stats
+
+    if (api >= 24) {
+        groups[count++] = 3009;  // readproc
+    }
+    if (api >= 27) {
+        groups[count++] = 3011;  // uhid
+    }
+    if (api >= 30) {
+        groups[count++] = 1078;  // ext_data_rw
+        groups[count++] = 1079;  // ext_obb_rw
+    }
+    if (api >= 32) {
+        groups[count++] = 3012;  // readtracefs
+    }
+
+    LOGI("shell supplementary groups: api=%d count=%zu", api, count);
+    return setgroups(count, groups);
 }
 
 static std::string trim_copy(const std::string& input) {
@@ -305,15 +336,6 @@ static int sui_main(int argc, char** argv) {
         }
         log_context("initial");
 
-        if (prctl(PR_SET_PDEATHSIG, SIGKILL) != 0) {
-            PLOGE("prctl PR_SET_PDEATHSIG");
-            exit(EXIT_FAILURE);
-        }
-        if (getppid() == 1) {
-            LOGW("shell server parent already exited");
-            exit(EXIT_FAILURE);
-        }
-
         // uid 2000 cannot read /data/adb/modules/zygisk-sui/sui.dex or .so libraries
         const char* shell_dir = shell_dir_path.c_str();
         ensure_dir(shell_dir, 0755);
@@ -346,8 +368,7 @@ static int sui_main(int argc, char** argv) {
         }
 
         // Match adbd's supplementary groups before dropping root credentials.
-        if (setgroups(sizeof(SHELL_SUPPLEMENTARY_GROUPS) / sizeof(SHELL_SUPPLEMENTARY_GROUPS[0]),
-                      SHELL_SUPPLEMENTARY_GROUPS) != 0) {
+        if (set_shell_supplementary_groups() != 0) {
             PLOGE("setgroups shell");
             exit(EXIT_FAILURE);
         }
@@ -368,14 +389,25 @@ static int sui_main(int argc, char** argv) {
 
         // Switch domains after dropping UID/GID while the current KSU domain can still perform
         // the credential changes above.
+        LOGI("shell credentials ready; switching to shell domain and arming parent death signal");
         if (setcon("u:r:shell:s0") != 0) {
             PLOGE("setcon u:r:shell:s0");
             exit(EXIT_FAILURE);
         }
-        log_context("after setcon");
 
-        log_context("before app_process");
-        app_process(shell_dex_path, shell_dir, "rikka.sui.server.Starter", "sui_shell", "--shell");
+        // setresgid/setresuid clear PDEATHSIG when credentials change, so arm it only after all
+        // credential and SELinux transitions are complete.
+        if (prctl(PR_SET_PDEATHSIG, SIGKILL) != 0) {
+            PLOGE("prctl PR_SET_PDEATHSIG");
+            exit(EXIT_FAILURE);
+        }
+        pid_t parent = getppid();
+        if (parent == 1) {
+            exit(EXIT_FAILURE);
+        }
+
+        app_process(shell_dex_path, shell_dir, "rikka.sui.server.Starter", "sui_shell", "--shell",
+                    false);
         exit(EXIT_FAILURE);
     } else {
         // Parent process -> Root Server

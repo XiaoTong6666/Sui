@@ -47,6 +47,16 @@ adb_data_file_secon=$(ls -Zd /data/adb | awk '{print $1}' | cut -d: -f3)
 sed -i "s|%su_secon%|$su_secon|g" "$MODPATH/sepolicy.rule"
 sed -i "s|%adb_data_file_secon%|$adb_data_file_secon|g" "$MODPATH/sepolicy.rule"
 
+# file:map exists in Android policy starting from API 27.
+if [ "$API" -ge 27 ]; then
+  echo "allow adbd $adb_data_file_secon file map" >> "$MODPATH/sepolicy.rule"
+fi
+
+# process2:nosuid_transition is available starting from API 29.
+if [ "$API" -ge 29 ]; then
+  echo 'allow init adbd process2 nosuid_transition' >> "$MODPATH/sepolicy.rule"
+fi
+
 # Append legacy rules for API <= 27
 if [ "$API" -le 27 ]; then
   ui_print "- Appending legacy sepolicy rules for API $API"
@@ -70,7 +80,7 @@ allow platform_app system_data_file dir { search getattr }
 allow system_app system_data_file dir { search getattr }
 
 # Allow system_server to access /data/system/sui (critical for API 23 injection)
-allow system_server system_data_file file { read execute open getattr map }
+allow system_server system_data_file file { read execute open getattr }
 allow system_server system_data_file dir { search getattr }
 
 # Allow dex2oat to access /data/system/sui (for OAT generation)
@@ -79,6 +89,11 @@ allow dex2oat system_data_file dir { read write search add_name }
 allow dex2oat system_app_data_file file { read write create getattr open }
 allow dex2oat system_app_data_file dir { read write search add_name }
 EOF
+
+  # file:map is valid on the API 27 end of the legacy range only.
+  if [ "$API" -eq 27 ]; then
+    echo 'allow system_server system_data_file file map' >> "$MODPATH/sepolicy.rule"
+  fi
 fi
 
 mkdir "$MODPATH/zygisk"

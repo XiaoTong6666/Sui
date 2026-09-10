@@ -1,5 +1,6 @@
 #include <cstring>
 #include <cerrno>
+#include <logging.h>
 #include <unistd.h>
 #include <syscall.h>
 #include <malloc.h>
@@ -82,21 +83,27 @@ int selinux_check_access(const char* scon, const char* tcon, const char* tclass,
     if (selinux_check_access_func) {
         return selinux_check_access_func(scon, tcon, tclass, perm, auditdata);
     }
-    return 0;
+    errno = ENOSYS;
+    return -1;
 }
 
 int getcon(char** con) {
     if (getcon_func) {
         return getcon_func(con);
     }
-    return 0;
+    if (con) {
+        *con = nullptr;
+    }
+    errno = ENOSYS;
+    return -1;
 }
 
 int setcon(const char* con) {
     if (setcon_func) {
         return setcon_func(con);
     }
-    return 0;
+    errno = ENOSYS;
+    return -1;
 }
 
 #ifdef __LP64__
@@ -117,5 +124,9 @@ bool init_selinux() {
     selinux_check_access_func = (selinux_check_access_t*)dlsym(handle, "selinux_check_access");
     getcon_func = (getcon_t*)dlsym(handle, "getcon");
     setcon_func = (setcon_t*)dlsym(handle, "setcon");
-    return selinux_check_access_func != nullptr && getcon_func != nullptr;
+    bool initialized =
+        selinux_check_access_func != nullptr && getcon_func != nullptr && setcon_func != nullptr;
+    LOGI("libselinux symbols: check_access=%d getcon=%d setcon=%d",
+         selinux_check_access_func != nullptr, getcon_func != nullptr, setcon_func != nullptr);
+    return initialized;
 }
