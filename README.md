@@ -1,18 +1,30 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `543`
-- **Commit:** [`a45ef9c`](https://github.com/XiaoTong6666/Sui/commit/a45ef9cde466c7b7a5025d43c21cb3771520cb20)
-- **Build time:** `2m 26s`
-- **SHA256:** `7ed911dc05a075ab9844532a230f7268228700f6b2474a60bc14a18370bf2fb4`
+- **VersionCode:** `542`
+- **Commit:** [`23d4384`](https://github.com/XiaoTong6666/Sui/commit/23d4384a897509e8e723eadc28133f4ceeb7ac0f)
+- **Build time:** `1m 26s`
+- **SHA256:** `248e14b44e028814c4db48d1e71e2ffb373889fc8fe67637b172a26b3880837d`
 
 ## Message
 
 ```text
-fix(sui): synchronize permission revocation lifecycle
+build(deps): bump org.jetbrains.kotlin.android from 2.4.10 to 2.4.20 (#98)
 
-在 Sui 层同步权限变更、服务器 Binder 路由和能力撤销流程。
+Bumps [org.jetbrains.kotlin.android](https://github.com/JetBrains/kotlin) from 2.4.10 to 2.4.20.
+- [Release notes](https://github.com/JetBrains/kotlin/releases)
+- [Changelog](https://github.com/JetBrains/kotlin/blob/master/ChangeLog.md)
+- [Commits](https://github.com/JetBrains/kotlin/compare/v2.4.10...v2.4.20)
 
-撤销远程进程、Rish 宿主和用户服务，处理 shell/root 切换及用户服务进程注册，避免权限降级后继续持有高权限能力。
+---
+updated-dependencies:
+- dependency-name: org.jetbrains.kotlin.android
+  dependency-version: 2.4.20
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
 
 ```
