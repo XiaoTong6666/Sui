@@ -27,6 +27,7 @@ import android.system.Os;
 import android.text.TextUtils;
 import java.io.File;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 import rikka.rish.Rish;
 import rikka.rish.RishConfig;
 import rikka.shizuku.Shizuku;
@@ -50,6 +51,14 @@ public class Shell extends Rish {
                     Shizuku.removeRequestPermissionResultListener(this);
 
                     if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                        IBinder binder = Shizuku.getBinder();
+                        if (binder == null) {
+                            System.err.println("Permission granted but Sui binder is unavailable");
+                            System.err.flush();
+                            System.exit(1);
+                            return;
+                        }
+                        RishConfig.init(binder, ShizukuApiConstants.BINDER_DESCRIPTOR, 30000);
                         onGrantedRunnable.run();
                     } else {
                         System.err.println("Permission denied");
@@ -91,6 +100,7 @@ public class Shell extends Rish {
 
         Looper looper = Objects.requireNonNull(Looper.myLooper());
         Handler handler = new Handler(looper);
+        AtomicBoolean shellStarted = new AtomicBoolean(false);
 
         try {
             if (!Sui.init(packageName)) {
@@ -111,6 +121,13 @@ public class Shell extends Rish {
             RishConfig.init(binder, ShizukuApiConstants.BINDER_DESCRIPTOR, 30000);
             Shizuku.onBinderReceived(binder, packageName);
             Shizuku.addBinderReceivedListenerSticky(() -> {
+                IBinder currentBinder = Shizuku.getBinder();
+                if (currentBinder != null) {
+                    RishConfig.init(currentBinder, ShizukuApiConstants.BINDER_DESCRIPTOR, 30000);
+                }
+                if (!shellStarted.compareAndSet(false, true)) {
+                    return;
+                }
                 int version = Shizuku.getVersion();
                 if (version < 12) {
                     System.err.println("Rish requires server 12 (running " + version + ")");

@@ -36,4 +36,5 @@ public class ServerConstants {
     public static final int BINDER_TRANSACTION_getShortcutToken = 10009;
     public static final int BINDER_TRANSACTION_requestPermissionFromShell = 10010;
     public static final int BINDER_TRANSACTION_reloadShellConfig = 10011;
+    public static final int BINDER_TRANSACTION_registerUserServiceProcess = 10012;
 }

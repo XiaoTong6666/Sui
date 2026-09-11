@@ -32,6 +32,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import rikka.shizuku.server.ConfigManager;
 
 public class SuiConfigManager extends ConfigManager {
@@ -52,8 +54,11 @@ public class SuiConfigManager extends ConfigManager {
     private static final String SHELL_DIR_PREFIX = "sui_shell_";
     private static final long SHELL_SYNC_DEBOUNCE_MS = 200;
     private static final long SHELL_SYNC_WAIT_TIMEOUT_MS = 5000;
+    private static final String SHELL_TRANSITION_PREFIX = "#transition:";
     private static final HandlerThread SHELL_SYNC_THREAD = new HandlerThread("sui-shell-sync");
     private static final Handler SHELL_SYNC_HANDLER;
+    private static final AtomicLong SHELL_TRANSITION_COUNTER =
+            new AtomicLong(Math.max(1L, android.os.SystemClock.elapsedRealtimeNanos()));
 
     private static android.os.FileObserver shellConfigObserver;
 
@@ -120,12 +125,35 @@ public class SuiConfigManager extends ConfigManager {
 
     private final SuiConfig config;
     private final Map<Integer, SuiConfig.PackageEntry> packageIndex = new HashMap<>();
-    private final Runnable syncUidsToShellFileRunnable = this::syncUidsToShellFile;
+    private final Runnable syncUidsToShellFileRunnable = () -> syncUidsToShellFile(nextShellTransitionId());
     private int[] hiddenUidsCache;
     private int[] rootUidsCache;
     private int[] deniedUidsCache;
     private int[] shellUidsCache;
     private String shortcutToken;
+    private final Object shellReloadLock = new Object();
+    private long lastAppliedShellTransitionId = -1;
+    private ShellReloadResult lastShellReloadResult = ShellReloadResult.notApplied(-1);
+
+    static final class ShellReloadResult {
+        final long transitionId;
+        final boolean applied;
+        final java.util.List<SuiService.ClientFallback> fallbacks;
+
+        ShellReloadResult(long transitionId, boolean applied, java.util.List<SuiService.ClientFallback> fallbacks) {
+            this.transitionId = transitionId;
+            this.applied = applied;
+            this.fallbacks = java.util.Collections.unmodifiableList(new java.util.ArrayList<>(fallbacks));
+        }
+
+        static ShellReloadResult notApplied(long transitionId) {
+            return new ShellReloadResult(transitionId, false, java.util.Collections.emptyList());
+        }
+    }
+
+    private static long nextShellTransitionId() {
+        return SHELL_TRANSITION_COUNTER.incrementAndGet();
+    }
 
     public SuiConfigManager() {
         this.config = load();
@@ -133,14 +161,28 @@ public class SuiConfigManager extends ConfigManager {
             rebuildPackageIndexLocked();
         }
         if (SuiService.isShellMode()) {
-            reloadShellConfigFromFile();
+            reloadShellConfigFromFile(0);
             if (shellConfigObserver == null) {
                 shellConfigObserver = createShellConfigObserver();
                 shellConfigObserver.startWatching();
             }
         } else {
-            syncUidsToShellFile();
+            long lastTransitionId = readShellTransitionId();
+            SHELL_TRANSITION_COUNTER.updateAndGet(current -> Math.max(current, lastTransitionId));
+            syncUidsToShellFile(nextShellTransitionId());
         }
+    }
+
+    private long readShellTransitionId() {
+        try (BufferedReader br = new BufferedReader(new FileReader(getShellConfigFile()))) {
+            String line = br.readLine();
+            if (line != null && line.startsWith(SHELL_TRANSITION_PREFIX)) {
+                return Long.parseLong(line.substring(SHELL_TRANSITION_PREFIX.length()));
+            }
+        } catch (Throwable e) {
+            LOGGER.w(e, "Failed to read previous shell transition id");
+        }
+        return 0;
     }
 
     private File getShellDir() {
@@ -188,53 +230,89 @@ public class SuiConfigManager extends ConfigManager {
         shellUidsCache = null;
     }
 
-    private void reloadShellConfigFromFile() {
+    private ShellReloadResult reloadShellConfigFromFile(long expectedTransitionId) {
+        synchronized (shellReloadLock) {
+            return reloadShellConfigFromFileLocked(expectedTransitionId);
+        }
+    }
+
+    private ShellReloadResult reloadShellConfigFromFileLocked(long expectedTransitionId) {
         try {
             java.io.File file = getShellConfigFile();
-            if (!file.exists()) return;
+            if (!file.exists()) return ShellReloadResult.notApplied(expectedTransitionId);
+
+            long transitionId = 0;
+            java.util.List<SuiConfig.PackageEntry> packages = new java.util.ArrayList<>();
             try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.FileReader(file))) {
                 String line;
-                synchronized (this) {
-                    config.packages.clear();
-                    while ((line = br.readLine()) != null) {
-                        String[] parts = line.split(":");
-                        if (parts.length == 2) {
-                            int uid = Integer.parseInt(parts[0]);
-                            int flags = Integer.parseInt(parts[1]);
-                            config.packages.add(new SuiConfig.PackageEntry(uid, flags));
-                        }
+                while ((line = br.readLine()) != null) {
+                    if (line.startsWith(SHELL_TRANSITION_PREFIX)) {
+                        transitionId = Long.parseLong(line.substring(SHELL_TRANSITION_PREFIX.length()));
+                        continue;
                     }
-                    rebuildPackageIndexLocked();
-                    invalidateUidCacheLocked();
+                    String[] parts = line.split(":");
+                    if (parts.length == 2) {
+                        int uid = Integer.parseInt(parts[0]);
+                        int flags = Integer.parseInt(parts[1]);
+                        packages.add(new SuiConfig.PackageEntry(uid, flags));
+                    }
                 }
             }
 
+            if (expectedTransitionId != 0 && transitionId != expectedTransitionId) {
+                LOGGER.w("Shell config transition mismatch: expected=%d actual=%d", expectedTransitionId, transitionId);
+                return ShellReloadResult.notApplied(transitionId);
+            }
+
+            synchronized (this) {
+                if (transitionId != 0 && transitionId == lastAppliedShellTransitionId) {
+                    return lastShellReloadResult;
+                }
+                if (transitionId != 0 && lastAppliedShellTransitionId > transitionId) {
+                    LOGGER.w(
+                            "Ignore stale shell config transition %d, last applied is %d",
+                            transitionId, lastAppliedShellTransitionId);
+                    return ShellReloadResult.notApplied(transitionId);
+                }
+                config.packages.clear();
+                config.packages.addAll(packages);
+                rebuildPackageIndexLocked();
+                invalidateUidCacheLocked();
+            }
+
+            java.util.List<SuiService.ClientFallback> fallbacks = java.util.Collections.emptyList();
             SuiService service = SuiService.getInstance();
             if (service != null && service.getClientManager() != null) {
-                for (rikka.shizuku.server.ClientRecord record :
-                        service.getClientManager().getClients()) {
-                    SuiConfig.PackageEntry entry = find(record.uid);
-                    boolean allowed = entry != null
-                            && ((entry.flags & (SuiConfig.FLAG_ALLOWED | SuiConfig.FLAG_ALLOWED_SHELL)) != 0);
-                    record.allowed = allowed;
+                fallbacks = service.onShellConfigReloaded();
+            }
+
+            ShellReloadResult result = new ShellReloadResult(transitionId, true, fallbacks);
+            synchronized (this) {
+                if (transitionId != 0) {
+                    lastAppliedShellTransitionId = transitionId;
+                    lastShellReloadResult = result;
                 }
             }
             LOGGER.i("Shell server reloaded config, apps: " + config.packages.size());
+            return result;
         } catch (Throwable e) {
             LOGGER.e(e, "reload shell config");
+            return ShellReloadResult.notApplied(expectedTransitionId);
         }
     }
 
-    public void reloadShellConfig() {
+    public ShellReloadResult reloadShellConfig(long expectedTransitionId) {
         if (SuiService.isShellMode()) {
-            reloadShellConfigFromFile();
+            return reloadShellConfigFromFile(expectedTransitionId);
         }
+        return ShellReloadResult.notApplied(expectedTransitionId);
     }
 
-    private void syncUidsToShellFile() {
-        if (SuiService.isShellMode()) return;
+    private boolean syncUidsToShellFile(long transitionId) {
+        if (SuiService.isShellMode()) return false;
         try {
             StringBuilder sb = new StringBuilder();
+            sb.append(SHELL_TRANSITION_PREFIX).append(transitionId).append("\n");
             synchronized (this) {
                 for (SuiConfig.PackageEntry entry : config.packages) {
                     sb.append(entry.uid).append(":").append(entry.flags).append("\n");
@@ -247,23 +325,28 @@ public class SuiConfigManager extends ConfigManager {
             try (java.io.FileOutputStream fos = new java.io.FileOutputStream(tempFile)) {
                 fos.write(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
                 fos.getFD().sync();
-                fos.close();
-                if (tempFile.renameTo(file)) {
-                    android.system.Os.chmod(file.getAbsolutePath(), 0644);
-                }
             }
+            if (!tempFile.renameTo(file)) {
+                LOGGER.w("Failed to atomically replace shell config file");
+                return false;
+            }
+            android.system.Os.chmod(file.getAbsolutePath(), 0644);
+            return true;
         } catch (Throwable e) {
             LOGGER.e(e, "sync uids to shell");
+            return false;
         }
     }
 
-    public void syncUidsToShellFileNow() {
-        if (SuiService.isShellMode()) return;
+    public long syncUidsToShellFileNow() {
+        if (SuiService.isShellMode()) return -1;
         SHELL_SYNC_HANDLER.removeCallbacks(syncUidsToShellFileRunnable);
         final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        final AtomicBoolean success = new AtomicBoolean(false);
+        final long transitionId = nextShellTransitionId();
         SHELL_SYNC_HANDLER.post(() -> {
             try {
-                syncUidsToShellFile();
+                success.set(syncUidsToShellFile(transitionId));
             } finally {
                 latch.countDown();
             }
@@ -271,11 +354,14 @@ public class SuiConfigManager extends ConfigManager {
         try {
             if (!latch.await(SHELL_SYNC_WAIT_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS)) {
                 LOGGER.w("syncUidsToShellFileNow timed out after %d ms", SHELL_SYNC_WAIT_TIMEOUT_MS);
+                return -1;
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             LOGGER.w(e, "syncUidsToShellFileNow interrupted");
+            return -1;
         }
+        return success.get() ? transitionId : -1;
     }
 
     private void scheduleSyncUidsToShellFile() {
@@ -292,7 +378,7 @@ public class SuiConfigManager extends ConfigManager {
             @Override
             public void onEvent(int event, String path) {
                 if (SHELL_CONFIG_FILENAME.equals(path)) {
-                    reloadShellConfigFromFile();
+                    reloadShellConfigFromFile(0);
                 }
             }
         };

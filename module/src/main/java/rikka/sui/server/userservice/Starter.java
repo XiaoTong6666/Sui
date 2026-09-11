@@ -30,6 +30,7 @@ import android.util.Log;
 import android.util.Pair;
 import moe.shizuku.server.IShizukuService;
 import rikka.shizuku.server.UserService;
+import rikka.sui.server.ServerConstants;
 import rikka.sui.util.BridgeConstants;
 
 public class Starter {
@@ -55,6 +56,15 @@ public class Starter {
         return -1;
     }
 
+    private static String parseToken(String[] args) {
+        for (String arg : args) {
+            if (arg.startsWith("--token=")) {
+                return arg.substring(8);
+            }
+        }
+        return null;
+    }
+
     public static void main(String[] args) {
         if (Looper.myLooper() == null) {
             if (Looper.getMainLooper() == null) {
@@ -65,8 +75,21 @@ public class Starter {
         }
 
         IBinder service;
-        String token;
+        String token = parseToken(args);
         int serverUid = parseServerUid(args);
+
+        if (token == null || serverUid == -1) {
+            Log.e(TAG, "Missing token or server uid");
+            System.exit(1);
+            return;
+        }
+
+        IBinder serverBinder = requestBinderFromBridge(serverUid);
+        if (serverBinder == null || !registerProcess(serverBinder, token)) {
+            Log.e(TAG, "Unable to register user-service process before loading app code");
+            System.exit(1);
+            return;
+        }
 
         UserService.setTag(TAG);
         Pair<IBinder, String> result = UserService.create(args);
@@ -77,9 +100,13 @@ public class Starter {
         }
 
         service = result.first;
-        token = result.second;
+        if (!token.equals(result.second)) {
+            Log.e(TAG, "User-service token changed unexpectedly");
+            System.exit(1);
+            return;
+        }
 
-        if (!sendBinder(service, token, serverUid)) {
+        if (!sendBinder(service, token, serverBinder)) {
             System.exit(1);
         }
 
@@ -121,8 +148,28 @@ public class Starter {
         return null;
     }
 
-    private static boolean sendBinder(IBinder binder, String token, int serverUid) {
-        IShizukuService shizukuService = IShizukuService.Stub.asInterface(requestBinderFromBridge(serverUid));
+    private static boolean registerProcess(IBinder serverBinder, String token) {
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken(rikka.shizuku.ShizukuApiConstants.BINDER_DESCRIPTOR);
+            data.writeString(token);
+            if (!serverBinder.transact(ServerConstants.BINDER_TRANSACTION_registerUserServiceProcess, data, reply, 0)) {
+                return false;
+            }
+            reply.readException();
+            return reply.readInt() != 0;
+        } catch (Throwable e) {
+            Log.w(TAG, "Failed to register user-service process", e);
+            return false;
+        } finally {
+            data.recycle();
+            reply.recycle();
+        }
+    }
+
+    private static boolean sendBinder(IBinder binder, String token, IBinder serverBinder) {
+        IShizukuService shizukuService = IShizukuService.Stub.asInterface(serverBinder);
         if (shizukuService == null) {
             return false;
         }

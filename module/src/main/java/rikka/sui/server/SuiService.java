@@ -20,7 +20,10 @@
 package rikka.sui.server;
 
 import static rikka.shizuku.ShizukuApiConstants.ATTACH_APPLICATION_API_VERSION;
+import static rikka.shizuku.ShizukuApiConstants.ATTACH_APPLICATION_BINDER_GENERATION;
 import static rikka.shizuku.ShizukuApiConstants.ATTACH_APPLICATION_PACKAGE_NAME;
+import static rikka.shizuku.ShizukuApiConstants.ATTACH_APPLICATION_SUPPORTS_SERVER_BINDER_HANDOFF;
+import static rikka.shizuku.ShizukuApiConstants.BIND_APPLICATION_BINDER_GENERATION;
 import static rikka.shizuku.ShizukuApiConstants.BIND_APPLICATION_PERMISSION_GRANTED;
 import static rikka.shizuku.ShizukuApiConstants.BIND_APPLICATION_SERVER_PATCH_VERSION;
 import static rikka.shizuku.ShizukuApiConstants.BIND_APPLICATION_SERVER_SECONTEXT;
@@ -64,7 +67,6 @@ import rikka.shizuku.server.Service;
 import rikka.shizuku.server.util.HandlerUtil;
 import rikka.sui.model.AppInfo;
 import rikka.sui.server.bridge.BridgeServiceClient;
-import rikka.sui.util.AppLaunchUtils;
 import rikka.sui.util.BridgeConstants;
 import rikka.sui.util.Logger;
 import rikka.sui.util.OsUtils;
@@ -114,47 +116,172 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     }
 
-    private void reloadShellServerConfig() {
+    private SuiConfigManager.ShellReloadResult reloadShellServerConfig(long expectedTransitionId) {
+        java.util.List<ClientFallback> fallbacks = new java.util.ArrayList<>();
         IBinder shellBinder = requestBinderFromBridge(BridgeConstants.SERVER_UID_SHELL);
         if (shellBinder == null) {
             LOGGER.w("shell binder is null, skip synchronous shell config reload");
-            return;
+            return SuiConfigManager.ShellReloadResult.notApplied(expectedTransitionId);
         }
 
         Parcel data = Parcel.obtain();
         Parcel reply = Parcel.obtain();
         try {
             data.writeInterfaceToken(ShizukuApiConstants.BINDER_DESCRIPTOR);
-            shellBinder.transact(ServerConstants.BINDER_TRANSACTION_reloadShellConfig, data, reply, 0);
+            data.writeLong(expectedTransitionId);
+            if (!shellBinder.transact(ServerConstants.BINDER_TRANSACTION_reloadShellConfig, data, reply, 0)) {
+                return SuiConfigManager.ShellReloadResult.notApplied(expectedTransitionId);
+            }
             reply.readException();
+            long appliedTransitionId = reply.readLong();
+            boolean applied = reply.readInt() != 0;
+            int count = reply.readInt();
+            for (int i = 0; i < count; ++i) {
+                fallbacks.add(new ClientFallback(reply.readInt(), reply.readInt(), reply.readString()));
+            }
+            return new SuiConfigManager.ShellReloadResult(appliedTransitionId, applied, fallbacks);
         } catch (Throwable e) {
             LOGGER.w(e, "reloadShellServerConfig");
+            return SuiConfigManager.ShellReloadResult.notApplied(expectedTransitionId);
         } finally {
             data.recycle();
             reply.recycle();
         }
     }
 
-    private static boolean isAllowedByFlags(int flags) {
-        return (flags & (SuiConfig.FLAG_ALLOWED | SuiConfig.FLAG_ALLOWED_SHELL)) != 0;
+    static boolean isPermissionAllowedForCurrentServer(int flags) {
+        int mode = flags & SuiConfig.MASK_PERMISSION;
+        return shellMode ? mode == SuiConfig.FLAG_ALLOWED_SHELL : mode == SuiConfig.FLAG_ALLOWED;
     }
 
-    private static boolean shouldAutoRestartAfterPermissionTransition(int oldFlags, int newFlags) {
-        return (oldFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0 || (newFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0;
+    private static boolean isRootPermissionMode(int flags) {
+        return (flags & SuiConfig.MASK_PERMISSION) == SuiConfig.FLAG_ALLOWED;
+    }
+
+    private static boolean requiresRootCapabilityReset(int oldFlags, int newFlags) {
+        return isRootPermissionMode(oldFlags) && !isRootPermissionMode(newFlags);
+    }
+
+    private static boolean requiresCurrentServerCapabilityReset(int oldFlags, int newFlags) {
+        return isPermissionAllowedForCurrentServer(oldFlags) && !isPermissionAllowedForCurrentServer(newFlags);
     }
 
     private void updateClientAllowedStateForUid(int uid, int effectiveFlags) {
-        boolean allowed = isAllowedByFlags(effectiveFlags);
+        boolean allowed = isPermissionAllowedForCurrentServer(effectiveFlags);
         for (ClientRecord record : clientManager.findClients(uid)) {
             record.allowed = allowed;
+            if (!allowed) {
+                record.onetime = false;
+            }
         }
     }
 
-    private void invalidatePackages(
-            int uid, @NonNull java.util.Collection<String> packageNames, boolean autoRestart, String reason) {
-        if (packageNames.isEmpty()) {
-            return;
+    private static int getServerUidForPermissionFlags(int flags) {
+        int mode = flags & SuiConfig.MASK_PERMISSION;
+        if (mode == SuiConfig.FLAG_ALLOWED) {
+            return BridgeConstants.SERVER_UID_ROOT;
         }
+        if (mode == SuiConfig.FLAG_ALLOWED_SHELL) {
+            return BridgeConstants.SERVER_UID_SHELL;
+        }
+        return -1;
+    }
+
+    private static int readProcessGroupId(int pid) throws java.io.IOException {
+        String stat;
+        try (java.io.BufferedReader reader =
+                new java.io.BufferedReader(new java.io.FileReader("/proc/" + pid + "/stat"))) {
+            stat = reader.readLine();
+        }
+        if (stat == null) {
+            throw new java.io.IOException("empty /proc stat for pid " + pid);
+        }
+
+        // /proc/<pid>/stat field 2 (comm) is parenthesized and may contain spaces or ')'.
+        // Split after its final ')' so field indexes stay aligned: state, ppid, pgrp, ...
+        int commEnd = stat.lastIndexOf(')');
+        if (commEnd < 0 || commEnd + 2 >= stat.length()) {
+            throw new java.io.IOException("malformed /proc stat for pid " + pid);
+        }
+        String[] fields = stat.substring(commEnd + 2).trim().split("\\s+");
+        if (fields.length < 3) {
+            throw new java.io.IOException("missing pgrp in /proc stat for pid " + pid);
+        }
+        try {
+            return Integer.parseInt(fields[2]);
+        } catch (NumberFormatException e) {
+            throw new java.io.IOException("invalid pgrp in /proc stat for pid " + pid, e);
+        }
+    }
+
+    static final class ClientFallback {
+        final int uid;
+        final int pid;
+        final String packageName;
+
+        ClientFallback(int uid, int pid, String packageName) {
+            this.uid = uid;
+            this.pid = pid;
+            this.packageName = packageName;
+        }
+    }
+
+    private java.util.List<ClientFallback> handoffClientsForUid(int uid, int effectiveFlags) {
+        java.util.List<ClientFallback> fallbacks = new java.util.ArrayList<>();
+        int targetServerUid = getServerUidForPermissionFlags(effectiveFlags);
+        int currentServerUid = shellMode ? BridgeConstants.SERVER_UID_SHELL : BridgeConstants.SERVER_UID_ROOT;
+        if (targetServerUid == -1 || targetServerUid == currentServerUid) {
+            return fallbacks;
+        }
+
+        IBinder targetBinder = requestBinderFromBridge(targetServerUid);
+        if (targetBinder == null) {
+            LOGGER.w("cannot hand off uid %d: target server binder %d is unavailable", uid, targetServerUid);
+            for (ClientRecord record : clientManager.findClients(uid)) {
+                fallbacks.add(new ClientFallback(record.uid, record.pid, record.packageName));
+            }
+            return fallbacks;
+        }
+
+        // A main-Binder handoff cannot migrate capabilities already materialized in the
+        // current server process. Force the lifecycle fallback whenever such capabilities
+        // exist so their owner process and server-side registries are reset together.
+        if (hasRemoteProcessesForUid(uid) || getUserServiceManager().hasUserServicesForUid(uid)) {
+            for (ClientRecord record : clientManager.findClients(uid)) {
+                fallbacks.add(new ClientFallback(record.uid, record.pid, record.packageName));
+            }
+            return fallbacks;
+        }
+
+        for (ClientRecord record : clientManager.findClients(uid)) {
+            if (!record.supportsServerBinderHandoff || hasRishHostForClient(record.pid)) {
+                fallbacks.add(new ClientFallback(record.uid, record.pid, record.packageName));
+                continue;
+            }
+            try {
+                long generation = android.os.SystemClock.elapsedRealtimeNanos();
+                LOGGER.i(
+                        "Handing off %s (uid %d, pid %d) to Sui server uid %d, generation=%d",
+                        record.packageName, record.uid, record.pid, targetServerUid, generation);
+                if (!record.client.dispatchServerBinder(targetBinder, record.packageName, generation)) {
+                    fallbacks.add(new ClientFallback(record.uid, record.pid, record.packageName));
+                }
+            } catch (Throwable e) {
+                LOGGER.w(e, "Failed to hand off client %s", record.packageName);
+                fallbacks.add(new ClientFallback(record.uid, record.pid, record.packageName));
+            }
+        }
+        return fallbacks;
+    }
+
+    private void invalidatePackages(int uid, @NonNull java.util.Collection<String> packageNames, String reason) {
+        List<ClientRecord> records = clientManager.findClients(uid);
+
+        for (ClientRecord record : records) {
+            revokeRishHostForClient(record.pid);
+        }
+        revokeRemoteProcessesForUid(uid);
+        getUserServiceManager().revokeUserServicesForUid(uid);
 
         long id = android.os.Binder.clearCallingIdentity();
         try {
@@ -162,13 +289,50 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 try {
                     LOGGER.i("%s for %s (uid %d), force stopping to sever old binders...", reason, packageName, uid);
                     ActivityManagerApis.forceStopPackageNoThrow(packageName, UserHandleCompat.getUserId(uid));
-                    getUserServiceManager().removeUserServicesForPackage(packageName);
-                    if (autoRestart) {
-                        LOGGER.i("Auto-restarting %s dynamically after %s", packageName, reason);
-                        AppLaunchUtils.startAppAsUser(packageName, UserHandleCompat.getUserId(uid));
-                    }
                 } catch (Throwable e) {
                     LOGGER.w(e, "Failed to invalidate package %s", packageName);
+                }
+            }
+
+            // forceStopPackage() only covers AMS-managed application processes. Sui also accepts
+            // clients such as rish/app_process, so explicitly terminate every attached client PID
+            // before considering a privilege downgrade complete.
+            for (ClientRecord record : records) {
+                try {
+                    android.system.Os.kill(record.pid, android.system.OsConstants.SIGKILL);
+                } catch (android.system.ErrnoException e) {
+                    if (e.errno != android.system.OsConstants.ESRCH) {
+                        LOGGER.w(e, "Failed to kill stale Sui client pid %d", record.pid);
+                    }
+                }
+            }
+
+        } finally {
+            android.os.Binder.restoreCallingIdentity(id);
+        }
+    }
+
+    private void invalidateFallbacks(@NonNull java.util.Collection<ClientFallback> fallbacks, String reason) {
+        java.util.Map<Integer, java.util.Set<String>> packagesByUid = new java.util.LinkedHashMap<>();
+        for (ClientFallback fallback : fallbacks) {
+            java.util.Set<String> packages = getOrCreateAffectedPackages(packagesByUid, fallback.uid);
+            if (fallback.packageName != null) {
+                packages.add(fallback.packageName);
+            }
+        }
+        for (java.util.Map.Entry<Integer, java.util.Set<String>> entry : packagesByUid.entrySet()) {
+            invalidatePackages(entry.getKey(), entry.getValue(), reason);
+        }
+
+        long id = android.os.Binder.clearCallingIdentity();
+        try {
+            for (ClientFallback fallback : fallbacks) {
+                try {
+                    android.system.Os.kill(fallback.pid, android.system.OsConstants.SIGKILL);
+                } catch (android.system.ErrnoException e) {
+                    if (e.errno != android.system.OsConstants.ESRCH) {
+                        LOGGER.w(e, "Failed to kill fallback client pid %d", fallback.pid);
+                    }
                 }
             }
         } finally {
@@ -176,12 +340,12 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     }
 
-    private void invalidatePackagesForUid(int uid, boolean autoRestart, String reason) {
+    private void invalidatePackagesForUid(int uid, String reason) {
         List<String> packages = PackageManagerApis.getPackagesForUidNoThrow(uid);
-        invalidatePackages(uid, packages, autoRestart, reason);
+        invalidatePackages(uid, packages, reason);
     }
 
-    private void refreshUnconfiguredClientsForDefaultPermissionTransition(int oldDefaultMode, int newDefaultMode) {
+    private java.util.Map<Integer, java.util.Set<String>> collectUnconfiguredAffectedPackages() {
         java.util.Map<Integer, java.util.Set<String>> affectedPackagesByUid = new java.util.LinkedHashMap<>();
         for (ClientRecord record : clientManager.getClients()) {
             if (record.uid < 10000 || record.uid == systemUiUid || record.uid == settingsUid) {
@@ -197,17 +361,39 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             }
         }
 
+        // Capability owners can outlive their original client process (daemon user services,
+        // remote process groups). Include their UIDs even when there is no current ClientRecord.
+        for (int uid : capabilityEpochStates.keySet()) {
+            if (uid < 10000 || uid == systemUiUid || uid == settingsUid || configManager.findExplicit(uid) != null) {
+                continue;
+            }
+            java.util.Set<String> packages = getOrCreateAffectedPackages(affectedPackagesByUid, uid);
+            packages.addAll(PackageManagerApis.getPackagesForUidNoThrow(uid));
+        }
+        return affectedPackagesByUid;
+    }
+
+    private void refreshUnconfiguredClientsForDefaultPermissionTransition(
+            int oldDefaultMode,
+            int newDefaultMode,
+            java.util.Map<Integer, java.util.Set<String>> affectedPackagesByUid) {
+
         for (java.util.Map.Entry<Integer, java.util.Set<String>> entry : affectedPackagesByUid.entrySet()) {
             int uid = entry.getKey();
             updateClientAllowedStateForUid(uid, newDefaultMode);
             if (oldDefaultMode == newDefaultMode) {
                 continue;
             }
-            invalidatePackages(
-                    uid,
-                    entry.getValue(),
-                    shouldAutoRestartAfterPermissionTransition(oldDefaultMode, newDefaultMode),
-                    "Default permission changed");
+            if (requiresRootCapabilityReset(oldDefaultMode, newDefaultMode)) {
+                invalidatePackages(uid, entry.getValue(), "Root permission revoked");
+            } else if (getServerUidForPermissionFlags(newDefaultMode) != -1) {
+                java.util.List<ClientFallback> fallbacks = handoffClientsForUid(uid, newDefaultMode);
+                if (!fallbacks.isEmpty()) {
+                    invalidateFallbacks(fallbacks, "Binder handoff failed");
+                }
+            } else {
+                invalidatePackages(uid, entry.getValue(), "Default permission changed");
+            }
         }
     }
 
@@ -255,6 +441,131 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     private final Logger flog = new Logger("Sui", "/cache/sui.log");
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Map<String, Integer> pendingPermissionConfirmations = new HashMap<>();
+    private final java.util.concurrent.ConcurrentHashMap<Integer, CapabilityEpochState> capabilityEpochStates =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static final class CapabilityEpochState {
+        long epoch = 1;
+        int inFlight;
+        boolean transitioning;
+    }
+
+    private CapabilityEpochState capabilityStateForUid(int uid) {
+        return capabilityEpochStates.computeIfAbsent(uid, ignored -> new CapabilityEpochState());
+    }
+
+    @Override
+    protected long beginCapabilityCreation(String kind, int uid, int pid) {
+        CapabilityEpochState state = capabilityStateForUid(uid);
+        synchronized (state) {
+            ClientRecord record = clientManager.findClient(uid, pid);
+            if (state.transitioning || record == null || !isClientAuthorized(record)) {
+                throw new SecurityException("permission transition in progress while creating " + kind);
+            }
+            state.inFlight++;
+            return state.epoch;
+        }
+    }
+
+    @Override
+    protected boolean finishCapabilityCreation(String kind, int uid, int pid, long epoch, Runnable publisher) {
+        CapabilityEpochState state = capabilityStateForUid(uid);
+        synchronized (state) {
+            try {
+                ClientRecord record = clientManager.findClient(uid, pid);
+                if (state.transitioning || state.epoch != epoch || record == null || !isClientAuthorized(record)) {
+                    return false;
+                }
+                publisher.run();
+                return true;
+            } finally {
+                if (state.inFlight > 0) {
+                    state.inFlight--;
+                }
+                state.notifyAll();
+            }
+        }
+    }
+
+    @Override
+    protected void abortCapabilityCreation(String kind, int uid, int pid, long epoch) {
+        CapabilityEpochState state = capabilityStateForUid(uid);
+        synchronized (state) {
+            if (state.inFlight > 0) {
+                state.inFlight--;
+            }
+            state.notifyAll();
+        }
+    }
+
+    private void beginPermissionTransition(int uid) {
+        CapabilityEpochState state = capabilityStateForUid(uid);
+        synchronized (state) {
+            while (state.transitioning) {
+                try {
+                    state.wait();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("interrupted while waiting for permission transition", e);
+                }
+            }
+            state.transitioning = true;
+            state.epoch++;
+        }
+    }
+
+    private void finishPermissionTransition(int uid) {
+        CapabilityEpochState state = capabilityStateForUid(uid);
+        synchronized (state) {
+            while (state.inFlight != 0) {
+                try {
+                    state.wait();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("interrupted while waiting for capability rollback", e);
+                }
+            }
+            state.transitioning = false;
+            state.notifyAll();
+        }
+    }
+
+    private boolean hasCapabilityWorkForUid(int uid) {
+        CapabilityEpochState state = capabilityEpochStates.get(uid);
+        boolean inFlight = false;
+        if (state != null) {
+            synchronized (state) {
+                inFlight = state.inFlight != 0;
+            }
+        }
+        return inFlight
+                || hasRemoteProcessesForUid(uid)
+                || getUserServiceManager().hasUserServicesForUid(uid);
+    }
+
+    long beginUserServiceCapabilityCreation(int uid, int pid) {
+        return beginCapabilityCreation("user-service", uid, pid);
+    }
+
+    boolean isUserServiceCapabilityCurrent(rikka.shizuku.server.UserServiceRecord record) {
+        CapabilityEpochState state = capabilityStateForUid(record.ownerUid);
+        synchronized (state) {
+            ClientRecord client = clientManager.findClient(record.ownerUid, record.ownerPid);
+            return !state.transitioning
+                    && state.epoch == record.capabilityEpoch
+                    && client != null
+                    && isClientAuthorized(client);
+        }
+    }
+
+    boolean finishUserServiceCapabilityCreation(rikka.shizuku.server.UserServiceRecord record, Runnable publisher) {
+        return finishCapabilityCreation(
+                "user-service", record.ownerUid, record.ownerPid, record.capabilityEpoch, publisher);
+    }
+
+    void abortUserServiceCapabilityCreation(rikka.shizuku.server.UserServiceRecord record) {
+        abortCapabilityCreation("user-service", record.ownerUid, record.ownerPid, record.capabilityEpoch);
+    }
 
     private static String buildPermissionRequestKey(int requestUid, int requestPid, int requestCode) {
         return requestUid + ":" + requestPid + ":" + requestCode;
@@ -324,11 +635,75 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 Boolean.toString(isShell));
 
         List<ClientRecord> records = clientManager.findClients(requestUid);
+        java.util.List<ClientFallback> shellFallbacks = java.util.Collections.emptyList();
+        java.util.List<ClientFallback> handoffFallbacks = java.util.Collections.emptyList();
+
+        if (!onetime) {
+            int oldPermissionFlags = 0;
+            SuiConfig.PackageEntry oldEntry = configManager.find(requestUid);
+            if (oldEntry != null) {
+                oldPermissionFlags = oldEntry.flags & SuiConfig.MASK_PERMISSION;
+            }
+            int permissionFlags =
+                    allowed ? (isShell ? SuiConfig.FLAG_ALLOWED_SHELL : SuiConfig.FLAG_ALLOWED) : SuiConfig.FLAG_DENIED;
+            boolean capabilityBarrier = requiresCurrentServerCapabilityReset(oldPermissionFlags, permissionFlags);
+            if (capabilityBarrier) {
+                beginPermissionTransition(requestUid);
+            }
+            try {
+                configManager.update(requestUid, SuiConfig.MASK_PERMISSION, permissionFlags);
+
+                if (!shellMode
+                        && (oldPermissionFlags == SuiConfig.FLAG_ALLOWED_SHELL
+                                || permissionFlags == SuiConfig.FLAG_ALLOWED_SHELL)) {
+                    // Make the shell server observe the new routing before any client is told that
+                    // the permission request succeeded.
+                    shellFallbacks = flushShellRoutingState();
+                }
+
+                if (!shellMode) {
+                    syncUidsToSystemServer();
+                }
+
+                updateClientAllowedStateForUid(requestUid, permissionFlags);
+
+                if (!shellMode && requiresRootCapabilityReset(oldPermissionFlags, permissionFlags)) {
+                    invalidatePackagesForUid(requestUid, "Root permission revoked");
+                } else {
+                    int targetServerUid = getServerUidForPermissionFlags(permissionFlags);
+                    int currentServerUid =
+                            shellMode ? BridgeConstants.SERVER_UID_SHELL : BridgeConstants.SERVER_UID_ROOT;
+                    if (targetServerUid != -1 && targetServerUid != currentServerUid) {
+                        handoffFallbacks = handoffClientsForUid(requestUid, permissionFlags);
+                    }
+                }
+
+                if (!shellFallbacks.isEmpty()) {
+                    invalidateFallbacks(shellFallbacks, "Shell client migration failed");
+                }
+                if (!handoffFallbacks.isEmpty()) {
+                    invalidateFallbacks(handoffFallbacks, "Binder handoff failed");
+                }
+            } finally {
+                if (capabilityBarrier) {
+                    finishPermissionTransition(requestUid);
+                }
+            }
+        } else {
+            for (ClientRecord record : records) {
+                if (record.pid == requestPid) {
+                    // One-time permission is root-only. Do not widen it to sibling processes
+                    // sharing the same UID.
+                    record.allowed = allowed && !shellMode;
+                    record.onetime = allowed && !shellMode;
+                }
+            }
+        }
+
         if (records.isEmpty()) {
             LOGGER.w("dispatchPermissionConfirmationResult: no client for uid %d was found", requestUid);
         } else {
             for (ClientRecord record : records) {
-                record.allowed = allowed;
                 if (record.pid == requestPid) {
                     record.dispatchRequestPermissionResult(requestCode, allowed);
                 }
@@ -349,42 +724,6 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 cbData.recycle();
             }
         }
-
-        if (!onetime) {
-            int flag =
-                    allowed ? (isShell ? SuiConfig.FLAG_ALLOWED_SHELL : SuiConfig.FLAG_ALLOWED) : SuiConfig.FLAG_DENIED;
-            configManager.update(requestUid, SuiConfig.MASK_PERMISSION, flag);
-
-            if (!shellMode && isShell) {
-                flushShellRoutingState();
-            }
-
-            if (!shellMode) {
-                syncUidsToSystemServer();
-            }
-
-            if (isShell) {
-                for (ClientRecord record : records) {
-                    if (record.packageName != null) {
-                        try {
-                            LOGGER.i("Force stopping and restarting %s to re-acquire shell binder", record.packageName);
-                            long id = android.os.Binder.clearCallingIdentity();
-                            try {
-                                ActivityManagerApis.forceStopPackageNoThrow(
-                                        record.packageName, UserHandleCompat.getUserId(requestUid));
-                                LOGGER.i("Auto-restarting %s dynamically", record.packageName);
-                                AppLaunchUtils.startAppAsUser(
-                                        record.packageName, UserHandleCompat.getUserId(requestUid));
-                            } finally {
-                                android.os.Binder.restoreCallingIdentity(id);
-                            }
-                        } catch (Throwable e) {
-                            LOGGER.w(e, "Failed to force stop/restart package %s", record.packageName);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     private boolean isTrustedPermissionDelegateCaller(int callingUid) {
@@ -403,12 +742,105 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 configManager.getDefaultPermissionFlags());
     }
 
-    private void flushShellRoutingState() {
+    private java.util.List<ClientFallback> flushShellRoutingState() {
         if (shellMode) {
-            return;
+            return java.util.Collections.emptyList();
         }
-        configManager.syncUidsToShellFileNow();
-        reloadShellServerConfig();
+        long transitionId = configManager.syncUidsToShellFileNow();
+        if (transitionId <= 0) {
+            throw new IllegalStateException("failed to publish shell config transition");
+        }
+        SuiConfigManager.ShellReloadResult result = reloadShellServerConfig(transitionId);
+        if (!result.applied || result.transitionId != transitionId) {
+            // One retry is useful when the FileObserver applied the file first and the first
+            // synchronous transaction raced with shell-server registration/reconnect.
+            result = reloadShellServerConfig(transitionId);
+        }
+        if (!result.applied || result.transitionId != transitionId) {
+            throw new IllegalStateException("shell server did not acknowledge config transition " + transitionId);
+        }
+        return result.fallbacks;
+    }
+
+    java.util.List<ClientFallback> onShellConfigReloaded() {
+        java.util.List<ClientFallback> fallbacks = new java.util.ArrayList<>();
+        if (!shellMode) {
+            return fallbacks;
+        }
+
+        java.util.List<ClientRecord> records = clientManager.getClients();
+        java.util.Map<Integer, Integer> effectiveFlagsByUid = new java.util.LinkedHashMap<>();
+        java.util.Set<Integer> revokedUids = new java.util.LinkedHashSet<>();
+        java.util.Set<Integer> rootTargetUids = new java.util.LinkedHashSet<>();
+        java.util.Set<Integer> materializedCapabilityUids = new java.util.LinkedHashSet<>();
+
+        for (ClientRecord record : records) {
+            SuiConfig.PackageEntry entry = configManager.find(record.uid);
+            int effectiveFlags = entry != null ? entry.flags & SuiConfig.MASK_PERMISSION : 0;
+            effectiveFlagsByUid.put(record.uid, effectiveFlags);
+            boolean wasAllowed = record.allowed || record.onetime;
+            boolean nowAllowed = isPermissionAllowedForCurrentServer(effectiveFlags);
+            if (wasAllowed && !nowAllowed) {
+                revokedUids.add(record.uid);
+            }
+            if (getServerUidForPermissionFlags(effectiveFlags) == BridgeConstants.SERVER_UID_ROOT) {
+                rootTargetUids.add(record.uid);
+            }
+            if (hasRishHostForClient(record.pid)) {
+                materializedCapabilityUids.add(record.uid);
+            }
+        }
+        for (int uid : capabilityEpochStates.keySet()) {
+            int effectiveFlags = effectiveFlagsByUid.computeIfAbsent(uid, ignored -> {
+                SuiConfig.PackageEntry entry = configManager.find(uid);
+                return entry != null ? entry.flags & SuiConfig.MASK_PERMISSION : 0;
+            });
+            if (!isPermissionAllowedForCurrentServer(effectiveFlags) && hasCapabilityWorkForUid(uid)) {
+                revokedUids.add(uid);
+                if (getServerUidForPermissionFlags(effectiveFlags) == BridgeConstants.SERVER_UID_ROOT) {
+                    rootTargetUids.add(uid);
+                }
+                materializedCapabilityUids.add(uid);
+            }
+        }
+        for (int uid : revokedUids) {
+            if (hasRemoteProcessesForUid(uid) || getUserServiceManager().hasUserServicesForUid(uid)) {
+                materializedCapabilityUids.add(uid);
+            }
+            beginPermissionTransition(uid);
+        }
+
+        try {
+            for (ClientRecord record : records) {
+                int effectiveFlags = effectiveFlagsByUid.getOrDefault(record.uid, 0);
+                record.allowed = isPermissionAllowedForCurrentServer(effectiveFlags);
+                if (!record.allowed) {
+                    record.onetime = false;
+                }
+            }
+
+            for (int uid : revokedUids) {
+                if (rootTargetUids.contains(uid) && !materializedCapabilityUids.contains(uid)) {
+                    fallbacks.addAll(handoffClientsForUid(uid, SuiConfig.FLAG_ALLOWED));
+                } else {
+                    for (ClientRecord record : clientManager.findClients(uid)) {
+                        fallbacks.add(new ClientFallback(record.uid, record.pid, record.packageName));
+                    }
+                }
+
+                for (ClientRecord record : clientManager.findClients(uid)) {
+                    revokeRishHostForClient(record.pid);
+                }
+                revokeRemoteProcessesForUid(uid);
+                getUserServiceManager().revokeUserServicesForUid(uid);
+            }
+            return fallbacks;
+        } finally {
+            java.util.List<Integer> ids = new java.util.ArrayList<>(revokedUids);
+            for (int i = ids.size() - 1; i >= 0; --i) {
+                finishPermissionTransition(ids.get(i));
+            }
+        }
     }
 
     private final class DelegatedPermissionCallback implements IBinder.DeathRecipient, Runnable {
@@ -617,11 +1049,20 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     public boolean checkCallerPermission(
             String func, int callingUid, int callingPid, @Nullable ClientRecord clientRecord) {
         // Temporary fix for https://github.com/RikkaApps/Sui/issues/35
-        if ("transactRemote".equals(func)) {
+        if ("transactRemote".equals(func) && clientRecord == null) {
             SuiConfig.PackageEntry packageEntry = configManager.find(callingUid);
-            return packageEntry != null && (packageEntry.isAllowed() || packageEntry.isAllowedShell());
+            return packageEntry != null && isPermissionAllowedForCurrentServer(packageEntry.flags);
         }
         return false;
+    }
+
+    @Override
+    protected boolean isClientAuthorized(ClientRecord clientRecord) {
+        if (clientRecord.onetime) {
+            return !shellMode && clientRecord.allowed;
+        }
+        SuiConfig.PackageEntry packageEntry = configManager.find(clientRecord.uid);
+        return packageEntry != null && isPermissionAllowedForCurrentServer(packageEntry.flags);
     }
 
     @Override
@@ -635,6 +1076,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             return;
         }
         int apiVersion = args.getInt(ATTACH_APPLICATION_API_VERSION, -1);
+        boolean supportsServerBinderHandoff = args.getBoolean(ATTACH_APPLICATION_SUPPORTS_SERVER_BINDER_HANDOFF, false);
+        long binderGeneration = args.getLong(ATTACH_APPLICATION_BINDER_GENERATION, 0);
 
         int callingPid = Binder.getCallingPid();
         int callingUid = Binder.getCallingUid();
@@ -683,17 +1126,27 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
 
         if (!isManager && !isSettings) {
-            if (clientManager.findClient(callingUid, callingPid) != null) {
-                throw new IllegalStateException(
-                        "Client (uid=" + callingUid + ", pid=" + callingPid + ") has already attached");
+            ClientRecord existing = clientManager.findClient(callingUid, callingPid);
+            if (existing != null) {
+                if (existing.client.asBinder() != application.asBinder()
+                        || !requestPackageName.equals(existing.packageName)) {
+                    throw new IllegalStateException(
+                            "Client (uid=" + callingUid + ", pid=" + callingPid + ") has already attached");
+                }
+                clientRecord = existing;
+                SuiConfig.PackageEntry packageEntry = configManager.find(callingUid);
+                clientRecord.allowed = packageEntry != null && isPermissionAllowedForCurrentServer(packageEntry.flags);
+                clientRecord.onetime = false;
+            } else {
+                synchronized (this) {
+                    clientRecord = clientManager.addClient(
+                            callingUid, callingPid, application, requestPackageName, apiVersion);
+                }
+                if (clientRecord == null) {
+                    return;
+                }
             }
-            synchronized (this) {
-                clientRecord =
-                        clientManager.addClient(callingUid, callingPid, application, requestPackageName, apiVersion);
-            }
-            if (clientRecord == null) {
-                return;
-            }
+            clientRecord.supportsServerBinderHandoff = supportsServerBinderHandoff;
         }
 
         int replyServerVersion = ShizukuApiConstants.SERVER_VERSION;
@@ -707,11 +1160,14 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
         Bundle reply = new Bundle();
         reply.putInt(BIND_APPLICATION_SERVER_UID, OsUtils.getUid());
+        if (binderGeneration != 0) {
+            reply.putLong(BIND_APPLICATION_BINDER_GENERATION, binderGeneration);
+        }
         reply.putInt(BIND_APPLICATION_SERVER_VERSION, replyServerVersion);
         reply.putString(BIND_APPLICATION_SERVER_SECONTEXT, OsUtils.getSELinuxContext());
         reply.putInt(BIND_APPLICATION_SERVER_PATCH_VERSION, ShizukuApiConstants.SERVER_PATCH_VERSION);
         if (!isManager && !isSettings) {
-            reply.putBoolean(BIND_APPLICATION_PERMISSION_GRANTED, clientRecord.allowed);
+            reply.putBoolean(BIND_APPLICATION_PERMISSION_GRANTED, isClientAuthorized(clientRecord));
             reply.putBoolean(
                     BIND_APPLICATION_SHOULD_SHOW_REQUEST_PERMISSION_RATIONALE,
                     shouldShowRequestPermissionRationale(clientRecord));
@@ -810,31 +1266,57 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         if (oldEffectiveEntry != null) {
             oldEffectiveFlags = oldEffectiveEntry.flags & SuiConfig.MASK_PERMISSION;
         }
-        configManager.update(uid, mask, value);
+        int permissionMask = mask & SuiConfig.MASK_PERMISSION;
+        int anticipatedPermissionFlags = (oldEffectiveFlags & ~permissionMask) | (value & permissionMask);
+        boolean capabilityBarrier = permissionMask != 0
+                && requiresCurrentServerCapabilityReset(oldEffectiveFlags, anticipatedPermissionFlags);
+        if (capabilityBarrier) {
+            beginPermissionTransition(uid);
+        }
+        try {
+            configManager.update(uid, mask, value);
 
-        if ((mask & SuiConfig.MASK_PERMISSION) != 0) {
+            if (permissionMask == 0) {
+                return;
+            }
+
             int newEffectiveFlags = 0;
             SuiConfig.PackageEntry newEffectiveEntry = configManager.find(uid);
             if (newEffectiveEntry != null) {
                 newEffectiveFlags = newEffectiveEntry.flags & SuiConfig.MASK_PERMISSION;
             }
-            boolean allowed = (newEffectiveFlags & (SuiConfig.FLAG_ALLOWED | SuiConfig.FLAG_ALLOWED_SHELL)) != 0;
-            for (ClientRecord record : clientManager.findClients(uid)) {
-                record.allowed = allowed;
-            }
+            updateClientAllowedStateForUid(uid, newEffectiveFlags);
 
-            if (newEffectiveFlags != oldEffectiveFlags) {
-                invalidatePackagesForUid(uid, false, "Permission changed");
-            }
-
+            java.util.List<ClientFallback> shellFallbacks = java.util.Collections.emptyList();
             if (!shellMode
-                    && ((oldEffectiveFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0
-                            || (newEffectiveFlags & SuiConfig.FLAG_ALLOWED_SHELL) != 0)) {
-                flushShellRoutingState();
+                    && (oldEffectiveFlags == SuiConfig.FLAG_ALLOWED_SHELL
+                            || newEffectiveFlags == SuiConfig.FLAG_ALLOWED_SHELL)) {
+                shellFallbacks = flushShellRoutingState();
             }
 
             // Always sync UIDs to system_server when permission flags change
             syncUidsToSystemServer();
+
+            if (newEffectiveFlags != oldEffectiveFlags) {
+                if (requiresRootCapabilityReset(oldEffectiveFlags, newEffectiveFlags)) {
+                    invalidatePackagesForUid(uid, "Root permission revoked");
+                } else if (getServerUidForPermissionFlags(newEffectiveFlags) != -1) {
+                    java.util.List<ClientFallback> handoffFallbacks = handoffClientsForUid(uid, newEffectiveFlags);
+                    if (!handoffFallbacks.isEmpty()) {
+                        invalidateFallbacks(handoffFallbacks, "Binder handoff failed");
+                    }
+                } else {
+                    invalidatePackagesForUid(uid, "Permission changed");
+                }
+            }
+
+            if (!shellFallbacks.isEmpty()) {
+                invalidateFallbacks(shellFallbacks, "Shell client migration failed");
+            }
+        } finally {
+            if (capabilityBarrier) {
+                finishPermissionTransition(uid);
+            }
         }
     }
 
@@ -991,15 +1473,35 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                     throw new IllegalArgumentException("Invalid targetMode: " + targetMode);
                 }
                 int oldDefaultMode = configManager.getDefaultPermissionFlags();
-                configManager.setDefaultPermissionFlags(targetMode);
-                if (!shellMode
-                        && (oldDefaultMode == SuiConfig.FLAG_ALLOWED_SHELL
-                                || targetMode == SuiConfig.FLAG_ALLOWED_SHELL)) {
-                    flushShellRoutingState();
+                java.util.Map<Integer, java.util.Set<String>> affectedPackagesByUid =
+                        collectUnconfiguredAffectedPackages();
+                java.util.List<Integer> barrierUids = new java.util.ArrayList<>();
+                if (!shellMode && requiresCurrentServerCapabilityReset(oldDefaultMode, targetMode)) {
+                    for (int uid : affectedPackagesByUid.keySet()) {
+                        beginPermissionTransition(uid);
+                        barrierUids.add(uid);
+                    }
                 }
-                if (!shellMode) {
-                    syncUidsToSystemServer();
-                    refreshUnconfiguredClientsForDefaultPermissionTransition(oldDefaultMode, targetMode);
+                try {
+                    configManager.setDefaultPermissionFlags(targetMode);
+                    java.util.List<ClientFallback> shellFallbacks = java.util.Collections.emptyList();
+                    if (!shellMode
+                            && (oldDefaultMode == SuiConfig.FLAG_ALLOWED_SHELL
+                                    || targetMode == SuiConfig.FLAG_ALLOWED_SHELL)) {
+                        shellFallbacks = flushShellRoutingState();
+                    }
+                    if (!shellMode) {
+                        syncUidsToSystemServer();
+                        refreshUnconfiguredClientsForDefaultPermissionTransition(
+                                oldDefaultMode, targetMode, affectedPackagesByUid);
+                        if (!shellFallbacks.isEmpty()) {
+                            invalidateFallbacks(shellFallbacks, "Shell client migration failed");
+                        }
+                    }
+                } finally {
+                    for (int i = barrierUids.size() - 1; i >= 0; --i) {
+                        finishPermissionTransition(barrierUids.get(i));
+                    }
                 }
                 reply.writeNoException();
             } catch (Throwable e) {
@@ -1010,15 +1512,51 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
         if (code == ServerConstants.BINDER_TRANSACTION_reloadShellConfig) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
+            long expectedTransitionId = data.readLong();
             try {
                 if (!shellMode) {
                     throw new IllegalStateException("reloadShellConfig is only available in shell mode");
                 }
-                configManager.reloadShellConfig();
+                SuiConfigManager.ShellReloadResult result = configManager.reloadShellConfig(expectedTransitionId);
                 reply.writeNoException();
+                reply.writeLong(result.transitionId);
+                reply.writeInt(result.applied ? 1 : 0);
+                reply.writeInt(result.fallbacks.size());
+                for (ClientFallback fallback : result.fallbacks) {
+                    reply.writeInt(fallback.uid);
+                    reply.writeInt(fallback.pid);
+                    reply.writeString(fallback.packageName);
+                }
             } catch (Throwable e) {
                 LOGGER.w(e, "reloadShellConfig");
                 reply.writeException(new RuntimeException("Failed to reload shell config", e));
+            }
+            return true;
+        }
+        if (code == ServerConstants.BINDER_TRANSACTION_registerUserServiceProcess) {
+            data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
+            String token = data.readString();
+            try {
+                int callingUid = Binder.getCallingUid();
+                int callingPid = Binder.getCallingPid();
+                int expectedUid = OsUtils.getUid();
+                if (callingUid != expectedUid) {
+                    throw new SecurityException("user-service registration uid " + callingUid
+                            + " does not match server uid " + expectedUid);
+                }
+
+                int pgid = readProcessGroupId(callingPid);
+                if (pgid != callingPid) {
+                    throw new SecurityException("user-service process " + callingPid
+                            + " is not a process-group leader (pgid=" + pgid + ")");
+                }
+
+                boolean registered = userServiceManager.registerUserServiceProcess(token, callingPid, pgid);
+                reply.writeNoException();
+                reply.writeInt(registered ? 1 : 0);
+            } catch (Throwable e) {
+                LOGGER.w(e, "registerUserServiceProcess");
+                reply.writeException(new RuntimeException("Failed to register user-service process", e));
             }
             return true;
         }
