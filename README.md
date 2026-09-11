@@ -1,17 +1,30 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `541`
-- **Commit:** [`2465053`](https://github.com/XiaoTong6666/Sui/commit/2465053afad18ddffffbb0eff803081f24bfb4d7)
-- **Build time:** `2m 22s`
-- **SHA256:** `8ff9dc9c826893307c904b69213c91a63ecf2679add8845397bfc733f6277ce5`
+- **VersionCode:** `542`
+- **Commit:** [`23d4384`](https://github.com/XiaoTong6666/Sui/commit/23d4384a897509e8e723eadc28133f4ceeb7ac0f)
+- **Build time:** `4m 10s`
+- **SHA256:** `248e14b44e028814c4db48d1e71e2ffb373889fc8fe67637b172a26b3880837d`
 
 ## Message
 
 ```text
-feat(shell): prevent KernelSU re-escalation
+build(deps): bump org.jetbrains.kotlin.android from 2.4.10 to 2.4.20 (#98)
 
-为 Sui Shell 增加可选的 KernelSU no-escape 保护，在 shell child 降到 UID 2000 前通过 KernelSU driver ioctl 设置 DISABLE_ESCAPE_TO_ROOT，并让该限制随进程树继承，阻止 Rish、shell 模式 Shizuku API 与 UserService 再次通过 KernelSU 获取 root。
-新增右上角开关、marker 持久化与状态同步；当目前的 KernelSU 不支持这个 UAPI 时自动移除 marker。
+Bumps [org.jetbrains.kotlin.android](https://github.com/JetBrains/kotlin) from 2.4.10 to 2.4.20.
+- [Release notes](https://github.com/JetBrains/kotlin/releases)
+- [Changelog](https://github.com/JetBrains/kotlin/blob/master/ChangeLog.md)
+- [Commits](https://github.com/JetBrains/kotlin/compare/v2.4.10...v2.4.20)
+
+---
+updated-dependencies:
+- dependency-name: org.jetbrains.kotlin.android
+  dependency-version: 2.4.20
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+...
+
+Signed-off-by: dependabot[bot] <support@github.com>
+Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
 
 ```
