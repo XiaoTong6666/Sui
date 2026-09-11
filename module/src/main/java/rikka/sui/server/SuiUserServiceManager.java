@@ -28,8 +28,8 @@ public class SuiUserServiceManager extends UserServiceManager {
 
     public static final String USER_SERVICE_CMD_DEBUG;
 
-    private static final String USER_SERVICE_CMD_FORMAT = "(CLASSPATH='%s' %s%s /system/bin " + "--nice-name='%s' %s "
-            + "--token='%s' --package='%s' --class='%s' --uid=%d --server-uid=%d%s)&";
+    private static final String USER_SERVICE_CMD_FORMAT = "(CLASSPATH='%s' %s%s%s /system/bin " + "--nice-name='%s' %s "
+            + "--token='%s' --package='%s' --class='%s' --uid=%d --server-uid=%d --sui-process-group=%d%s)&";
 
     static {
         int sdk = Build.VERSION.SDK_INT;
@@ -52,6 +52,41 @@ public class SuiUserServiceManager extends UserServiceManager {
     }
 
     @Override
+    protected long beginUserServiceCapabilityCreation(int uid, int pid) {
+        SuiService service = SuiService.getInstance();
+        if (service == null) {
+            throw new IllegalStateException("Sui service unavailable");
+        }
+        return service.beginUserServiceCapabilityCreation(uid, pid);
+    }
+
+    @Override
+    protected boolean isUserServiceCapabilityCurrent(rikka.shizuku.server.UserServiceRecord record) {
+        SuiService service = SuiService.getInstance();
+        return service != null && service.isUserServiceCapabilityCurrent(record);
+    }
+
+    @Override
+    protected boolean finishUserServiceCapabilityCreation(
+            rikka.shizuku.server.UserServiceRecord record, Runnable publisher) {
+        SuiService service = SuiService.getInstance();
+        return service != null && service.finishUserServiceCapabilityCreation(record, publisher);
+    }
+
+    @Override
+    protected void abortUserServiceCapabilityCreation(rikka.shizuku.server.UserServiceRecord record) {
+        SuiService service = SuiService.getInstance();
+        if (service != null) {
+            service.abortUserServiceCapabilityCreation(record);
+        }
+    }
+
+    @Override
+    protected boolean requiresUserServiceProcessRegistration() {
+        return true;
+    }
+
+    @Override
     public String getUserServiceStartCmd(
             rikka.shizuku.server.UserServiceRecord record,
             String key,
@@ -66,11 +101,13 @@ public class SuiUserServiceManager extends UserServiceManager {
         if (use32Bits && new File("/system/bin/app_process32").exists()) {
             appProcess = "/system/bin/app_process32";
         }
+        String setsid = new File("/system/bin/setsid").canExecute() ? "/system/bin/setsid " : "";
         String processName = String.format("%s:%s", packageName, processNameSuffix);
         return String.format(
                 Locale.ENGLISH,
                 USER_SERVICE_CMD_FORMAT,
                 dexPath,
+                setsid,
                 appProcess,
                 debug ? (" " + SuiUserServiceManager.USER_SERVICE_CMD_DEBUG) : "",
                 processName,
@@ -80,6 +117,7 @@ public class SuiUserServiceManager extends UserServiceManager {
                 classname,
                 callingUid,
                 SuiService.isShellMode() ? 2000 : 0,
+                setsid.isEmpty() ? 0 : 1,
                 debug ? (" " + "--debug-name=" + processName) : "");
     }
 }

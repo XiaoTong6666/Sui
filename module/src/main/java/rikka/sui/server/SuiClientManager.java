@@ -20,10 +20,19 @@
 package rikka.sui.server;
 
 import rikka.shizuku.server.ClientManager;
+import rikka.shizuku.server.ConfigPackageEntry;
 
 public class SuiClientManager extends ClientManager<SuiConfigManager> {
 
     public SuiClientManager(SuiConfigManager configManager) {
         super(configManager);
+    }
+
+    @Override
+    protected boolean isClientAllowed(ConfigPackageEntry entry) {
+        if (!(entry instanceof SuiConfig.PackageEntry)) {
+            return false;
+        }
+        return SuiService.isPermissionAllowedForCurrentServer(((SuiConfig.PackageEntry) entry).flags);
     }
 }

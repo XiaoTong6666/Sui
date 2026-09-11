@@ -32,6 +32,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.os.Parcel;
 import android.os.RemoteException;
 import android.provider.Telephony;
@@ -58,6 +59,11 @@ public class ManagerProcess {
 
         @Override
         public void dispatchRequestPermissionResult(int requestCode, Bundle data) {}
+
+        @Override
+        public boolean dispatchServerBinder(IBinder binder, String packageName, long generation) {
+            return false;
+        }
 
         @Override
         public void showPermissionConfirmation(
