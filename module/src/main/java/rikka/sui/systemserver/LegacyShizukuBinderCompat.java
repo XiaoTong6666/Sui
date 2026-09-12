@@ -21,6 +21,7 @@ package rikka.sui.systemserver;
 
 import static rikka.sui.systemserver.SystemServerConstants.LOGGER;
 
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.os.Binder;
@@ -54,6 +55,7 @@ final class LegacyShizukuBinderCompat {
 
     private LegacyShizukuBinderCompat() {}
 
+    @SuppressLint("PrivateApi")
     private static int findTransaction(String fieldName) {
         try {
             Class<?> stub = Class.forName("android.app.IActivityManager$Stub");
@@ -65,6 +67,7 @@ final class LegacyShizukuBinderCompat {
         }
     }
 
+    @SuppressLint("PrivateApi")
     private static int findIntentStringArgumentCount(String methodName) {
         try {
             Class<?> activityManager = Class.forName("android.app.IActivityManager");

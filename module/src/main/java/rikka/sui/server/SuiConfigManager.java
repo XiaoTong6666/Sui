@@ -21,7 +21,6 @@ package rikka.sui.server;
 
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Process;
 import androidx.annotation.Nullable;
 import java.io.BufferedReader;
 import java.io.File;
@@ -168,7 +167,13 @@ public class SuiConfigManager extends ConfigManager {
             }
         } else {
             long lastTransitionId = readShellTransitionId();
-            SHELL_TRANSITION_COUNTER.updateAndGet(current -> Math.max(current, lastTransitionId));
+            long current;
+            do {
+                current = SHELL_TRANSITION_COUNTER.get();
+                if (current >= lastTransitionId) {
+                    break;
+                }
+            } while (!SHELL_TRANSITION_COUNTER.compareAndSet(current, lastTransitionId));
             syncUidsToShellFile(nextShellTransitionId());
         }
     }
@@ -600,8 +605,9 @@ public class SuiConfigManager extends ConfigManager {
     private int[] buildUidsByFlagLocked(int flag) {
         List<Integer> uids = new ArrayList<>();
         for (SuiConfig.PackageEntry entry : config.packages) {
-            boolean routableUid =
-                    entry.uid >= 10000 || (flag == SuiConfig.FLAG_ALLOWED_SHELL && entry.uid == Process.SHELL_UID);
+            boolean routableUid = entry.uid >= 10000
+                    || (flag == SuiConfig.FLAG_ALLOWED_SHELL
+                            && entry.uid == rikka.sui.util.BridgeConstants.SERVER_UID_SHELL);
             if (routableUid && (entry.flags & flag) != 0) {
                 uids.add(entry.uid);
             }

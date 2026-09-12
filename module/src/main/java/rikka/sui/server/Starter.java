@@ -40,8 +40,12 @@ public class Starter {
     }
 
     public static void main(String[] args) {
+        Thread.UncaughtExceptionHandler existingHandler = Thread.getDefaultUncaughtExceptionHandler();
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             LOGGER.e(e, "Uncaught exception on thread %s", t.getName());
+            if (existingHandler != null) {
+                existingHandler.uncaughtException(t, e);
+            }
             System.exit(1);
         });
 

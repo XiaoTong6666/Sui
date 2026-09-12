@@ -141,7 +141,7 @@ public final class SystemPackages {
         return null;
     }
 
-    @SuppressLint("InlinedApi")
+    @SuppressLint({"InlinedApi", "QueryPermissionsNeeded"})
     public static @Nullable SystemPackage resolveSettings(Context context) {
         PackageManager packageManager = context.getPackageManager();
         Intent intent = new Intent(Settings.ACTION_SETTINGS);

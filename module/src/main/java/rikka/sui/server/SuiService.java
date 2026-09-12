@@ -484,7 +484,15 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     }
 
     private CapabilityEpochState capabilityStateForUid(int uid) {
-        return capabilityEpochStates.computeIfAbsent(uid, ignored -> new CapabilityEpochState());
+        CapabilityEpochState state = capabilityEpochStates.get(uid);
+        if (state == null) {
+            CapabilityEpochState newState = new CapabilityEpochState();
+            state = capabilityEpochStates.putIfAbsent(uid, newState);
+            if (state == null) {
+                state = newState;
+            }
+        }
+        return state;
     }
 
     @Override
@@ -824,10 +832,13 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             }
         }
         for (int uid : capabilityEpochStates.keySet()) {
-            int effectiveFlags = effectiveFlagsByUid.computeIfAbsent(uid, ignored -> {
+            Integer effectiveFlagsValue = effectiveFlagsByUid.get(uid);
+            if (effectiveFlagsValue == null) {
                 SuiConfig.PackageEntry entry = configManager.find(uid);
-                return entry != null ? entry.flags & SuiConfig.MASK_PERMISSION : 0;
-            });
+                effectiveFlagsValue = entry != null ? entry.flags & SuiConfig.MASK_PERMISSION : 0;
+                effectiveFlagsByUid.put(uid, effectiveFlagsValue);
+            }
+            int effectiveFlags = effectiveFlagsValue;
             if (!isPermissionAllowedForCurrentServer(effectiveFlags) && hasCapabilityWorkForUid(uid)) {
                 revokedUids.add(uid);
                 if (getServerUidForPermissionFlags(effectiveFlags) == BridgeConstants.SERVER_UID_ROOT) {
@@ -845,7 +856,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
         try {
             for (ClientRecord record : records) {
-                int effectiveFlags = effectiveFlagsByUid.getOrDefault(record.uid, 0);
+                Integer effectiveFlagsValue = effectiveFlagsByUid.get(record.uid);
+                int effectiveFlags = effectiveFlagsValue != null ? effectiveFlagsValue : 0;
                 record.allowed = isPermissionAllowedForCurrentServer(effectiveFlags);
                 if (!record.allowed) {
                     record.onetime = false;
