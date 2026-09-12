@@ -1,18 +1,16 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `543`
-- **Commit:** [`5b2aa16`](https://github.com/XiaoTong6666/Sui/commit/5b2aa1606e4734adeec3fbddf48800c564c8c8d4)
-- **Build time:** `1m 52s`
-- **SHA256:** `fb3286bdaedee32ee4a040495c9ddcd27e84252bd4f9ccd2e326d4cbcdc56177`
+- **VersionCode:** `544`
+- **Commit:** [`221cf29`](https://github.com/XiaoTong6666/Sui/commit/221cf2945dc3446f16b6748b926fb031e51cc265)
+- **Build time:** `2m 50s`
+- **SHA256:** `e707f5ae8af535d2bb629d9d225bcb9ac27539d74ffa012047e43eb2eace3f41`
 
 ## Message
 
 ```text
-fix(sui): synchronize permission revocation lifecycle
+fix(server): restart legacy clients after permission approval
 
-在 Sui 层同步权限变更、服务器 Binder 路由和能力撤销流程。
-
-撤销远程进程、Rish 宿主和用户服务，处理 shell/root 切换及用户服务进程注册，避免权限降级后继续持有高权限能力。
+授权弹窗确认后，若旧版 API 客户端不支持 Binder handoff，服务端先强制停止客户端，再仅重新拉起发起授权请求的应用，使其在新权限下重新连接。
 
 ```
