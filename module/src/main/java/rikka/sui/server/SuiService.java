@@ -67,6 +67,7 @@ import rikka.shizuku.server.Service;
 import rikka.shizuku.server.util.HandlerUtil;
 import rikka.sui.model.AppInfo;
 import rikka.sui.server.bridge.BridgeServiceClient;
+import rikka.sui.util.AppLaunchUtils;
 import rikka.sui.util.BridgeConstants;
 import rikka.sui.util.Logger;
 import rikka.sui.util.OsUtils;
@@ -340,6 +341,40 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     }
 
+    private void restartPermissionRequester(
+            int requestUid,
+            int requestPid,
+            @NonNull java.util.Collection<ClientFallback> firstFallbacks,
+            @NonNull java.util.Collection<ClientFallback> secondFallbacks) {
+        ClientFallback requesterFallback = null;
+        for (ClientFallback fallback : firstFallbacks) {
+            if (fallback.uid == requestUid && fallback.pid == requestPid) {
+                requesterFallback = fallback;
+                break;
+            }
+        }
+        if (requesterFallback == null) {
+            for (ClientFallback fallback : secondFallbacks) {
+                if (fallback.uid == requestUid && fallback.pid == requestPid) {
+                    requesterFallback = fallback;
+                    break;
+                }
+            }
+        }
+        if (requesterFallback == null || requesterFallback.packageName == null) {
+            return;
+        }
+
+        long id = android.os.Binder.clearCallingIdentity();
+        try {
+            LOGGER.i("Restarting permission requester %s after legacy Binder fallback", requesterFallback.packageName);
+            AppLaunchUtils.startAppAsUser(
+                    requesterFallback.packageName, UserHandleCompat.getUserId(requesterFallback.uid));
+        } finally {
+            android.os.Binder.restoreCallingIdentity(id);
+        }
+    }
+
     private void invalidatePackagesForUid(int uid, String reason) {
         List<String> packages = PackageManagerApis.getPackagesForUidNoThrow(uid);
         invalidatePackages(uid, packages, reason);
@@ -384,9 +419,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             if (oldDefaultMode == newDefaultMode) {
                 continue;
             }
-            if (requiresRootCapabilityReset(oldDefaultMode, newDefaultMode)) {
-                invalidatePackages(uid, entry.getValue(), "Root permission revoked");
-            } else if (getServerUidForPermissionFlags(newDefaultMode) != -1) {
+            if (getServerUidForPermissionFlags(newDefaultMode) != -1) {
                 java.util.List<ClientFallback> fallbacks = handoffClientsForUid(uid, newDefaultMode);
                 if (!fallbacks.isEmpty()) {
                     invalidateFallbacks(fallbacks, "Binder handoff failed");
@@ -667,15 +700,12 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
                 updateClientAllowedStateForUid(requestUid, permissionFlags);
 
-                if (!shellMode && requiresRootCapabilityReset(oldPermissionFlags, permissionFlags)) {
+                int targetServerUid = getServerUidForPermissionFlags(permissionFlags);
+                int currentServerUid = shellMode ? BridgeConstants.SERVER_UID_SHELL : BridgeConstants.SERVER_UID_ROOT;
+                if (targetServerUid != -1 && targetServerUid != currentServerUid) {
+                    handoffFallbacks = handoffClientsForUid(requestUid, permissionFlags);
+                } else if (!shellMode && requiresRootCapabilityReset(oldPermissionFlags, permissionFlags)) {
                     invalidatePackagesForUid(requestUid, "Root permission revoked");
-                } else {
-                    int targetServerUid = getServerUidForPermissionFlags(permissionFlags);
-                    int currentServerUid =
-                            shellMode ? BridgeConstants.SERVER_UID_SHELL : BridgeConstants.SERVER_UID_ROOT;
-                    if (targetServerUid != -1 && targetServerUid != currentServerUid) {
-                        handoffFallbacks = handoffClientsForUid(requestUid, permissionFlags);
-                    }
                 }
 
                 if (!shellFallbacks.isEmpty()) {
@@ -683,6 +713,9 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 }
                 if (!handoffFallbacks.isEmpty()) {
                     invalidateFallbacks(handoffFallbacks, "Binder handoff failed");
+                }
+                if (allowed) {
+                    restartPermissionRequester(requestUid, requestPid, shellFallbacks, handoffFallbacks);
                 }
             } finally {
                 if (capabilityBarrier) {
@@ -1298,9 +1331,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             syncUidsToSystemServer();
 
             if (newEffectiveFlags != oldEffectiveFlags) {
-                if (requiresRootCapabilityReset(oldEffectiveFlags, newEffectiveFlags)) {
-                    invalidatePackagesForUid(uid, "Root permission revoked");
-                } else if (getServerUidForPermissionFlags(newEffectiveFlags) != -1) {
+                if (getServerUidForPermissionFlags(newEffectiveFlags) != -1) {
                     java.util.List<ClientFallback> handoffFallbacks = handoffClientsForUid(uid, newEffectiveFlags);
                     if (!handoffFallbacks.isEmpty()) {
                         invalidateFallbacks(handoffFallbacks, "Binder handoff failed");
