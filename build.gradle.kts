@@ -23,7 +23,7 @@ import java.util.Properties
 buildscript {
     configurations.classpath {
         resolutionStrategy {
-            force("org.bitbucket.b_c:jose4j:0.9.6")
+            force("org.bitbucket.b_c:jose4j:0.9.7")
             force("org.jdom:jdom2:2.0.6.1")
             force("org.apache.commons:commons-lang3:3.20.0")
             force("org.bouncycastle:bcpkix-jdk18on:1.85")
@@ -43,7 +43,7 @@ plugins {
 }
 
 val forcedDependencies = listOf(
-    "org.bitbucket.b_c:jose4j:0.9.6",            // Fix CVE-2024-29371
+    "org.bitbucket.b_c:jose4j:0.9.7",            // Fix CVE-2024-29371
     "org.jdom:jdom2:2.0.6.1",                    // Fix CVE-2021-33813
     "org.apache.commons:commons-lang3:3.20.0",  // Fix CVE-2025-48924
     "org.bouncycastle:bcpkix-jdk18on:1.85",     // Fix GHSA-8xfc-gm6g-vgpv via AGP classpath
