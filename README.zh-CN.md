@@ -53,22 +53,31 @@ Sui 需要一个兼容的 root 环境。对于 Magisk，需要 Magisk 24.0+ 且�
 * 在桌面长按系统设置图标，会看到 Sui 的快捷方式
 * 在 Sui 管理界面点击右上角菜单（三个点），点击 **“添加快捷方式到桌面”** 即可在桌面创建快捷方式
 * 在默认拨号器中输入 `*#*#784784#*#*`
-* 可以通过 KernelSU/Magisk 的 Action 按钮打开 Sui 管理界面
+* 可以通过受支持 root 管理器中的模块 **Action** 按钮打开 Sui 管理界面
 
 > **注意：** 对于部分系统，长按设置可能不会出现 Sui 快捷方式；    
 > 为了避免打扰用户，新版本已 **移除** 进入 **“开发者选项”** 时自动询问添加快捷方式的功能。
 
+右上角菜单也是现在配置 Sui 的首选入口。除搜索/筛选、快捷方式和外观选项外，目前还提供：
+
+* **修改默认值**：设置没有显式 UID 权限规则的应用所继承的默认权限。默认值可以设为询问、root、shell、拒绝或隐藏。
+* **旧版 Shizuku 兼容**：可选兼容旧版 Shizuku 客户端通过显式 `REQUEST_BINDER` 广播请求 Binder 的方式。设备已经安装 Shizuku 时该兼容 Hook 不会接管请求，并且仍然复用 Sui 原有的权限路由与 Hide 行为。
+* **禁止 Shell 提权 (KSU)**：在受支持的 KernelSU 版本上，Sui 会在 shell 子进程降权到 UID 2000 之前设置 no-escape 限制，使 Rish、shell 模式 Shizuku API、UserService 以及它们的后代进程不能再通过 KernelSU 重新提权到 root。修改后需要重启。如果当前 KernelSU 不支持所需 UAPI，Sui 会自动关闭该选项，而不是让 shell 后端启动失败。
+* **ADB Root**：可以选择 **关闭**、**下次启动启用一次** 或 **始终启用**。修改后需要重启才会生效。
+
+这些选项都由 Sui 服务负责持久化。部分启动阶段功能内部仍会使用 `/data/adb/sui/` 下的 marker 文件，但正常使用时应当通过管理界面修改，不再需要手动创建或删除这些文件。
+
 ### 权限模式
 
-Sui 按 UID 保存应用的权限状态。主要模式包括：
+Sui 按 UID 保存应用的显式权限状态。在管理界面点击一个应用即可选择显式模式；选择 **默认** 则表示删除该 UID 的显式规则，并继承右上角 **修改默认值** 中配置的全局默认权限。
 
-* **询问 / 默认**：应用可以连接到 Sui，并通过正常流程请求授权。
 * **允许 root**：应用会被路由到 root 后端，相关 API 以 root 身份执行。
 * **允许 shell**：应用会被路由到 shell 后端，相关 API 以 shell 身份执行。
 * **拒绝**：拒绝应用使用 Sui。
 * **隐藏**：对目标应用隐藏 Sui。开启隐藏后，目标应用 UID 会在 Native Binder `execTransact` 阶段被拦截，其发起的 Sui bridge transaction 会被直接吞掉，无法继续进入 BridgeService 获取 Sui Binder。
+* **默认**：不保存该 UID 的显式权限，应用继承当前全局默认值。当全局默认值为 **询问** 时，应用可以连接到 Sui，并通过正常流程请求授权。
 
-修改权限状态后，Sui 可能会强制停止受影响应用，以切断旧 Binder 句柄，并让应用下次启动时获取正确的后端。
+修改权限状态后，Sui 会同步 system_server 与 shell 侧的路由状态，并在安全的情况下直接迁移兼容客户端的 Binder。对于需要撤销已经持有的高权限能力的迁移，或不支持实时 Binder handoff 的旧客户端，Sui 可能会强制停止或重新拉起受影响应用，避免旧的高权限 Binder 句柄在权限变更后继续存活。
 
 ### 交互式 shell
 
@@ -82,27 +91,14 @@ Sui 提供交互式 shell。
 
 Sui 还提供可选的 `adb root` 支持。启用后，Sui 会为 `adbd` 配置 wrapper 和 preload hook，使 `adbd` 运行在当前 root 实现对应的 SELinux 域下，同时保持预期的 `adbd` socket label。
 
-该功能默认关闭。请在 root shell 中创建下面的标记文件之一，然后重启设备，让 Sui 在 `post-fs-data` 阶段完成配置：
+该功能默认关闭。打开 Sui 管理界面，点击右上角菜单，进入 **ADB Root**，然后选择：
 
-* 仅对下一次开机启用：
+* **关闭**：保持 `adb root` 支持关闭。
+* **下次启动启用一次**：只对下一次开机启用。一次性状态会在 `post-fs-data` 阶段被消费，因此本次开机完成后，管理界面中的状态会自动回落为 **关闭**。
+* **始终启用**：之后每次开机都启用，直到你重新改为 **关闭**。
 
-  ```sh
-  touch /data/adb/sui/enable_adb_root_once
-  ```
+修改模式后请重启设备。设备以启用 ADB Root 的状态启动完成后，像平常一样使用 `adb root` 即可。
 
-* 对之后每次开机都启用：
-
-  ```sh
-  touch /data/adb/sui/enable_adb_root
-  ```
-
-重启完成后，像平常一样使用 `adb root` 即可。
-
-如果要关闭持久启用模式：
-
-```sh
-rm /data/adb/sui/enable_adb_root
-```
 > 该功能依赖你的 root 实现和设备 SELinux 策略。Sui 会在启用前检查所需的 `setcurrent`、`dyntransition` 和 `setsockcreate` 权限。
 >  现有应用行为不会变化；这个功能只影响设备上的 `adbd` 链路。
 > 如果设备使用了高度定制的 `adbd` 实现，兼容性可能会有所不同。
@@ -246,15 +242,15 @@ adb logcat -v time | grep -i sui
 
 ### 可选功能异常
 
-- 修改 Sui 模块文件或 marker 文件后，先重启一次设备。
+- 对于 **ADB Root** 和 **禁止 Shell 提权 (KSU)**，请从 Sui 管理界面修改选项，并重启一次，让启动阶段配置真正生效。
 - 如有需要，优先导出 KernelSU / APatch 日志，同时[抓取 Sui 日志](#抓取-sui-日志)。
-- 必要时再检查 `/data/adb/sui/` 下的 marker 文件和生成文件是否存在。
+- `/data/adb/sui/` 下的 marker 文件属于实现细节。只有排查问题时才需要检查，正常使用不需要手动修改。
 
 ## 内部实现（Internals）
 
 Sui 依赖 [Zygisk](https://github.com/topjohnwu/zygisk-module-sample)，它允许我们注入 system_server、SystemUI、Settings 以及相关应用进程。
 
-整体上有五个主要部分，以及可选的 `adb root` 路径：
+整体上有五个主要部分，以及 `adb root`、KernelSU shell no-escape 等可选的启动阶段路径：
 
 * **Root 进程（Root process）**
 
@@ -266,12 +262,15 @@ Sui 依赖 [Zygisk](https://github.com/topjohnwu/zygisk-module-sample)，它允�
   Shell server 以 shell 身份运行，用于服务被授予 shell 权限的应用。
   它会从 root server 同步出的配置文件中加载 UID 权限状态。当 shell 后端需要显示授权确认窗口时，会将请求委托给 root server，由 root server 负责触发 SystemUI 授权界面。
 
+  启用 **禁止 Shell 提权 (KSU)** 后，native launcher 会在 shell 子进程降权到 UID 2000 之前请求受支持的 KernelSU driver 应用 `DISABLE_ESCAPE_TO_ROOT`，并由后代进程继承该限制。如果 KernelSU 不支持对应 UAPI，Sui 会清除该选项并继续启动 shell 后端，只是不启用这层保护。
+
 * **SystemServer 注入（SystemServer inject）**
 
     * Hook `Binder#execTransact`，在 `system_server` 中接管 Sui 使用的特殊 Binder transaction
     * 维护 root binder、shell binder，以及 hidden/root allowed/shell allowed/denied/default mode 的权限缓存
     * 根据 UID 的有效权限决定返回哪个后端 Binder：root 返回 root binder，shell 返回 shell binder
     * 对 `hidden` UID，直接拦截其 Sui bridge 请求；对 `ask` / `deny`，仍返回 root binder，使客户端可以继续走授权或拒绝结果流程
+    * 启用 **旧版 Shizuku 兼容** 后，还会识别旧版 Shizuku 的显式 `REQUEST_BINDER` 广播请求，并通过调用方提供的 callback Binder 返回同一套按权限路由后的 Sui Binder
 
 * **SystemUI 注入（SystemUI inject）**
 

@@ -53,22 +53,31 @@ Sui requires a compatible root environment. On Magisk, this means Magisk 24.0+ w
 * Long press the **System Settings** icon on the home screen to see the Sui shortcut
 * In the Sui management interface, tap the menu button in the top-right corner and select **Add shortcut to home screen**
 * Enter `*#*#784784#*#*` in the default dialer app
-* Open the Sui management interface via the **Action** button in KernelSU/Magisk manager
+* Open the Sui management interface via the module **Action** button in a supported root manager
 
 > **Note:** On some systems, the Sui shortcut may not appear when long-pressing Settings.     
 > Additionally, to avoid disturbing users, newer versions have **removed** the feature that automatically prompts to add a shortcut when entering **Developer options**.
 
+The top-right menu is also the preferred place to configure Sui. Besides search/filter, shortcut and appearance options, it currently provides:
+
+* **Modify default value**: set the permission inherited by apps that do not have an explicit per-UID rule. The default can be Ask, root, shell, Deny, or Hide.
+* **Legacy Shizuku support**: optionally serve the old explicit `REQUEST_BINDER` broadcast protocol used by older Shizuku clients. The compatibility hook is bypassed when Shizuku itself is installed and keeps the normal Sui permission/Hide routing rules.
+* **Block Shell root (KSU)**: on supported KernelSU versions, mark the Sui shell process before it drops to UID 2000 so Rish, shell-mode Shizuku API calls, UserService processes, and their descendants cannot use KernelSU to escalate back to root. A reboot is required. If the running KernelSU does not support the required UAPI, Sui automatically disables this option instead of preventing the shell backend from starting.
+* **ADB Root**: choose **Off**, **Enable for next boot once**, or **Always enable**. A reboot is required for the selected mode to take effect.
+
+These options are persisted by the Sui service. Some boot-time options still use files under `/data/adb/sui/` internally, but normal users should change them from the management UI instead of creating or deleting marker files manually.
+
 ### Permission modes
 
-Sui stores permission states by UID. The main modes are:
+Sui stores explicit permission states by UID. Tap an app in the management UI to select one of the explicit modes, or choose **Default** to remove the explicit rule and inherit the global default configured through **Modify default value**.
 
-* **Ask / default**: the app can connect to Sui and request permission through the normal flow.
 * **Allow root**: the app will be routed to the root backend.
 * **Allow shell**: the app will be routed to the shell backend.
 * **Deny**: deny the app from using Sui.
 * **Hide**: hide Sui from the target app. When Hide is enabled, the target app UID is intercepted in the Native Binder `execTransact` stage. Its Sui bridge transaction is swallowed before it can enter BridgeService and obtain the Sui Binder.
+* **Default**: no explicit per-UID permission is stored. The app inherits the current global default. When that global default is **Ask**, the app can connect to Sui and request permission through the normal flow.
 
-When the permission state changes, Sui may force-stop affected apps to cut off old Binder handles and make them obtain the correct backend on the next launch.
+When a permission state changes, Sui synchronizes the system_server and shell routing state and migrates compatible clients when it is safe to do so. Transitions that revoke a previously held capability, and legacy clients that cannot accept a live Binder handoff, may be force-stopped or restarted so stale privileged Binder handles cannot survive the permission change.
 
 ### Interactive shell
 
@@ -82,27 +91,14 @@ After the files are correctly copied, use `rish` as `sh` to start an interactive
 
 Sui also provides optional `adb root` support. When enabled, Sui sets up an `adbd` wrapper plus preload hook so that `adbd` can run under the current root implementation's SELinux domain while keeping the expected `adbd` socket label.
 
-This feature is disabled by default. Enable it by creating one of the following marker files from a root shell, then reboot so Sui can apply the setup during `post-fs-data`:
+This feature is disabled by default. Open the Sui management UI, tap the top-right menu, choose **ADB Root**, then select one of the following modes:
 
-* Enable for the next boot only:
+* **Off**: keep `adb root` support disabled.
+* **Enable for next boot once**: enable the setup for the next boot only. The one-shot state is consumed during `post-fs-data`, so the UI falls back to **Off** after that boot.
+* **Always enable**: enable the setup on every boot until you change the mode back to **Off**.
 
-  ```sh
-  touch /data/adb/sui/enable_adb_root_once
-  ```
+Reboot after changing the mode. After the device boots with ADB Root enabled, use `adb root` normally.
 
-* Enable persistently for every boot:
-
-  ```sh
-  touch /data/adb/sui/enable_adb_root
-  ```
-
-After reboot, use `adb root` normally.
-
-To disable the persistent mode again:
-
-```sh
-rm /data/adb/sui/enable_adb_root
-```
 > This feature depends on your root implementation and SELinux policy. Sui checks the required `setcurrent`, `dyntransition`, and `setsockcreate` permissions before enabling it.
 > Existing app behavior does not change. This only affects the device `adbd` path.
 > If your device uses a heavily customized `adbd` implementation, compatibility may vary.
@@ -246,15 +242,15 @@ If the issue cannot be reproduced on the debug build and only happens on release
 
 ### Optional features do not work as expected
 
-- Reboot once after changing Sui module files or marker files.
+- For **ADB Root** and **Block Shell root (KSU)**, change the option from the Sui management UI and reboot once so the boot-time configuration can take effect.
 - If needed, export logs from KernelSU / APatch and [capture Sui logs](#capture-sui-logs).
-- If needed, also inspect the files under `/data/adb/sui/` to confirm marker files and generated artifacts are present.
+- Marker files under `/data/adb/sui/` are implementation details. Inspect them only when diagnosing a problem; they normally do not need to be edited by hand.
 
 ## Internals
 
 Sui requires [Zygisk](https://github.com/topjohnwu/zygisk-module-sample). Zygisk allows us to inject into system_server, SystemUI, Settings and related app processes.
 
-Overall, there are five main parts, and an optional `adb root` path:
+Overall, there are five main parts, plus optional boot-time paths such as `adb root` and KernelSU shell no-escape protection:
 
 * **Root process**
 
@@ -268,12 +264,15 @@ Overall, there are five main parts, and an optional `adb root` path:
 
   It loads UID permission states from the configuration file mirrored by the root server. When the shell backend needs to show a permission confirmation window, it delegates the request to the root server, which then triggers the SystemUI confirmation UI.
 
+  When **Block Shell root (KSU)** is enabled, the native launcher asks a supported KernelSU driver to apply `DISABLE_ESCAPE_TO_ROOT` before dropping the shell child to UID 2000. The restriction is inherited by descendants. Unsupported KernelSU versions cause the option to be cleared and shell startup continues without this protection.
+
 * **SystemServer inject**
 
   * Hooks `Binder#execTransact` to intercept the dedicated Binder transaction used by Sui inside `system_server`
   * Keeps the root binder, shell binder, and permission caches for hidden/root allowed/shell allowed/denied/default mode
   * Chooses which backend Binder to return based on the UID's effective permission: root gets the root binder, shell gets the shell binder
   * For hidden UIDs, blocks the Sui bridge request directly; for ask/deny, still returns the root binder so the client can continue through the normal permission or denial result flow
+  * When **Legacy Shizuku support** is enabled, also recognizes the old explicit Shizuku `REQUEST_BINDER` broadcast path and returns the same permission-routed Sui Binder through the caller's callback Binder
 
 * **SystemUI inject**
 
