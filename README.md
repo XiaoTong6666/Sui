@@ -1,26 +1,26 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `546`
-- **Commit:** [`7c95334`](https://github.com/XiaoTong6666/Sui/commit/7c95334db18b02b0ab9910dacae3897523f34864)
-- **Build time:** `1m 18s`
-- **SHA256:** `3f9bf298aba61ba36501d1f00bc6bb5da366c65628279462b0f87542aa5ce8d9`
+- **VersionCode:** `548`
+- **Commit:** [`3f7317f`](https://github.com/XiaoTong6666/Sui/commit/3f7317f87d6f1d58524155efecc5cec6ecbd0ee8)
+- **Build time:** `3m 59s`
+- **SHA256:** `af35fa73aa9cea86500ac825d42d816475aa59885aea5e31190c4f6dd7d68c78`
 
 ## Message
 
 ```text
-build(deps): bump org.bitbucket.b_c:jose4j from 0.9.6 to 0.9.7 (#99)
+build(deps): bump org.bouncycastle:bcprov-jdk18on from 1.85.2 to 1.86 (#120)
 
-Bumps [org.bitbucket.b_c:jose4j](https://bitbucket.org/b_c/jose4j) from 0.9.6 to 0.9.7.
-- [Changelog](https://bitbucket.org/b_c/jose4j/src/master/Release Notes.md)
-- [Commits](https://bitbucket.org/b_c/jose4j/branches/compare/jose4j-0.9.7..jose4j-0.9.6)
+Bumps [org.bouncycastle:bcprov-jdk18on](https://github.com/bcgit/bc-java) from 1.85.2 to 1.86.
+- [Changelog](https://github.com/bcgit/bc-java/blob/main/docs/releasenotes.md)
+- [Commits](https://github.com/bcgit/bc-java/commits)
 
 ---
 updated-dependencies:
-- dependency-name: org.bitbucket.b_c:jose4j
-  dependency-version: 0.9.7
+- dependency-name: org.bouncycastle:bcprov-jdk18on
+  dependency-version: '1.86'
   dependency-type: direct:production
-  update-type: version-update:semver-patch
+  update-type: version-update:semver-minor
 ...
 
 Signed-off-by: dependabot[bot] <support@github.com>
