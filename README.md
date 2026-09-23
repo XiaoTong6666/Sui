@@ -1,20 +1,30 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `552`
-- **Commit:** [`8c64193`](https://github.com/XiaoTong6666/Sui/commit/8c64193b360e8e56a70637e868c0915855484d0e)
-- **Build time:** `1m 53s`
-- **SHA256:** `3c3c4f9bd3e73f3a4821b1a310cb8dfce01d58a77fb97e23d4b0304a54ef2a1a`
+- **VersionCode:** `553`
+- **Commit:** [`e37d54c`](https://github.com/XiaoTong6666/Sui/commit/e37d54c3914bf614fd96daf32641d0865c382762)
+- **Build time:** `2m 48s`
+- **SHA256:** `a9363704d070b68514c62d656d2c6ede95c0c07da21507de11c8d4514287f4ad`
 
 ## Message
 
 ```text
-fix(logging): centralize Sui logs in a single collector
+fix(module): harden shell runtime and framework compatibility #124
 
-统一 Sui 的持久化日志写入路径，新增由 root 启动的 logcat collector，将 Sui、SuiDaemon、SuiServer、SuiSystemServer、SuiManager、SuiSettings 以及 server-shared 等相关日志统一追加到 /data/adb/sui/sui.log，并使用 logcat 自带的轮转机制控制日志大小。通过单一写入进程避免 shell 脚本、native daemon 与 Java FileHandler 并发写入同一文件时可能出现的交叉、截断和竞争。
+修复部分 OEM 系统上 shell runtime 文件继承错误 SELinux 标签的问题。启动时先检查实际 context，只有标签异常时才修正为 shell_data_file，并在修改后重新校验。
 
-保留原有 logcat 行为，同时保留原先会进入 sui.log 的 stdout/stderr：native daemon 的标准输出与错误输出统一转写到 Sui tag，Installer 的完整 stdout/stderr 在安装和运行时刷新路径中统一转写到 SuiInstaller tag，再由 collector 持久化，因此早期 app_process 异常和非 Android Logger 输出也不会丢失。
+统一 shell runtime 文件准备流程。system_ui、settings、sui.dex 和 librish.so 在降权前完成复制、标签、权限与属主设置，关键步骤失败时直接终止 shell child，避免以半初始化状态继续启动。
 
-同时移除 post-fs-data.sh、service.sh 对 sui.log 的直接重定向以及 Java Logger 中的 FileHandler 特殊路径，SuiService 原有 /cache/sui.log 日志重新归并到常规 LOGGER。service watchdog 会持续检查并恢复 collector，卸载时会先终止 collector；所有进程只负责写入 logd，不再直接竞争 /data/adb/sui/sui.log。
+移除无效的 libsui.so shell runtime staging。libsui.so 安装后会作为 Zygisk 模块移动到 zygisk/<abi>.so，模块根目录并不存在 libsui.so，shell server 运行时也不依赖该文件。
+
+保持 shell 权限切换顺序不变。runtime 准备完成后再依次设置 supplementary groups、GID、UID，并最终切换到 u:r:shell:s0，避免扩大 shell 对 system_data_file 的访问权限。
+
+将长驻 SuiService 的 SystemUI 和 Settings 解析改为读取 Installer 生成的 metadata，避免 server 为获取 system context 调用 ActivityThread.systemMain()，减少 OEM framework 初始化带来的副作用。
+
+Installer 与 Uninstaller 优先使用未 attach 的 ActivityThread 配合 ContextImpl.createSystemContext() 获取 system resources 和 PackageManager，保留 config_systemUIServiceComponent 与 Settings 的动态解析能力。
+
+为旧 Android 或定制 framework 保留 ActivityThread.systemMain() fallback。detached context 构造失败时会输出明确诊断信息后回退原路径，兼顾新路径的低副作用和旧设备兼容性。
+
+metadata 变化时同步刷新相关目标并重启 Sui root/shell pair，确保 SystemUI、Settings 身份变化后运行时状态与 Zygisk 注入目标保持一致。
 
 ```
