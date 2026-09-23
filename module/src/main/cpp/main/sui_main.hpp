@@ -41,6 +41,55 @@ static constexpr const char* LEGACY_SHELL_DIR = "/data/local/tmp/sui_shell";
 static constexpr const char* SHELL_BASE_DIR = "/data/local/tmp";
 static constexpr const char* SHELL_DIR_PREFIX = "sui_shell_";
 static constexpr const char* SHELL_DIR_MARKER = "/data/adb/sui/shell_dir_name";
+static constexpr const char* SHELL_DATA_FILE_CONTEXT = "u:object_r:shell_data_file:s0";
+
+static bool set_shell_runtime_context(const char* path) {
+    char* context = nullptr;
+    if (getfilecon_raw(path, &context) >= 0) {
+        bool matched = strcmp(context, SHELL_DATA_FILE_CONTEXT) == 0;
+        freecon(context);
+        if (matched) {
+            return true;
+        }
+    }
+
+    if (setfilecon_raw(path, SHELL_DATA_FILE_CONTEXT) != 0) {
+        PLOGE("setfilecon %s -> %s", path, SHELL_DATA_FILE_CONTEXT);
+        return false;
+    }
+
+    context = nullptr;
+    if (getfilecon_raw(path, &context) < 0) {
+        PLOGE("getfilecon %s", path);
+        return false;
+    }
+    bool matched = strcmp(context, SHELL_DATA_FILE_CONTEXT) == 0;
+    if (!matched) {
+        LOGE("unexpected SELinux context for %s: %s", path, context);
+    }
+    freecon(context);
+    return matched;
+}
+
+static bool prepare_shell_runtime_file(const char* source, const char* target, mode_t mode) {
+    if (copyfile(source, target) != 0) {
+        PLOGE("copy %s -> %s", source, target);
+        return false;
+    }
+    if (!set_shell_runtime_context(target)) {
+        return false;
+    }
+    if (chmod(target, mode) != 0) {
+        PLOGE("chmod %s", target);
+        return false;
+    }
+    if (chown(target, 2000, 2000) != 0) {
+        PLOGE("chown %s", target);
+        return false;
+    }
+    return true;
+}
+
 static void log_context(const char* stage) {
     char* con = nullptr;
     if (getcon(&con) == 0 && con != nullptr) {
@@ -357,33 +406,45 @@ static int sui_main(int argc, char** argv) {
 
         // uid 2000 cannot read /data/adb/modules/zygisk-sui/sui.dex or .so libraries
         const char* shell_dir = shell_dir_path.c_str();
-        ensure_dir(shell_dir, 0755);
-        chmod(shell_dir, 0755);
-        chown(shell_dir, 2000, 2000);
+        if (ensure_dir(shell_dir, 0755) != 0) {
+            PLOGE("ensure shell runtime directory %s", shell_dir);
+            exit(EXIT_FAILURE);
+        }
+        if (!set_shell_runtime_context(shell_dir)) {
+            exit(EXIT_FAILURE);
+        }
+        if (chmod(shell_dir, 0755) != 0) {
+            PLOGE("chmod %s", shell_dir);
+            exit(EXIT_FAILURE);
+        }
+        if (chown(shell_dir, 2000, 2000) != 0) {
+            PLOGE("chown %s", shell_dir);
+            exit(EXIT_FAILURE);
+        }
+
+        const char* metadata_names[] = {"system_ui", "settings"};
+        for (const char* metadata_name : metadata_names) {
+            char metadata_path[PATH_MAX];
+            snprintf(metadata_path, PATH_MAX, "%s/%s", root_path, metadata_name);
+            char shell_metadata_path[PATH_MAX];
+            snprintf(shell_metadata_path, PATH_MAX, "%s/%s", shell_dir, metadata_name);
+            if (!prepare_shell_runtime_file(metadata_path, shell_metadata_path, 0644)) {
+                exit(EXIT_FAILURE);
+            }
+        }
 
         char shell_dex_path[PATH_MAX];
         snprintf(shell_dex_path, PATH_MAX, "%s/sui.dex", shell_dir);
-        if (copyfile(dex_path, shell_dex_path) == 0) {
-            chmod(shell_dex_path, 0644);
-            chown(shell_dex_path, 2000, 2000);
+        if (!prepare_shell_runtime_file(dex_path, shell_dex_path, 0644)) {
+            exit(EXIT_FAILURE);
         }
 
         char lib_path[PATH_MAX];
         snprintf(lib_path, PATH_MAX, "%s/librish.so", root_path);
         char shell_lib_path[PATH_MAX];
         snprintf(shell_lib_path, PATH_MAX, "%s/librish.so", shell_dir);
-        if (copyfile(lib_path, shell_lib_path) == 0) {
-            chmod(shell_lib_path, 0644);
-            chown(shell_lib_path, 2000, 2000);
-        }
-
-        char libsui_path[PATH_MAX];
-        snprintf(libsui_path, PATH_MAX, "%s/libsui.so", root_path);
-        char shell_libsui_path[PATH_MAX];
-        snprintf(shell_libsui_path, PATH_MAX, "%s/libsui.so", shell_dir);
-        if (copyfile(libsui_path, shell_libsui_path) == 0) {
-            chmod(shell_libsui_path, 0644);
-            chown(shell_libsui_path, 2000, 2000);
+        if (!prepare_shell_runtime_file(lib_path, shell_lib_path, 0644)) {
+            exit(EXIT_FAILURE);
         }
 
         // Match adbd's supplementary groups before dropping root credentials.

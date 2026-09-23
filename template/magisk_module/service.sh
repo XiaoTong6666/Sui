@@ -174,6 +174,7 @@ restart_changed_metadata_processes() {
 }
 
 refresh_metadata() {
+    metadata_changed=0
     old_system_ui="$(read_metadata "$MODDIR/system_ui")"
     old_settings="$(read_metadata "$MODDIR/settings")"
 
@@ -186,9 +187,11 @@ refresh_metadata() {
     new_system_ui="$(read_metadata "$MODDIR/system_ui")"
     new_settings="$(read_metadata "$MODDIR/settings")"
     if [ "$old_system_ui" != "$new_system_ui" ]; then
+        metadata_changed=1
         restart_changed_metadata_processes "$old_system_ui" "$new_system_ui"
     fi
     if [ "$old_settings" != "$new_settings" ]; then
+        metadata_changed=1
         restart_changed_metadata_processes "$old_settings" "$new_settings"
     fi
 
@@ -240,8 +243,15 @@ trap 'exit 0' INT TERM
 ensure_sui_log_collector
 
 metadata_ready=0
+metadata_changed=0
 if refresh_metadata; then
     metadata_ready=1
+    if [ "$metadata_changed" -eq 1 ] && is_sui_pair_healthy; then
+        print_log "Package metadata changed, restarting Sui process pair..."
+        stop_sui_pair
+        start_sui
+        sleep 2
+    fi
 fi
 
 backoff=1

@@ -20,6 +20,7 @@
 package rikka.sui.util;
 
 import android.annotation.SuppressLint;
+import android.app.ActivityThread;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -31,10 +32,19 @@ import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.provider.Settings;
 import androidx.annotation.Nullable;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.List;
 import rikka.hidden.compat.PackageManagerApis;
 
 public final class SystemPackages {
+
+    public static final String SYSTEM_UI_METADATA_FILE = "system_ui";
+    public static final String SETTINGS_METADATA_FILE = "settings";
 
     private static final String LEGACY_SYSTEM_UI_PACKAGE = "com.android.systemui";
     private static final String LEGACY_SYSTEM_UI_SERVICE = "com.android.systemui.SystemUIService";
@@ -55,6 +65,63 @@ public final class SystemPackages {
     }
 
     private SystemPackages() {}
+
+    public static Context createSystemContext() {
+        try {
+            // Avoid attaching this short-lived app_process as a system process. Some OEMs
+            // initialize extra framework services from ActivityThread.systemMain().
+            return createDetachedSystemContext();
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            // Preserve the legacy path for older or OEM frameworks where the detached
+            // ContextImpl construction API is unavailable. This may reintroduce OEM framework
+            // side effects, so keep it as a compatibility fallback only.
+            System.err.println("! Detached system context unavailable ("
+                    + e.getClass().getSimpleName() + "), falling back to ActivityThread.systemMain()");
+            return ActivityThread.systemMain().getSystemContext();
+        }
+    }
+
+    private static Context createDetachedSystemContext() throws ReflectiveOperationException {
+        Constructor<ActivityThread> constructor = ActivityThread.class.getDeclaredConstructor();
+        constructor.setAccessible(true);
+        ActivityThread activityThread = constructor.newInstance();
+
+        Class<?> contextImplClass = Class.forName("android.app.ContextImpl");
+        Method createSystemContext = contextImplClass.getDeclaredMethod("createSystemContext", ActivityThread.class);
+        createSystemContext.setAccessible(true);
+        return (Context) createSystemContext.invoke(null, activityThread);
+    }
+
+    public static @Nullable SystemPackage readPackageMetadata(String directory, String fileName) {
+        if (directory == null || directory.isEmpty() || fileName == null || fileName.isEmpty()) {
+            return null;
+        }
+
+        File file = new File(directory, fileName);
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String packageName = reader.readLine();
+            String uidString = reader.readLine();
+            String processName = reader.readLine();
+            if (packageName == null || uidString == null || processName == null) {
+                return null;
+            }
+
+            packageName = packageName.trim();
+            uidString = uidString.trim();
+            processName = processName.trim();
+            if (packageName.isEmpty() || uidString.isEmpty() || processName.isEmpty()) {
+                return null;
+            }
+
+            int uid = Integer.parseInt(uidString);
+            if (uid < 0) {
+                return null;
+            }
+            return new SystemPackage(packageName, uid, processName);
+        } catch (IOException | NumberFormatException ignored) {
+            return null;
+        }
+    }
 
     private static boolean isSystemApplication(ApplicationInfo applicationInfo) {
         return (applicationInfo.flags & (ApplicationInfo.FLAG_SYSTEM | ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0;

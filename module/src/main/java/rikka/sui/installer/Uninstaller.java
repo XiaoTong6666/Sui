@@ -19,7 +19,6 @@
 
 package rikka.sui.installer;
 
-import android.app.ActivityThread;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.pm.ShortcutManager;
@@ -134,7 +133,7 @@ public class Uninstaller {
         if (Looper.myLooper() == null) {
             Looper.prepare();
         }
-        Context context = ActivityThread.systemMain().getSystemContext();
+        Context context = SystemPackages.createSystemContext();
         String installedSettingsPackage = findInstalledSettingsPackage(args);
 
         new Handler(Looper.myLooper()).post(() -> {
