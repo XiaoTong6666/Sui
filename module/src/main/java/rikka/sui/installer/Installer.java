@@ -19,7 +19,6 @@
 
 package rikka.sui.installer;
 
-import android.app.ActivityThread;
 import android.content.Context;
 import android.os.Looper;
 import java.io.File;
@@ -97,7 +96,7 @@ public class Installer {
         if (Looper.getMainLooper() == null) {
             Looper.prepareMainLooper();
         }
-        Context context = ActivityThread.systemMain().getSystemContext();
+        Context context = SystemPackages.createSystemContext();
         SystemPackage[] packages = resolvePackages(context);
 
         if (packages[0] == null || packages[1] == null) {

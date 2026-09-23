@@ -33,8 +33,6 @@ import static rikka.shizuku.ShizukuApiConstants.BIND_APPLICATION_SHOULD_SHOW_REQ
 import static rikka.shizuku.ShizukuApiConstants.REQUEST_PERMISSION_REPLY_ALLOWED;
 import static rikka.shizuku.ShizukuApiConstants.REQUEST_PERMISSION_REPLY_IS_ONETIME;
 
-import android.app.ActivityThread;
-import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.net.Uri;
@@ -446,13 +444,10 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         SuiService.shellMode = isShell;
 
         Looper.prepareMainLooper();
-        // Frameworks without the SQLite isolated-process fix may query SettingsProvider through
-        // systemMain's unregistered Application, so initialize SQLite first.
         if (!isShell && !SuiDatabase.initialize()) {
             throw new IllegalStateException("database unavailable");
         }
-        Context context = ActivityThread.systemMain().getSystemContext();
-        new SuiService(context);
+        new SuiService();
         Looper.loop();
 
         LOGGER.i("server exited");
@@ -953,13 +948,9 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         return waitForPackage(new String[] {packageName}, forever);
     }
 
-    private interface PackageResolver {
-        SystemPackage resolve();
-    }
-
-    private SystemPackage waitForPackage(String name, PackageResolver resolver) {
+    private SystemPackage waitForPackageMetadata(String name, String fileName) {
         while (true) {
-            SystemPackage systemPackage = resolver.resolve();
+            SystemPackage systemPackage = SystemPackages.readPackageMetadata(filesPath, fileName);
             if (systemPackage != null) {
                 LOGGER.i(
                         "%s package is %s (uid=%d, process=%s)",
@@ -967,7 +958,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
                 return systemPackage;
             }
 
-            LOGGER.w("can't resolve %s package, wait 1s", name);
+            LOGGER.w("can't read %s package metadata, wait 1s", name);
 
             try {
                 //noinspection BusyWait
@@ -1039,7 +1030,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
     };
 
-    public SuiService(Context context) {
+    public SuiService() {
         super();
 
         HandlerUtil.setMainHandler(mainHandler);
@@ -1050,8 +1041,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         clientManager = getClientManager();
         userServiceManager = getUserServiceManager();
 
-        SystemPackage systemUi = waitForPackage("SystemUI", () -> SystemPackages.resolveSystemUi(context));
-        SystemPackage settings = waitForPackage("Settings", () -> SystemPackages.resolveSettings(context));
+        SystemPackage systemUi = waitForPackageMetadata("SystemUI", SystemPackages.SYSTEM_UI_METADATA_FILE);
+        SystemPackage settings = waitForPackageMetadata("Settings", SystemPackages.SETTINGS_METADATA_FILE);
         systemUiPackageName = systemUi.packageName;
         systemUiUid = systemUi.uid;
         settingsPackageName = settings.packageName;
