@@ -2,29 +2,14 @@
 
 MODDIR=${0%/*}
 
-SUI_DIR="/data/adb/sui"
-LOG_FILE="$SUI_DIR/sui.log"
+. "$MODDIR/logging.sh"
+
+SUI_DIR="$SUI_LOG_DIR"
 TAG="SuiDaemon"
 
 mkdir -p "$SUI_DIR" 2>/dev/null
 
-rotate_log_file() {
-    max_size=1048576
-
-    if [ ! -f "$LOG_FILE" ]; then
-        return
-    fi
-
-    log_size=$(wc -c < "$LOG_FILE" 2>/dev/null)
-    if [ -n "$log_size" ] && [ "$log_size" -gt "$max_size" ]; then
-        rm -f "$LOG_FILE.1" 2>/dev/null
-        mv "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null
-    fi
-}
-
 print_log() {
-    rotate_log_file
-    echo "[$(date)] $1" >> "$LOG_FILE"
     log -p i -t "$TAG" "$1"
 }
 
@@ -194,9 +179,9 @@ refresh_metadata() {
 
     print_log "Refreshing SystemUI and Settings package metadata..."
     refresh_status=0
-    /system/bin/app_process -Djava.class.path="$MODDIR"/sui.dex /system/bin \
+    run_sui_logged_command "SuiInstaller" /system/bin/app_process -Djava.class.path="$MODDIR"/sui.dex /system/bin \
         --nice-name=sui_installer rikka.sui.installer.Installer "$MODDIR" \
-        9>&- >> "$LOG_FILE" 2>&1 || refresh_status=$?
+        9>&- >/dev/null 2>&1 || refresh_status=$?
 
     new_system_ui="$(read_metadata "$MODDIR/system_ui")"
     new_settings="$(read_metadata "$MODDIR/settings")"
@@ -220,7 +205,7 @@ refresh_metadata() {
 
 start_sui() {
     chmod 700 "$MODDIR/bin/sui" 2>/dev/null
-    nohup "$MODDIR/bin/sui" "$MODDIR" 0 9>&- >> "$LOG_FILE" 2>&1 &
+    nohup "$MODDIR/bin/sui" "$MODDIR" 0 9>&- 2>&1 | pipe_sui_output_to_logcat 9>&- &
 }
 
 LOCK_FILE="$SUI_DIR/watchdog.lock.v2"
@@ -252,6 +237,8 @@ else
 fi
 trap 'exit 0' INT TERM
 
+ensure_sui_log_collector
+
 metadata_ready=0
 if refresh_metadata; then
     metadata_ready=1
@@ -262,6 +249,8 @@ backoff_max=60
 interval=5
 
 while true; do
+    ensure_sui_log_collector
+
     if is_sui_pair_healthy; then
         if [ "$metadata_ready" -eq 0 ] && refresh_metadata; then
             metadata_ready=1

@@ -4,25 +4,9 @@ MODULE_ID=$(basename "$MODDIR")
 
 SUI_WORK_DIR="/data/system/sui"
 API_LEVEL=$(getprop ro.build.version.sdk)
-SUI_DIR="/data/adb/sui"
-SUI_LOG="$SUI_DIR/sui.log"
+. "$MODDIR/logging.sh"
 
-mkdir -p "$SUI_DIR" 2>/dev/null
-
-rotate_log_file() {
-    log_file="$1"
-    max_size=1048576
-
-    if [ ! -f "$log_file" ]; then
-        return
-    fi
-
-    log_size=$(wc -c < "$log_file" 2>/dev/null)
-    if [ -n "$log_size" ] && [ "$log_size" -gt "$max_size" ]; then
-        rm -f "$log_file.1" 2>/dev/null
-        mv "$log_file" "$log_file.1" 2>/dev/null
-    fi
-}
+start_sui_log_collector
 
 fix_oat_permissions_until_ready() {
     attempts=0
@@ -164,8 +148,6 @@ chmod 700 "$MODDIR"/bin/sui
 
 # define print_log
 print_log() {
-    rotate_log_file "$SUI_LOG"
-    echo "[$(date)] $1" >> "$SUI_LOG"
     log -p i -t "SuiDaemon" "$1"
 }
 
@@ -173,8 +155,8 @@ print_log() {
 print_log "Starting Sui native daemon..."
 
 # strat the sui daemon
-nohup "$MODDIR"/bin/sui "$MODDIR" "$adb_root_exit" >> "$SUI_LOG" 2>&1 &
+nohup "$MODDIR"/bin/sui "$MODDIR" "$adb_root_exit" 2>&1 | pipe_sui_output_to_logcat &
 
-print_log "Sui daemon launched with PID $!"
+print_log "Sui daemon launched"
 
 exit 0

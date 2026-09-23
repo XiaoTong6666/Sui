@@ -34,8 +34,12 @@ ui_print "- Extracting module files"
 extract "$ZIPFILE" 'module.prop' "$MODPATH"
 extract "$ZIPFILE" 'post-fs-data.sh' "$MODPATH"
 extract "$ZIPFILE" 'service.sh' "$MODPATH"
+extract "$ZIPFILE" 'logging.sh' "$MODPATH"
 extract "$ZIPFILE" 'uninstall.sh' "$MODPATH"
 extract "$ZIPFILE" 'sepolicy.rule' "$MODPATH"
+
+. "$MODPATH/logging.sh"
+start_sui_log_collector
 
 ui_print "- Extracting action script"
 extract "$ZIPFILE" 'action.sh' "$MODPATH"
@@ -135,7 +139,8 @@ set_perm "$MODPATH/sui.apk" 0 0 0655
 set_perm_recursive "$MODPATH/res" 0 0 0700 0600
 
 ui_print "- Fetching information for SystemUI and Settings"
-/system/bin/app_process -Djava.class.path="$MODPATH"/sui.dex /system/bin --nice-name=sui_installer rikka.sui.installer.Installer "$MODPATH"
+run_sui_logged_command "SuiInstaller" /system/bin/app_process -Djava.class.path="$MODPATH"/sui.dex /system/bin \
+  --nice-name=sui_installer rikka.sui.installer.Installer "$MODPATH"
 
 ui_print "- Extracting files for rish"
 extract "$ZIPFILE" 'rish' "$MODPATH"

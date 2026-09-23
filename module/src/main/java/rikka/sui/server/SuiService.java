@@ -69,7 +69,6 @@ import rikka.sui.model.AppInfo;
 import rikka.sui.server.bridge.BridgeServiceClient;
 import rikka.sui.util.AppLaunchUtils;
 import rikka.sui.util.BridgeConstants;
-import rikka.sui.util.Logger;
 import rikka.sui.util.OsUtils;
 import rikka.sui.util.SystemPackages;
 import rikka.sui.util.SystemPackages.SystemPackage;
@@ -471,7 +470,6 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
     private final Object managerBinderLock = new Object();
     private final Object pendingPermissionLock = new Object();
-    private final Logger flog = new Logger("Sui", "/cache/sui.log");
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private final Map<String, Integer> pendingPermissionConfirmations = new HashMap<>();
     private final java.util.concurrent.ConcurrentHashMap<Integer, CapabilityEpochState> capabilityEpochStates =
@@ -1146,13 +1144,13 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
                             @Override
                             public void binderDied() {
-                                flog.w("manager binder is dead, pid=%d", callingPid);
+                                LOGGER.w("manager binder is dead, pid=%d", callingPid);
 
                                 synchronized (managerBinderLock) {
                                     if (systemUiApplication.asBinder() == binder) {
                                         systemUiApplication = null;
                                     } else {
-                                        flog.w("binderDied is called later than the arrival of the new binder ?!");
+                                        LOGGER.w("binderDied is called later than the arrival of the new binder ?!");
                                     }
                                 }
 
@@ -1166,7 +1164,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
 
             synchronized (managerBinderLock) {
                 systemUiApplication = application;
-                flog.i("manager attached: pid=%d", callingPid);
+                LOGGER.i("manager attached: pid=%d", callingPid);
             }
         }
 

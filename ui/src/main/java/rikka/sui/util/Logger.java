@@ -20,31 +20,14 @@
 package rikka.sui.util;
 
 import android.util.Log;
-import java.io.IOException;
 import java.util.Locale;
-import java.util.logging.FileHandler;
-import java.util.logging.SimpleFormatter;
 
 public class Logger {
 
     private final String TAG;
-    private final java.util.logging.Logger LOGGER;
 
     public Logger(String TAG) {
         this.TAG = TAG;
-        this.LOGGER = null;
-    }
-
-    public Logger(String TAG, String file) {
-        this.TAG = TAG;
-        this.LOGGER = java.util.logging.Logger.getLogger(TAG);
-        try {
-            FileHandler fh = new FileHandler(file);
-            fh.setFormatter(new SimpleFormatter());
-            LOGGER.addHandler(fh);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public boolean isLoggable(String tag, int level) {
@@ -154,9 +137,6 @@ public class Logger {
     }
 
     public int println(int priority, String msg) {
-        if (LOGGER != null) {
-            LOGGER.info(msg);
-        }
         return Log.println(priority, TAG, msg);
     }
 }
