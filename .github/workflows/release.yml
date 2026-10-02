@@ -54,13 +54,13 @@ jobs:
 
     steps:
       - name: Download module zips
-        uses: actions/download-artifact@main
+        uses: actions/download-artifact@v8
         with:
           name: module-zips
           path: dist/zips
 
       - name: Download build metadata
-        uses: actions/download-artifact@main
+        uses: actions/download-artifact@v8
         with:
           name: build-metadata
           path: dist/metadata
@@ -129,7 +129,7 @@ jobs:
           } > release-note.md
 
       - name: Publish release
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ inputs.release_tag }}
           name: ${{ inputs.release_title }}

@@ -45,13 +45,13 @@ jobs:
 
     steps:
       - name: Download module zips
-        uses: actions/download-artifact@main
+        uses: actions/download-artifact@v8
         with:
           name: module-zips
           path: dist/zips
 
       - name: Download build metadata
-        uses: actions/download-artifact@main
+        uses: actions/download-artifact@v8
         with:
           name: build-metadata
           path: dist/metadata
@@ -71,6 +71,16 @@ jobs:
         run: |
           set -euo pipefail
           test -n "${GH_TOKEN:-}"
+
+          if ! gh repo view "$TARGET_REPO" >/dev/null 2>&1; then
+            echo "::warning title=KernelSU upstream unavailable::${TARGET_REPO} is unavailable; skipping community release sync."
+            {
+              echo "## KernelSU community release"
+              echo
+              echo "Skipped because upstream repository \`${TARGET_REPO}\` is unavailable."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
           tag_ref_exists() {
             local tag="$1"

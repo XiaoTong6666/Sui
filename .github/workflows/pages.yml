@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Download build metadata
-        uses: actions/download-artifact@main
+        uses: actions/download-artifact@v8
         with:
           name: build-metadata
           path: dist/metadata
