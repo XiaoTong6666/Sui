@@ -1,26 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `557`
-- **Commit:** [`4c79536`](https://github.com/XiaoTong6666/Sui/commit/4c795366ba5ce4ba47d0017c176f87335e8249a3)
-- **Build time:** `5m 27s`
-- **SHA256:** `57bcd7786ec1ec99f2552793b73879bf8c9fbb7baefe4f50646de3eaeafc1a7f`
+- **VersionCode:** `558`
+- **Commit:** [`6f2b94b`](https://github.com/XiaoTong6666/Sui/commit/6f2b94b4104e3cf0be91e3281c3cb0705590e2dd)
+- **Build time:** `1m 36s`
+- **SHA256:** `2bbcc5ee921d820341419d6c20dc76cffa62b5e741459338a454ee05e416c1dc`
 
 ## Message
 
 ```text
-build(deps): bump androidx.annotation:annotation from 1.10.0 to 1.11.0 (#127)
+build: update native toolchain and harden KSU sync
 
-Bumps androidx.annotation:annotation from 1.10.0 to 1.11.0.
-
----
-updated-dependencies:
-- dependency-name: androidx.annotation:annotation
-  dependency-version: 1.11.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
 ```
