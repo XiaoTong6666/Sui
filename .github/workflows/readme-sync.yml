@@ -33,7 +33,7 @@ jobs:
       - name: Checkout module repository
         uses: actions/checkout@v7
         with:
-          repository: KernelSU-Modules-Repo/zygisk-sui
+          repository: XiaoTong6666/zygisk-sui
           token: ${{ secrets.KSU_REPO_TOKEN }}
           path: module-repo
           persist-credentials: true

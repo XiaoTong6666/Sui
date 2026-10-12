@@ -64,7 +64,7 @@ jobs:
     uses: ./.github/workflows/ksu-release.yml
     with:
       main_repo: XiaoTong6666/Sui
-      ksu_target_repo: KernelSU-Modules-Repo/zygisk-sui
+      ksu_target_repo: XiaoTong6666/zygisk-sui
       version_name: ${{ needs.build.outputs.version_name }}
       version_code: ${{ needs.build.outputs.version_code }}
       commit_sha: ${{ needs.build.outputs.commit_sha }}
