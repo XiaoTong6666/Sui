@@ -1,14 +1,14 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `561`
-- **Commit:** [`ff124fb`](https://github.com/XiaoTong6666/Sui/commit/ff124fb246a7c977980b14f644d11f26403bf035)
-- **Build time:** `2m 19s`
-- **SHA256:** `75ac1b9ac2d468fbfd8ea658aa9a59fef02fed6a834ecba3c2116d62287051b0`
+- **VersionCode:** `562`
+- **Commit:** [`b033d81`](https://github.com/XiaoTong6666/Sui/commit/b033d813cad6362f14befd0d54fc1b5c822106cc)
+- **Build time:** `3m 43s`
+- **SHA256:** `2a3c0f220ba2e3343499cfa6b03ea5ee02e9521b892e34dd6910177954d9efdf`
 
 ## Message
 
 ```text
-ci: redirect module publishing to owned repository, Meow
+build(deps): sync Gradle updates and Shizuku API, Meow
 
 ```
