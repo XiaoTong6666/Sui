@@ -1,6 +1,6 @@
 [versions]
 agp = "9.4.1"
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 hidden-api = "4.4.0"
 refine = "4.4.0"
 libcxx = "30.0.16248370"
@@ -16,7 +16,7 @@ lifecycle = "2.11.0"
 material = "1.14.0"
 dynamicanimation = "1.1.0"
 appiconloader = "1.5.0"
-spotless = "8.10.3"
+spotless = "8.10.4"
 support-annotations = "28.0.0"
 
 [libraries]
