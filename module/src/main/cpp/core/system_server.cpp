@@ -36,6 +36,7 @@
 #include <cinttypes>
 #include <string>
 #include <vector>
+#include <atomic>
 #include <unordered_set>
 #include <shared_mutex>
 
@@ -64,27 +65,83 @@ static jint broadcastIntentTransactionCode = -1;
 static jint broadcastIntentWithFeatureTransactionCode = -1;
 
 static std::unordered_set<uid_t> hiddenUids;
+static std::unordered_set<uid_t> rootUids;
+static std::unordered_set<uid_t> deniedUids;
+static std::unordered_set<uid_t> shellUids;
+static bool defaultHidden = false;
 static std::shared_mutex hiddenUidsMutex;
+static bool legacyCompatEnabled = false;
+static std::atomic_bool legacyCompatFastEnabled{false};
 
-static void setHiddenUids(JNIEnv* env, jclass, jintArray uids) {
-    std::unique_lock lock(hiddenUidsMutex);
-    if (!uids) {
-        hiddenUids.clear();
-        return;
-    }
-
+static bool readUids(JNIEnv* env, jintArray uids, std::unordered_set<uid_t>& result) {
+    if (!uids) return true;
     jsize len = env->GetArrayLength(uids);
+    if (len == 0) return true;
     jint* body = env->GetIntArrayElements(uids, nullptr);
     if (body == nullptr) {
-        return;
+        return false;
     }
-
-    hiddenUids.clear();
     for (jsize i = 0; i < len; i++) {
-        hiddenUids.insert((uid_t)body[i]);
+        result.insert((uid_t)body[i]);
     }
     env->ReleaseIntArrayElements(uids, body, JNI_ABORT);
+    return true;
+}
+
+static jboolean setPermissionSnapshot(JNIEnv* env, jclass, jintArray hidden, jintArray root,
+                                      jintArray denied, jintArray shell, jboolean isDefaultHidden,
+                                      jboolean enabled) {
+    std::unordered_set<uid_t> newHidden, newRoot, newDenied, newShell;
+    if (!readUids(env, hidden, newHidden) || !readUids(env, root, newRoot) ||
+        !readUids(env, denied, newDenied) || !readUids(env, shell, newShell)) {
+        return JNI_FALSE;
+    }
+
+    std::unique_lock lock(hiddenUidsMutex);
+    hiddenUids.swap(newHidden);
+    rootUids.swap(newRoot);
+    deniedUids.swap(newDenied);
+    shellUids.swap(newShell);
+    defaultHidden = isDefaultHidden == JNI_TRUE;
+    legacyCompatEnabled = enabled == JNI_TRUE;
+    legacyCompatFastEnabled.store(legacyCompatEnabled, std::memory_order_release);
     LOGD("updated %zu hidden uids", hiddenUids.size());
+    return JNI_TRUE;
+}
+
+static bool isUidHiddenLocked(uid_t uid) {
+    if (hiddenUids.find(uid) != hiddenUids.end()) return true;
+    if (deniedUids.find(uid) != deniedUids.end() || rootUids.find(uid) != rootUids.end() ||
+        shellUids.find(uid) != shellUids.end()) return false;
+    return defaultHidden;
+}
+
+static bool isUidHidden(uid_t uid) {
+    std::shared_lock lock(hiddenUidsMutex);
+    return isUidHiddenLocked(uid);
+}
+
+static bool shouldSkipLegacy(uid_t uid) {
+    std::shared_lock lock(hiddenUidsMutex);
+    return !legacyCompatEnabled || isUidHiddenLocked(uid);
+}
+
+static uid_t getCallingUid(JNIEnv* env) {
+    static AIBinder_getCallingUid_t get_uid_ndk = []() -> AIBinder_getCallingUid_t {
+        void* libbinder_ndk = dlopen("libbinder_ndk.so", RTLD_NOW);
+        return libbinder_ndk ? (AIBinder_getCallingUid_t)dlsym(libbinder_ndk, "AIBinder_getCallingUid")
+                             : nullptr;
+    }();
+
+    if (get_uid_ndk) return get_uid_ndk();
+    if (!getCallingUidMethodID) return (uid_t)-1;
+    jint uid = env->CallStaticIntMethod(javaBinderClass, getCallingUidMethodID);
+    if (env->ExceptionCheck()) {
+        env->ExceptionDescribe();
+        env->ExceptionClear();
+        return (uid_t)-1;
+    }
+    return (uid_t)uid;
 }
 
 static jint getIActivityManagerTransactionCode(JNIEnv* env, jclass stubClass, const char* name) {
@@ -126,7 +183,7 @@ static bool installDex(JNIEnv* env, Dex* dexFile) {
     jobjectArray args = nullptr;
     jmethodID mainMethod = nullptr;
     JNINativeMethod methods[] = {
-        {"setHiddenUids", "([I)V", (void*)setHiddenUids},
+        {"setPermissionSnapshot", "([I[I[I[IZZ)Z", (void*)setPermissionSnapshot},
     };
 
     if (android_get_device_api_level() < 27) {
@@ -263,20 +320,7 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
     va_end(copy);
 
     if (code == BridgeService::BRIDGE_TRANSACTION_CODE) {
-        static void* libbinder_ndk = dlopen("libbinder_ndk.so", RTLD_NOW);
-        static AIBinder_getCallingUid_t get_uid_ndk = nullptr;
-
-        if (libbinder_ndk && !get_uid_ndk) {
-            get_uid_ndk = (AIBinder_getCallingUid_t)dlsym(libbinder_ndk, "AIBinder_getCallingUid");
-        }
-
-        uid_t uid = -1;
-
-        if (get_uid_ndk) {
-            uid = get_uid_ndk();
-        } else if (getCallingUidMethodID) {
-            uid = (uid_t)env->CallStaticIntMethod(javaBinderClass, getCallingUidMethodID);
-        }
+        uid_t uid = getCallingUid(env);
 
         if (uid != (uid_t)-1 && uid >= 10000) {
             uid_t app_id = uid % 100000;
@@ -285,13 +329,7 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
                 return false;
             }
 
-            {
-                std::shared_lock lock(hiddenUidsMutex);
-                if (hiddenUids.find(uid) != hiddenUids.end()) {
-                    return false;
-                }
-            }
-
+            if (isUidHidden(uid)) return false;
             if (isUidHiddenEffectiveMethodID &&
                 env->CallStaticBooleanMethod(mainClass, isUidHiddenEffectiveMethodID, (jint)uid)) {
                 if (env->ExceptionCheck()) {
@@ -313,6 +351,10 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
 
     if (code == broadcastIntentTransactionCode ||
         code == broadcastIntentWithFeatureTransactionCode) {
+        if (!legacyCompatFastEnabled.load(std::memory_order_acquire)) return false;
+        uid_t uid = getCallingUid(env);
+        if (uid == (uid_t)-1 || shouldSkipLegacy(uid)) return false;
+
         *res = env->CallStaticBooleanMethod(mainClass, my_execTransactMethodID, obj, code, dataObj,
                                             replyObj, flags);
         if (env->ExceptionCheck()) {

@@ -50,9 +50,13 @@ using SetTableOverride_t = void(JNINativeInterface*);
 
 static jboolean new_CallBooleanMethodV(JNIEnv* env, jobject obj, jmethodID methodId, va_list args) {
     if (methodId == original_execTransactMethodID) {
-        int logCount = execTransactDispatchLogCount.fetch_add(1, std::memory_order_relaxed);
-        if (logCount < 16) {
-            LOGI("BinderHook: intercepted Binder.execTransact (sample=%d)", logCount + 1);
+        int logCount = execTransactDispatchLogCount.load(std::memory_order_relaxed);
+        while (logCount < 16) {
+            if (execTransactDispatchLogCount.compare_exchange_weak(
+                    logCount, logCount + 1, std::memory_order_relaxed)) {
+                LOGI("BinderHook: intercepted Binder.execTransact (sample=%d)", logCount + 1);
+                break;
+            }
         }
         jboolean res = false;
         if (my_ExecTransact(&res, env, obj, args))

@@ -31,10 +31,7 @@ import android.os.Parcel;
 import androidx.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import moe.shizuku.server.IShizukuService;
 import rikka.hidden.compat.PackageManagerApis;
-import rikka.shizuku.ShizukuApiConstants;
-import rikka.sui.server.ServerConstants;
 
 final class LegacyShizukuBinderCompat {
 
@@ -44,7 +41,6 @@ final class LegacyShizukuBinderCompat {
     private static final String EXTRA_DATA = "data";
     private static final String EXTRA_BINDER = "binder";
     private static final int CALLBACK_TRANSACTION = 1;
-    private static final int FLAG_LEGACY_SHIZUKU_BINDER_COMPAT = 1 << 2;
 
     private static final int broadcastIntentTransaction = findTransaction("TRANSACTION_broadcastIntent");
     private static final int broadcastIntentWithFeatureTransaction =
@@ -99,10 +95,19 @@ final class LegacyShizukuBinderCompat {
     }
 
     static boolean handle(Binder binder, int code, Parcel data, @Nullable Parcel reply) {
+        if (!SystemProcess.isLegacyCompatEnabled()) {
+            return false;
+        }
+
         int stringArgumentCount = code == broadcastIntentTransaction
                 ? broadcastIntentStringArgumentCount
                 : code == broadcastIntentWithFeatureTransaction ? broadcastIntentWithFeatureStringArgumentCount : -1;
         if (stringArgumentCount == -1) {
+            return false;
+        }
+
+        int callingUid = Binder.getCallingUid();
+        if (SystemProcess.isUidHiddenEffective(callingUid)) {
             return false;
         }
 
@@ -118,8 +123,8 @@ final class LegacyShizukuBinderCompat {
                 return false;
             }
 
-            int callingUid = Binder.getCallingUid();
-            if (!isEnabled() || isShizukuInstalled(callingUid) || SystemProcess.isUidHiddenEffective(callingUid)) {
+            // Only the running root server can serve the legacy callback.
+            if (BridgeService.get() == null || isShizukuInstalled(callingUid)) {
                 return false;
             }
 
@@ -183,25 +188,4 @@ final class LegacyShizukuBinderCompat {
         return applicationInfo != null && applicationInfo.enabled;
     }
 
-    private static boolean isEnabled() {
-        IShizukuService service = BridgeService.get();
-        if (service == null) {
-            return false;
-        }
-
-        Parcel data = Parcel.obtain();
-        Parcel reply = Parcel.obtain();
-        try {
-            data.writeInterfaceToken(ShizukuApiConstants.BINDER_DESCRIPTOR);
-            service.asBinder().transact(ServerConstants.BINDER_TRANSACTION_getGlobalSettings, data, reply, 0);
-            reply.readException();
-            return (reply.readInt() & FLAG_LEGACY_SHIZUKU_BINDER_COMPAT) != 0;
-        } catch (Throwable e) {
-            LOGGER.w(e, "read legacy Shizuku compatibility setting");
-            return false;
-        } finally {
-            data.recycle();
-            reply.recycle();
-        }
-    }
 }

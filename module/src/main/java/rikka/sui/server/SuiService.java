@@ -81,6 +81,8 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     private static SuiService instance;
     private static String filesPath;
     private static boolean shellMode = false;
+    private final Object uidSyncLock = new Object();
+    private final Runnable retryUidSync = () -> syncUidsToSystemServer();
     private final java.util.concurrent.ConcurrentHashMap<String, DelegatedPermissionCallback>
             delegatedPermissionCallbacks = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -767,13 +769,23 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         return callingUid == systemUiUid;
     }
 
-    private void syncUidsToSystemServer() {
-        BridgeServiceClient.syncUids(
-                configManager.getHiddenUids(),
-                getRootUidsWithSystem(),
-                configManager.getDeniedUids(),
-                configManager.getShellUids(),
-                configManager.getDefaultPermissionFlags());
+    private boolean syncUidsToSystemServer() {
+        if (shellMode) return false;
+        synchronized (uidSyncLock) {
+            boolean applied = BridgeServiceClient.syncUids(
+                    configManager.getHiddenUids(),
+                    getRootUidsWithSystem(),
+                    configManager.getDeniedUids(),
+                    configManager.getShellUids(),
+                    configManager.getDefaultPermissionFlags(),
+                    (configManager.getGlobalSettings() & SuiConfigManager.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT) != 0);
+            mainHandler.removeCallbacks(retryUidSync);
+            if (!applied) {
+                LOGGER.w("permission snapshot sync failed, retrying");
+                mainHandler.postDelayed(retryUidSync, 1000);
+            }
+            return applied;
+        }
     }
 
     private java.util.List<ClientFallback> flushShellRoutingState() {
@@ -1610,6 +1622,11 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             try {
                 enforceManagerPermission("setGlobalSettings");
                 configManager.setGlobalSettings(settingFlags);
+                if (!shellMode) {
+                    if (!syncUidsToSystemServer()) {
+                        throw new IllegalStateException("global settings saved but system_server sync pending");
+                    }
+                }
                 reply.writeNoException();
             } catch (Throwable e) {
                 LOGGER.w(e, "setGlobalSettings");
