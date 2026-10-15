@@ -49,7 +49,7 @@ public class BridgeService {
     };
 
     private static volatile IBinder rootServiceBinder;
-    private static IShizukuService rootService;
+    private static volatile IShizukuService rootService;
     private static volatile IBinder shellServiceBinder;
     private static IShizukuService shellService;
     private static volatile boolean serviceStarted;
@@ -233,9 +233,15 @@ public class BridgeService {
                     if (data.dataAvail() >= Integer.BYTES) {
                         deniedUids = data.createIntArray();
                     }
-                    SystemProcess.updateUids(hiddenUids, rootUids, deniedUids, shellUids, defaultFlags);
+                    boolean legacyCompatEnabled = data.dataAvail() >= Integer.BYTES && data.readInt() != 0;
+                    boolean applied = SystemProcess.updateUids(
+                            hiddenUids, rootUids, deniedUids, shellUids, defaultFlags, legacyCompatEnabled);
                     if (reply != null) {
-                        reply.writeNoException();
+                        if (applied) {
+                            reply.writeNoException();
+                        } else {
+                            reply.writeException(new IllegalStateException("permission snapshot not applied"));
+                        }
                     }
                     return true;
                 }

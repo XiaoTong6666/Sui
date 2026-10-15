@@ -33,11 +33,28 @@ import rikka.sui.util.ParcelUtils;
 public final class SystemProcess {
 
     private static final BridgeService SERVICE = new BridgeService();
-    private static volatile int[] hiddenUids = new int[0];
-    private static volatile int[] rootUids = new int[0];
-    private static volatile int[] deniedUids = new int[0];
-    private static volatile int[] shellUids = new int[0];
-    private static volatile int defaultPermissionFlags = 0;
+
+    private static final class PermissionSnapshot {
+        final int[] hidden;
+        final int[] root;
+        final int[] denied;
+        final int[] shell;
+        final int defaultFlags;
+        final boolean legacyCompatEnabled;
+
+        PermissionSnapshot(
+                int[] hidden, int[] root, int[] denied, int[] shell, int defaultFlags, boolean legacyCompatEnabled) {
+            this.hidden = hidden;
+            this.root = root;
+            this.denied = denied;
+            this.shell = shell;
+            this.defaultFlags = defaultFlags;
+            this.legacyCompatEnabled = legacyCompatEnabled;
+        }
+    }
+
+    private static volatile PermissionSnapshot permissionSnapshot =
+            new PermissionSnapshot(new int[0], new int[0], new int[0], new int[0], 0, false);
 
     private static boolean execActivityTransaction(
             @NonNull Binder binder, int code, Parcel data, Parcel reply, int flags) {
@@ -94,7 +111,7 @@ public final class SystemProcess {
             if (service != null) {
                 int[] uids = service.getHiddenUids();
                 LOGGER.d("syncing %d hidden uids to native and Java cache", uids.length);
-                updateUids(uids, new int[0], new int[0], new int[0], 0);
+                updateUids(uids, new int[0], new int[0], new int[0], 0, false);
             } else {
                 LOGGER.w("IShizukuService is null in SystemProcess.main");
             }
@@ -103,43 +120,66 @@ public final class SystemProcess {
         }
     }
 
-    public static void updateUids(int[] hidden, int[] root, int[] denied, int[] shell, int defaultFlags) {
-        if (hidden == null) hidden = new int[0];
-        if (root == null) root = new int[0];
-        if (denied == null) denied = new int[0];
-        if (shell == null) shell = new int[0];
+    public static synchronized boolean updateUids(
+            int[] hidden, int[] root, int[] denied, int[] shell, int defaultFlags, boolean legacyCompatEnabled) {
+        int[] newHidden = sortedCopy(hidden);
+        int[] newRoot = sortedCopy(root);
+        int[] newDenied = sortedCopy(denied);
+        int[] newShell = sortedCopy(shell);
+        int newDefaultFlags = defaultFlags & SuiConfig.MASK_PERMISSION;
 
-        Arrays.sort(hidden);
-        Arrays.sort(root);
-        Arrays.sort(denied);
-        Arrays.sort(shell);
-
-        hiddenUids = hidden;
-        rootUids = root;
-        deniedUids = denied;
-        shellUids = shell;
-        defaultPermissionFlags = defaultFlags & SuiConfig.MASK_PERMISSION;
-
+        // Only publish the Java snapshot if native accepted the complete update.
+        if (!setPermissionSnapshot(
+                newHidden,
+                newRoot,
+                newDenied,
+                newShell,
+                (newDefaultFlags & SuiConfig.FLAG_HIDDEN) != 0,
+                legacyCompatEnabled)) {
+            LOGGER.w("native permission snapshot update failed");
+            return false;
+        }
+        permissionSnapshot =
+                new PermissionSnapshot(newHidden, newRoot, newDenied, newShell, newDefaultFlags, legacyCompatEnabled);
         LOGGER.d(
-                "syncing %d hidden, %d root, %d denied, %d shell uids to native, defaultFlags=%d",
-                hidden.length, root.length, denied.length, shell.length, defaultPermissionFlags);
-        setHiddenUids(hidden);
+                "synced %d hidden, %d root, %d denied, %d shell uids, defaultFlags=%d, legacy=%s",
+                newHidden.length,
+                newRoot.length,
+                newDenied.length,
+                newShell.length,
+                newDefaultFlags,
+                legacyCompatEnabled);
+        return true;
     }
 
-    public static boolean isHidden(int uid) {
-        int[] uids = hiddenUids;
+    private static int[] sortedCopy(int[] source) {
+        int[] copy = source == null ? new int[0] : source.clone();
+        Arrays.sort(copy);
+        return copy;
+    }
+
+    private static boolean contains(int[] uids, int uid) {
         return Arrays.binarySearch(uids, uid) >= 0;
     }
 
+    public static boolean isLegacyCompatEnabled() {
+        return permissionSnapshot.legacyCompatEnabled;
+    }
+
+    public static boolean isHidden(int uid) {
+        return contains(permissionSnapshot.hidden, uid);
+    }
+
     public static int getEffectivePermissionFlags(int uid) {
-        int flags = defaultPermissionFlags;
-        if (isHidden(uid)) {
+        PermissionSnapshot snapshot = permissionSnapshot;
+        int flags = snapshot.defaultFlags;
+        if (contains(snapshot.hidden, uid)) {
             flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_HIDDEN;
-        } else if (isDenied(uid)) {
+        } else if (contains(snapshot.denied, uid)) {
             flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_DENIED;
-        } else if (isRootAllowed(uid)) {
+        } else if (contains(snapshot.root, uid)) {
             flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_ALLOWED;
-        } else if (isShellAllowed(uid)) {
+        } else if (contains(snapshot.shell, uid)) {
             flags = (flags & ~SuiConfig.MASK_PERMISSION) | SuiConfig.FLAG_ALLOWED_SHELL;
         }
         return flags & SuiConfig.MASK_PERMISSION;
@@ -150,25 +190,23 @@ public final class SystemProcess {
     }
 
     public static boolean isRootAllowed(int uid) {
-        int[] uids = rootUids;
-        return Arrays.binarySearch(uids, uid) >= 0;
+        return contains(permissionSnapshot.root, uid);
     }
 
     public static boolean isShellAllowed(int uid) {
-        int[] uids = shellUids;
-        return Arrays.binarySearch(uids, uid) >= 0;
+        return contains(permissionSnapshot.shell, uid);
     }
 
     public static boolean isDenied(int uid) {
-        int[] uids = deniedUids;
-        return Arrays.binarySearch(uids, uid) >= 0;
+        return contains(permissionSnapshot.denied, uid);
     }
 
     public static int getDefaultPermissionFlags() {
-        return defaultPermissionFlags;
+        return permissionSnapshot.defaultFlags;
     }
 
     @Keep
     @SuppressWarnings("JavaJniMissingFunction")
-    private static native void setHiddenUids(int[] uids);
+    private static native boolean setPermissionSnapshot(
+            int[] hidden, int[] root, int[] denied, int[] shell, boolean defaultHidden, boolean legacyCompatEnabled);
 }

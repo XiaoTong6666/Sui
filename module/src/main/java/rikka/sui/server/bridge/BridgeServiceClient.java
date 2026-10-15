@@ -231,10 +231,16 @@ public class BridgeServiceClient {
         }
     }
 
-    public static void syncUids(int[] hiddenUids, int[] rootUids, int[] deniedUids, int[] shellUids, int defaultFlags) {
+    public static boolean syncUids(
+            int[] hiddenUids,
+            int[] rootUids,
+            int[] deniedUids,
+            int[] shellUids,
+            int defaultFlags,
+            boolean legacyCompatEnabled) {
         IBinder bridgeService = ServiceManager.getService(BridgeConstants.SERVICE_NAME);
         if (bridgeService == null) {
-            return;
+            return false;
         }
 
         Parcel data = Parcel.obtain();
@@ -247,10 +253,15 @@ public class BridgeServiceClient {
             data.writeIntArray(shellUids);
             data.writeInt(defaultFlags);
             data.writeIntArray(deniedUids);
-            bridgeService.transact(BridgeConstants.TRANSACTION_CODE, data, reply, 0);
+            data.writeInt(legacyCompatEnabled ? 1 : 0);
+            if (!bridgeService.transact(BridgeConstants.TRANSACTION_CODE, data, reply, 0)) {
+                return false;
+            }
             reply.readException();
+            return true;
         } catch (Throwable e) {
             LOGGER.e(e, "sync uids");
+            return false;
         } finally {
             data.recycle();
             reply.recycle();

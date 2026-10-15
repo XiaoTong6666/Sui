@@ -180,9 +180,10 @@ public class AppListBuilder {
                         boolean hasData = (dataDir != null
                                         && MapUtil.getOrPut(existenceCache, dataDir, () -> new File(dataDir).exists()))
                                 || (deviceProtectedDataDir != null
-                                        && MapUtil.getOrPut(existenceCache, deviceProtectedDataDir, () -> new File(
-                                                        deviceProtectedDataDir)
-                                                .exists()));
+                                        && MapUtil.getOrPut(
+                                                existenceCache,
+                                                deviceProtectedDataDir,
+                                                () -> new File(deviceProtectedDataDir).exists()));
 
                         // Installed (or hidden): hasApk && hasData
                         // Uninstalled but keep data: !hasApk && hasData

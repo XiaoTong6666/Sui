@@ -40,6 +40,7 @@ public class SuiConfigManager extends ConfigManager {
     public static final int DEFAULT_UID = -1;
     private static final int FLAG_GLOBAL_SETTINGS_INITIALIZED = 1 << 30;
     private static final int FLAG_MONET_DISABLED = 1 << 1;
+    public static final int FLAG_LEGACY_SHIZUKU_BINDER_COMPAT = 1 << 2;
     private static final int FLAG_KSU_NO_ESCAPE = 1 << 3;
     private static final int FLAG_ADB_ROOT_ONCE = 1 << 4;
     private static final int FLAG_ADB_ROOT_ALWAYS = 1 << 5;
