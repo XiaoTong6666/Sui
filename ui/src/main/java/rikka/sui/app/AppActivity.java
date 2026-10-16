@@ -24,7 +24,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.view.View;
@@ -34,13 +33,15 @@ import androidx.activity.EdgeToEdge;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.graphics.ColorUtils;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.color.DynamicColors;
+import com.google.android.material.color.MaterialColors;
 import rikka.sui.R;
-import rikka.sui.ktx.ResourcesKt;
+import rikka.sui.util.MaterialTonalColors;
+import rikka.sui.util.MiuixTonalColors;
 import rikka.sui.util.MonetSettings;
+import rikka.sui.util.UiStyleSettings;
 
 public class AppActivity extends AppCompatActivity {
 
@@ -79,19 +80,30 @@ public class AppActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        setTheme(R.style.Theme_Sui);
-
-        final boolean monetEnabled = MonetSettings.isMonetEnabled(this);
-        MonetSettings.syncFromServerAsync(this, (changed, enabled) -> {
-            if (!changed) {
-                return;
+        UiStyleSettings.syncFromServerAsync(this, changed -> {
+            if (changed) {
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) recreate();
+                });
             }
-            runOnUiThread(() -> {
-                if (!isFinishing() && !isDestroyed()) {
-                    recreate();
-                }
-            });
         });
+        final boolean materialUi = UiStyleSettings.isMaterial(this);
+        setTheme(materialUi ? R.style.Theme_Sui_Material : R.style.Theme_Sui);
+
+        final boolean monetEnabled =
+                materialUi ? UiStyleSettings.isMaterialDynamicColorEnabled(this) : MonetSettings.isMonetEnabled(this);
+        if (!materialUi) {
+            MonetSettings.syncFromServerAsync(this, (changed, enabled) -> {
+                if (!changed) {
+                    return;
+                }
+                runOnUiThread(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        recreate();
+                    }
+                });
+            });
+        }
         if (monetEnabled) {
             DynamicColors.applyToActivityIfAvailable(this);
         }
@@ -119,16 +131,30 @@ public class AppActivity extends AppCompatActivity {
 
             EdgeToEdge.enable(this);
 
-            boolean isNight = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
-                    == Configuration.UI_MODE_NIGHT_YES;
-            if (isNight && monetEnabled) {
-                int primaryColor = ResourcesKt.resolveColor(getTheme(), androidx.appcompat.R.attr.colorPrimary);
-                int blendedBg = ColorUtils.blendARGB(Color.BLACK, primaryColor, 0.10f);
-                rootView.setBackgroundColor(blendedBg);
-                if (toolbarContainer != null) {
-                    toolbarContainer.setBackgroundColor(blendedBg);
+            if (materialUi) {
+                int accent = MaterialColors.getColor(rootView, androidx.appcompat.R.attr.colorAccent);
+                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                        == Configuration.UI_MODE_NIGHT_YES;
+                int background = MaterialTonalColors.surfaceContainerFromAccent(accent, dark);
+                rootView.setBackgroundColor(background);
+                toolbarContainer.setBackgroundColor(background);
+                if (toolbar != null) {
+                    toolbar.setBackgroundColor(background);
                 }
-                getWindow().setBackgroundDrawable(new ColorDrawable(blendedBg));
+                getWindow().setBackgroundDrawable(new ColorDrawable(background));
+            }
+
+            if (!materialUi && monetEnabled) {
+                int accent = MaterialColors.getColor(rootView, androidx.appcompat.R.attr.colorAccent);
+                boolean dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                        == Configuration.UI_MODE_NIGHT_YES;
+                int surface = MiuixTonalColors.fromAccent(accent, dark).surface;
+                rootView.setBackgroundColor(surface);
+                toolbarContainer.setBackgroundColor(surface);
+                if (toolbar != null) {
+                    toolbar.setBackgroundColor(surface);
+                }
+                getWindow().setBackgroundDrawable(new ColorDrawable(surface));
             }
         } catch (Throwable t) {
             android.util.Log.e("Sui", "Fatal error in AppActivity.onCreate", t);

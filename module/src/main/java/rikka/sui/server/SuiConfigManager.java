@@ -44,6 +44,7 @@ public class SuiConfigManager extends ConfigManager {
     private static final int FLAG_KSU_NO_ESCAPE = 1 << 3;
     private static final int FLAG_ADB_ROOT_ONCE = 1 << 4;
     private static final int FLAG_ADB_ROOT_ALWAYS = 1 << 5;
+    public static final int MASK_UI_APPEARANCE = (1 << 6) | (1 << 7);
     private static final File KSU_NO_ESCAPE_MARKER = new File("/data/adb/sui/ksu_no_escape");
     private static final File ADB_ROOT_ONCE_MARKER = new File("/data/adb/sui/enable_adb_root_once");
     private static final File ADB_ROOT_ALWAYS_MARKER = new File("/data/adb/sui/enable_adb_root");
@@ -416,7 +417,7 @@ public class SuiConfigManager extends ConfigManager {
         }
     }
 
-    public void setGlobalSettings(int flags) {
+    public synchronized void setGlobalSettings(int flags) {
         boolean enableKsuNoEscape = (flags & FLAG_KSU_NO_ESCAPE) != 0;
         try {
             if (enableKsuNoEscape) {
@@ -470,6 +471,14 @@ public class SuiConfigManager extends ConfigManager {
             throw new IllegalStateException("Failed to update adb root setting", e);
         }
         update(UID_GLOBAL_SETTINGS, 0xFFFFFFFF, flags | FLAG_GLOBAL_SETTINGS_INITIALIZED);
+    }
+
+    public synchronized boolean updateGlobalSettings(int mask, int value) {
+        int current = getGlobalSettings();
+        int updated = (current & ~mask) | (value & mask);
+        if (current == updated) return false;
+        setGlobalSettings(updated);
+        return true;
     }
 
     private SuiConfig.PackageEntry findLocked(int uid) {

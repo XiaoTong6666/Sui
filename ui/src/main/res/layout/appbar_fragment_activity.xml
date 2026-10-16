@@ -26,7 +26,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="@color/miuix_window_background">
+    android:background="@color/miuix_window_background"
+    tools:ignore="Overdraw">
 
     <FrameLayout
         android:id="@+id/toolbar_container"
@@ -34,7 +35,7 @@
         android:layout_height="wrap_content"
         android:background="@color/miuix_appbar_background">
 
-        <androidx.appcompat.widget.Toolbar
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"

@@ -18,11 +18,11 @@
   ~ Copyright (c) 2026 Sui Contributors
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <color name="miuix_window_background">#F7F7F7</color>
     <color name="miuix_appbar_background">#F7F7F7</color>
     <color name="miuix_card_normal">#FFFFFF</color>
-    <color name="miuix_popup_background_color">#D9FFFFFF</color>
+    <color name="miuix_popup_background_color" tools:ignore="UnusedResources">#D9FFFFFF</color>
     <color name="miuix_card_pressed">#E5E5E5</color>
 
     <color name="miuix_bottom_sheet_bg_color">#FFFFFF</color>

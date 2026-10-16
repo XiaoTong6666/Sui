@@ -29,6 +29,9 @@
         android:id="@+id/action_add_shortcut"
         android:title="@string/action_add_shortcut" />
     <item
+        android:id="@+id/action_ui_style"
+        android:title="@string/action_ui_style" />
+    <item
         android:id="@+id/action_monet"
         android:title="@string/action_monet"
         android:checkable="true" />

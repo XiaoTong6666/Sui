@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/material_permission_sheet"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="bottom"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingTop="16dp"
+    android:paddingEnd="24dp"
+    android:paddingBottom="24dp">
+
+    <View
+        android:layout_width="32dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="28dp"
+        android:background="@drawable/material_permission_handle"
+        android:importantForAccessibility="no" />
+
+    <ImageView
+        android:id="@android:id/icon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="16dp"
+        android:importantForAccessibility="no"
+        app:tint="?attr/colorPrimary"
+        tools:src="@drawable/ic_su_24" />
+
+    <TextView
+        android:id="@android:id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"
+        android:fontFamily="sans-serif-medium"
+        android:gravity="center"
+        android:lineSpacingExtra="4dp"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="22sp"
+        tools:text="Allow example app to have full access of the device?" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <rikka.sui.widget.MaterialExpressiveButton
+                android:id="@+id/button1_root"
+                style="@style/Widget.Material3.Button"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginBottom="8dp"
+                android:textSize="14sp"
+                app:cornerRadius="20dp"
+                tools:text="Always (root)" />
+
+            <rikka.sui.widget.MaterialExpressiveButton
+                android:id="@+id/button1_shell"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginBottom="8dp"
+                android:textSize="14sp"
+                app:cornerRadius="20dp"
+                tools:text="Always (Shell)" />
+
+            <rikka.sui.widget.MaterialExpressiveButton
+                android:id="@+id/button2"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginBottom="8dp"
+                android:textSize="14sp"
+                app:cornerRadius="20dp"
+                tools:text="Only this time (root)" />
+
+            <rikka.sui.widget.MaterialExpressiveButton
+                android:id="@android:id/button3"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:textSize="14sp"
+                app:cornerRadius="20dp"
+                tools:text="Deny, don't ask again" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

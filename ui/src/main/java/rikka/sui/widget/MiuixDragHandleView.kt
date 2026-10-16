@@ -1,6 +1,7 @@
 package rikka.sui.widget
 
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -51,6 +52,7 @@ class MiuixDragHandleView @JvmOverloads constructor(
         canvas.drawRoundRect(rectF, radius, radius, paint)
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean = when (event.actionMasked) {
         MotionEvent.ACTION_DOWN -> {
             isPressing = true

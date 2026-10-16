@@ -114,6 +114,7 @@ class MiuixPullToRefreshView @JvmOverloads constructor(
         paint.strokeWidth = ringStrokeWidthPx
     }
 
+    @SuppressLint("UseKtx")
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         if (state == RefreshState.IDLE) return

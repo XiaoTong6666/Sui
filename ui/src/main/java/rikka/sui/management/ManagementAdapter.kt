@@ -31,12 +31,14 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import rikka.sui.model.AppInfo
+import rikka.sui.util.UiStyleSettings
 
 class ManagementAdapter(
     context: Context,
 ) : RecyclerView.Adapter<ManagementAppItemViewHolder>() {
 
     private val inflater = LayoutInflater.from(context)
+    private val materialUi = UiStyleSettings.isMaterial(context)
     private val adapterScope = MainScope()
     private val items = ArrayList<AppInfo>()
     private var updateJob: Job? = null
@@ -53,10 +55,11 @@ class ManagementAdapter(
         return uid * 31L + item.packageInfo.packageName.hashCode().toLong()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ManagementAppItemViewHolder = ManagementAppItemViewHolder.create(inflater, parent)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ManagementAppItemViewHolder = ManagementAppItemViewHolder.create(inflater, parent, materialUi)
 
     override fun onBindViewHolder(holder: ManagementAppItemViewHolder, position: Int) {
         holder.bind(items[position], this)
+        if (materialUi) holder.updateMaterialAppearance(position, items.size)
     }
 
     override fun onViewRecycled(holder: ManagementAppItemViewHolder) {

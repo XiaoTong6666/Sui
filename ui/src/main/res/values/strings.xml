@@ -18,7 +18,7 @@
   ~ Copyright (c) 2026 Sui Contributors
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="permission_warning_template"><![CDATA[Allow <b>%1$s</b> to %2$s?]]></string>
     <string name="permission_description">have the full access of the device</string>
     <string name="grant_dialog_button_allow_always">Always (root)</string>
@@ -33,13 +33,17 @@
     <string name="permission_ask">Ask</string>
     <string name="permission_default">Default</string>
     <string name="shortcut_is_out_dated">This shortcut is outdated, please remove this shortcut add it again.</string>
-    <string name="action_search">Search</string>
+    <string name="action_search" tools:ignore="UnusedResources">Search</string>
     <string name="action_add_shortcut">Add shortcut to home screen</string>
     <string name="action_about">About</string>
     <string name="about_button_ok">OK</string>
+    <string name="about_title" translatable="false">Sui</string>
     <string name="action_batch_unconfigured">Modify default value</string>
     <string name="action_filter_shizuku_apps">Show only Shizuku apps</string>
     <string name="action_monet">Monet dynamic color</string>
+    <string name="action_ui_style">UI style</string>
+    <string name="ui_style_miuix" translatable="false">MIUIX</string>
+    <string name="ui_style_material" translatable="false">Material</string>
     <string name="action_legacy_shizuku_binder_compat">Legacy Shizuku support</string>
     <string name="action_ksu_no_escape">Block Shell root (KSU)</string>
     <string name="toast_ksu_no_escape_failed">Failed to update KSU root protection</string>
@@ -52,9 +56,9 @@
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">This project is licensed under GPLv3 and open source on </string>
     <string name="about_license_part2">GitHub</string>
-    <string name="about_license_part3">.\nCopyright (c) 2021-2026 Sui Contributors</string>
+    <string name="about_license_part3" tools:ignore="TypographyOther,TypographyDashes">.\nCopyright (c) 2021-2026 Sui Contributors</string>
     <string name="about_contributors">Contributors: %1$s</string>
-    <string name="toast_request_shortcut">Trying to create...</string>
+    <string name="toast_request_shortcut" tools:ignore="TypographyEllipsis">Trying to create...</string>
     <string name="toast_request_shortcut_failed">Failed to create: %1$s</string>
     <string name="toast_legacy_shizuku_binder_compat_failed">Failed to update compatibility mode</string>
 </resources>

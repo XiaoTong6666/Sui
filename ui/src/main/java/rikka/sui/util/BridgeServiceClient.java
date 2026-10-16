@@ -39,12 +39,15 @@ public class BridgeServiceClient {
     public static final int FLAG_KSU_NO_ESCAPE = 1 << 3;
     public static final int FLAG_ADB_ROOT_ONCE = 1 << 4;
     public static final int FLAG_ADB_ROOT_ALWAYS = 1 << 5;
+    public static final int FLAG_UI_MATERIAL = 1 << 6;
+    public static final int FLAG_MATERIAL_DYNAMIC_DISABLED = 1 << 7;
 
     private static final int BINDER_TRANSACTION_getApplications = 10001;
     private static final int BINDER_TRANSACTION_REQUEST_PINNED_SHORTCUT_FROM_UI = 10005;
     private static final int BINDER_TRANSACTION_BATCH_UPDATE_UNCONFIGURED = 10006;
     private static final int BINDER_TRANSACTION_setGlobalSettings = 10007;
     private static final int BINDER_TRANSACTION_getGlobalSettings = 10008;
+    private static final int BINDER_TRANSACTION_updateGlobalSettings = 10013;
     private static final int RETRY_MAX = 5;
     private static final long RETRY_DELAY_MS = 1000;
     private static IBinder binder;
@@ -107,6 +110,30 @@ public class BridgeServiceClient {
             return false;
         } catch (Throwable e) {
             android.util.Log.e("SuiBridgeDebug", "Exception when calling setGlobalSettings via binder", e);
+            return false;
+        } finally {
+            data.recycle();
+            reply.recycle();
+        }
+    }
+
+    public static boolean updateGlobalSettings(int mask, int value) {
+        IShizukuService s = getService();
+        if (s == null) return false;
+
+        Parcel data = Parcel.obtain();
+        Parcel reply = Parcel.obtain();
+        try {
+            data.writeInterfaceToken("moe.shizuku.server.IShizukuService");
+            data.writeInt(mask);
+            data.writeInt(value & mask);
+            if (!s.asBinder().transact(BINDER_TRANSACTION_updateGlobalSettings, data, reply, 0)) {
+                return false;
+            }
+            reply.readException();
+            return true;
+        } catch (Throwable e) {
+            android.util.Log.e("SuiBridgeDebug", "Failed to update masked global settings", e);
             return false;
         } finally {
             data.recycle();

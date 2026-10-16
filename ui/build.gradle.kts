@@ -99,6 +99,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
 
     implementation(libs.google.material)
+    implementation(libs.material.color.utilities)
     implementation(libs.androidx.dynamicanimation)
     implementation(libs.appiconloader)
 }

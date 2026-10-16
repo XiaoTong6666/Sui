@@ -28,42 +28,55 @@ import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
+import android.widget.PopupWindow
+import android.widget.TextView
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.graphics.ColorUtils
 import androidx.core.view.get
 import androidx.core.view.size
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.listitem.ListItemCardView
+import com.google.android.material.listitem.ListItemLayout
 import kotlinx.coroutines.Job
 import rikka.sui.R
-import rikka.sui.databinding.ManagementAppItemBinding
 import rikka.sui.ktx.resolveColor
 import rikka.sui.model.AppInfo
 import rikka.sui.server.SuiConfig
 import rikka.sui.util.AppIconCache
 import rikka.sui.util.BridgeServiceClient
+import rikka.sui.util.MaterialTonalColors
 import rikka.sui.util.MiuixPopupDimOverlay
 import rikka.sui.util.MiuixPressHelper
 import rikka.sui.util.MiuixSmoothCardDrawable
 import rikka.sui.util.MiuixSquircleProvider
+import rikka.sui.util.MiuixTonalColors
 import rikka.sui.util.MonetSettings
+import rikka.sui.util.UiStyleSettings
 import rikka.sui.util.UserHandleCompat
 import rikka.sui.util.applyMiuixPopupStyle
 import rikka.sui.util.colorCheckedItemsMiuixBlue
+import rikka.sui.widget.showMaterialMenu
 
 class ManagementAppItemViewHolder private constructor(
-    private val binding: ManagementAppItemBinding,
-) : RecyclerView.ViewHolder(binding.root) {
+    view: View,
+    private val materialUi: Boolean,
+) : RecyclerView.ViewHolder(view) {
 
     companion object {
         private val SANS_SERIF_MEDIUM = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         private var lastMenuClickTime = 0L
         private var lastPopupDismissTime = 0L
 
-        fun create(inflater: LayoutInflater, parent: ViewGroup): ManagementAppItemViewHolder = ManagementAppItemViewHolder(ManagementAppItemBinding.inflate(inflater, parent, false))
+        fun create(inflater: LayoutInflater, parent: ViewGroup, materialUi: Boolean): ManagementAppItemViewHolder = ManagementAppItemViewHolder(
+            inflater.inflate(if (materialUi) R.layout.management_app_item_material else R.layout.management_app_item, parent, false),
+            materialUi,
+        )
     }
 
-    private val context get() = binding.root.context
+    private val context get() = itemView.context
     private lateinit var data: AppInfo
     private var adapter: ManagementAdapter? = null
 
@@ -73,11 +86,12 @@ class ManagementAppItemViewHolder private constructor(
 
     private var loadIconJob: Job? = null
     private var activePopupMenu: PopupMenu? = null
+    private var activeMaterialPopup: PopupWindow? = null
 
-    private val icon get() = binding.icon
-    private val name get() = binding.title
-    private val pkg get() = binding.summary
-    private val statusText get() = binding.button1
+    private val icon: ImageView = itemView.findViewById(android.R.id.icon)
+    private val name: TextView = itemView.findViewById(android.R.id.title)
+    private val pkg: TextView = itemView.findViewById(android.R.id.summary)
+    private val statusText: TextView = itemView.findViewById(android.R.id.button1)
 
     private val textColorSecondary: ColorStateList
     private val textColorPrimary: ColorStateList
@@ -91,19 +105,35 @@ class ManagementAppItemViewHolder private constructor(
         context.theme.resolveAttribute(android.R.attr.textColorPrimary, typedValue, true)
         textColorPrimary = context.getColorStateList(typedValue.resourceId)
 
-        var normalColor = context.getColor(R.color.miuix_card_normal)
-        val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        if (!isNight && MonetSettings.isMonetEnabled(context)) {
-            val primaryColor = context.theme.resolveColor(androidx.appcompat.R.attr.colorPrimary)
-            normalColor = ColorUtils.blendARGB(normalColor, primaryColor, 0.10f)
+        if (materialUi) {
+            val card = itemView.findViewById<ListItemCardView>(R.id.material_list_card)
+            val isNight = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+            if (isNight) {
+                val accent = MaterialColors.getColor(card, androidx.appcompat.R.attr.colorAccent)
+                card.setCardBackgroundColor(MaterialTonalColors.cardFromAccent(accent))
+            }
+            card.setOnClickListener { showPopupMenu() }
+        } else {
+            var normalColor = context.getColor(R.color.miuix_card_normal)
+            val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            if (MonetSettings.isMonetEnabled(context)) {
+                val accent = MaterialColors.getColor(itemView, androidx.appcompat.R.attr.colorAccent)
+                normalColor = MiuixTonalColors.fromAccent(accent, isNight).surfaceContainer
+            }
+            itemView.background = MiuixSmoothCardDrawable.createSelectorWithOverlay(context, normalColor)
+            itemView.setOnClickListener { showPopupMenu() }
+            itemView.setOnTouchListener(MiuixPressHelper())
         }
-        binding.root.background = MiuixSmoothCardDrawable.createSelectorWithOverlay(context, normalColor)
-        binding.root.setOnClickListener { showPopupMenu() }
-        binding.root.setOnTouchListener(MiuixPressHelper())
 
         iconSize = context.resources.getDimensionPixelSize(R.dimen.expected_app_icon_max_size)
-        icon.outlineProvider = MiuixSquircleProvider(10.5f)
-        icon.clipToOutline = true
+        if (!materialUi) {
+            icon.outlineProvider = MiuixSquircleProvider(10.5f)
+            icon.clipToOutline = true
+        }
+    }
+
+    fun updateMaterialAppearance(position: Int, itemCount: Int) {
+        (itemView as? ListItemLayout)?.updateAppearance(position, itemCount)
     }
 
     fun bind(data: AppInfo, adapter: ManagementAdapter) {
@@ -132,15 +162,20 @@ class ManagementAppItemViewHolder private constructor(
         if (currentTime - lastPopupDismissTime < 200 || currentTime - lastMenuClickTime < 300) return
         lastMenuClickTime = currentTime
 
+        activeMaterialPopup?.let {
+            it.dismiss()
+            activeMaterialPopup = null
+            return
+        }
         activePopupMenu?.let {
             it.dismiss()
             activePopupMenu = null
             return
         }
 
-        val contextWrapper = ContextThemeWrapper(context, R.style.Theme_Sui_PopupMenu)
-        val popupMenu = PopupMenu(contextWrapper, statusText, Gravity.END)
-        activePopupMenu = popupMenu
+        val popupContext = if (materialUi) context else ContextThemeWrapper(context, R.style.Theme_Sui_PopupMenu)
+        val popupMenu = PopupMenu(popupContext, statusText, Gravity.END)
+        if (!materialUi) activePopupMenu = popupMenu
         popupMenu.inflate(R.menu.app_item_options_menu)
         statusText.isActivated = true
 
@@ -149,13 +184,13 @@ class ManagementAppItemViewHolder private constructor(
             if (activityContext is android.app.Activity) break
             activityContext = activityContext.baseContext
         }
-        if (activityContext is android.app.Activity) {
+        if (!materialUi && activityContext is android.app.Activity) {
             MiuixPopupDimOverlay.show(activityContext)
         }
 
         popupMenu.setOnDismissListener {
             statusText.isActivated = false
-            MiuixPopupDimOverlay.hide()
+            if (!materialUi) MiuixPopupDimOverlay.hide()
             lastPopupDismissTime = SystemClock.elapsedRealtime()
             if (activePopupMenu === popupMenu) activePopupMenu = null
         }
@@ -197,8 +232,16 @@ class ManagementAppItemViewHolder private constructor(
             true
         }
 
-        popupMenu.colorCheckedItemsMiuixBlue(itemView.context)
-        popupMenu.applyMiuixPopupStyle()
+        if (materialUi) {
+            activeMaterialPopup = popupMenu.showMaterialMenu(statusText) {
+                statusText.isActivated = false
+                lastPopupDismissTime = SystemClock.elapsedRealtime()
+                activeMaterialPopup = null
+            }
+        } else {
+            popupMenu.colorCheckedItemsMiuixBlue(itemView.context)
+            popupMenu.applyMiuixPopupStyle()
+        }
     }
 
     private fun syncViewStateForFlags() {
@@ -207,11 +250,11 @@ class ManagementAppItemViewHolder private constructor(
         val allowed = effectiveFlags and SuiConfig.FLAG_ALLOWED != 0
         val allowedShell = effectiveFlags and SuiConfig.FLAG_ALLOWED_SHELL != 0
         if (allowed || allowedShell) {
-            binding.title.setTextColor(textColorPrimary)
-            binding.title.typeface = SANS_SERIF_MEDIUM
+            name.setTextColor(textColorPrimary)
+            name.typeface = SANS_SERIF_MEDIUM
         } else {
-            binding.title.setTextColor(textColorSecondary)
-            binding.title.typeface = SANS_SERIF_MEDIUM
+            name.setTextColor(textColorSecondary)
+            name.typeface = SANS_SERIF_MEDIUM
         }
 
         val explicitAllowed = explicitFlags and SuiConfig.FLAG_ALLOWED != 0
@@ -228,16 +271,30 @@ class ManagementAppItemViewHolder private constructor(
         }
 
         if (explicitAllowed || explicitAllowedShell) {
-            statusText.setTextColor(context.theme.resolveColor(androidx.appcompat.R.attr.colorAccent))
+            statusText.setTextColor(
+                if (materialUi) {
+                    context.theme.resolveColor(androidx.appcompat.R.attr.colorAccent)
+                } else {
+                    MiuixTonalColors.primaryForTheme(context)
+                },
+            )
         } else if (explicitDenied) {
-            val isNight = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_YES != 0
-            statusText.setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFFFF5252.toInt())
+            if (materialUi) {
+                statusText.setTextColor(MaterialColors.getColor(statusText, R.attr.colorError))
+            } else {
+                val isNight = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_YES != 0
+                statusText.setTextColor(if (isNight) 0xFFFF8A80.toInt() else 0xFFFF5252.toInt())
+            }
         } else if (explicitHidden) {
             statusText.setTextColor(context.theme.resolveColor(android.R.attr.colorForeground))
         } else {
-            val typedValue = TypedValue()
-            context.theme.resolveAttribute(android.R.attr.textColorTertiary, typedValue, true)
-            statusText.setTextColor(context.getColorStateList(typedValue.resourceId))
+            if (materialUi) {
+                statusText.setTextColor(MaterialColors.getColor(statusText, com.google.android.material.R.attr.colorOnSurfaceVariant))
+            } else {
+                val typedValue = TypedValue()
+                context.theme.resolveAttribute(android.R.attr.textColorTertiary, typedValue, true)
+                statusText.setTextColor(context.getColorStateList(typedValue.resourceId))
+            }
         }
 
         statusText.setText(textRes)

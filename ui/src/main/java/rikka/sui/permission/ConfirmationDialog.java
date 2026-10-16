@@ -33,7 +33,6 @@ import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.PixelFormat;
 import android.os.Binder;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.ContextThemeWrapper;
@@ -44,14 +43,19 @@ import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.TextView;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.text.HtmlCompat;
 import com.google.android.material.color.DynamicColors;
+import com.google.android.material.color.MaterialColors;
+import com.google.android.material.shape.CornerFamily;
+import com.google.android.material.shape.MaterialShapeDrawable;
+import com.google.android.material.shape.ShapeAppearanceModel;
 import dev.rikka.tools.refine.Refine;
 import java.util.Objects;
 import rikka.sui.R;
-import rikka.sui.databinding.ConfirmationDialogBinding;
 import rikka.sui.ktx.HandlerKt;
 import rikka.sui.ktx.ResourcesKt;
 import rikka.sui.ktx.TextViewKt;
@@ -61,6 +65,7 @@ import rikka.sui.util.BridgeServiceClient;
 import rikka.sui.util.Logger;
 import rikka.sui.util.MiuixSmoothCardDrawable;
 import rikka.sui.util.MiuixSquircleUtils;
+import rikka.sui.util.MiuixTonalColors;
 import rikka.sui.util.UserHandleCompat;
 import rikka.sui.widget.MiuixBottomSheetLayout;
 
@@ -73,6 +78,7 @@ public class ConfirmationDialog {
     private final Resources resources;
     private final LayoutInflater layoutInflater;
     private boolean monetEnabled = false;
+    private final boolean materialUi;
     private final boolean isNight;
 
     @SuppressWarnings("deprecation")
@@ -81,7 +87,18 @@ public class ConfirmationDialog {
         resources.updateConfiguration(hostConfig, application.getResources().getDisplayMetrics());
 
         this.isNight = (hostConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-        int themeRes = R.style.Theme_Sui;
+        boolean selectedMaterial = false;
+        try {
+            int globalSettings = BridgeServiceClient.getGlobalSettings();
+            selectedMaterial = (globalSettings & BridgeServiceClient.FLAG_UI_MATERIAL) != 0;
+            this.monetEnabled = selectedMaterial
+                    ? (globalSettings & BridgeServiceClient.FLAG_MATERIAL_DYNAMIC_DISABLED) == 0
+                    : (globalSettings & BridgeServiceClient.FLAG_MONET_DISABLED) == 0;
+        } catch (Throwable e) {
+            LOGGER.e("getGlobalSettings failed in ConfirmationDialog", e);
+        }
+        this.materialUi = selectedMaterial;
+        int themeRes = materialUi ? R.style.Theme_Sui_Material : R.style.Theme_Sui;
 
         Context wrappedContext = new ContextThemeWrapper(application, themeRes) {
             @Override
@@ -94,13 +111,6 @@ public class ConfirmationDialog {
                 return ConfirmationDialog.class.getClassLoader();
             }
         };
-
-        try {
-            int globalSettings = BridgeServiceClient.getGlobalSettings();
-            this.monetEnabled = (globalSettings & BridgeServiceClient.FLAG_MONET_DISABLED) == 0;
-        } catch (Throwable e) {
-            LOGGER.e("getGlobalSettings failed in ConfirmationDialog", e);
-        }
 
         if (monetEnabled) {
             wrappedContext = DynamicColors.wrapContextIfAvailable(wrappedContext);
@@ -165,13 +175,21 @@ public class ConfirmationDialog {
                 sheetLayout,
                 new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
-        View view = layoutInflater.inflate(resources.getLayout(R.layout.confirmation_dialog), sheetLayout, false);
-        ConfirmationDialogBinding binding = ConfirmationDialogBinding.bind(view);
+        View view = layoutInflater.inflate(
+                resources.getLayout(materialUi ? R.layout.material_confirmation_dialog : R.layout.confirmation_dialog),
+                sheetLayout,
+                false);
+        ImageView icon = view.findViewById(android.R.id.icon);
+        TextView title = view.findViewById(android.R.id.title);
+        TextView button1Root = view.findViewById(R.id.button1_root);
+        TextView button1Shell = view.findViewById(R.id.button1_shell);
+        TextView button2 = view.findViewById(R.id.button2);
+        TextView button3 = view.findViewById(android.R.id.button3);
 
         FrameLayout.LayoutParams lp =
                 new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.gravity = Gravity.BOTTOM;
-        sheetLayout.addView(binding.getRoot(), lp);
+        sheetLayout.addView(view, lp);
 
         sheetLayout.setOnDimAlphaChange(alpha -> {
             dimView.setAlpha(alpha);
@@ -212,102 +230,121 @@ public class ConfirmationDialog {
             LOGGER.e("getApplicationInfoAsUser");
         }
 
-        binding.icon.setImageDrawable(ResourcesCompat.getDrawable(resources, R.drawable.ic_su_24, context.getTheme()));
-        binding.title.setText(HtmlCompat.fromHtml(
+        icon.setImageDrawable(ResourcesCompat.getDrawable(resources, R.drawable.ic_su_24, context.getTheme()));
+        title.setText(HtmlCompat.fromHtml(
                 String.format(
                         resources.getString(R.string.permission_warning_template),
                         label,
                         resources.getString(R.string.permission_description)),
                 HtmlCompat.FROM_HTML_MODE_LEGACY));
-        binding.button1Root.setText(resources.getString(R.string.grant_dialog_button_allow_always));
-        binding.button1Shell.setText(resources.getString(R.string.grant_dialog_button_allow_always_shell));
-        binding.button2.setText(resources.getString(R.string.grant_dialog_button_allow_one_time));
-        binding.button3.setText(resources.getString(R.string.grant_dialog_button_deny_and_dont_ask_again));
+        button1Root.setText(resources.getString(R.string.grant_dialog_button_allow_always));
+        button1Shell.setText(resources.getString(R.string.grant_dialog_button_allow_always_shell));
+        button2.setText(resources.getString(R.string.grant_dialog_button_allow_one_time));
+        button3.setText(resources.getString(R.string.grant_dialog_button_deny_and_dont_ask_again));
 
-        ColorStateList buttonTextColor =
-                resources.getColorStateList(R.color.confirmation_dialog_button_text, context.getTheme());
-        binding.button1Root.setTextColor(buttonTextColor);
-        binding.button1Shell.setTextColor(buttonTextColor);
-        binding.button2.setTextColor(buttonTextColor);
-        binding.button3.setTextColor(buttonTextColor);
+        if (!materialUi) {
+            ColorStateList buttonTextColor =
+                    resources.getColorStateList(R.color.confirmation_dialog_button_text, context.getTheme());
+            button1Root.setTextColor(buttonTextColor);
+            button1Shell.setTextColor(buttonTextColor);
+            button2.setTextColor(buttonTextColor);
+            button3.setTextColor(buttonTextColor);
+        }
 
-        binding.button1Root.setOnClickListener(v -> {
+        button1Root.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
             setResult(requestUid, requestPid, requestCode, true, false, false);
             sheetLayout.dismiss();
         });
-        binding.button1Shell.setOnClickListener(v -> {
+        button1Shell.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
             setResult(requestUid, requestPid, requestCode, true, false, true);
             sheetLayout.dismiss();
         });
-        binding.button2.setOnClickListener(v -> {
+        button2.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
             setResult(requestUid, requestPid, requestCode, true, true, false);
             sheetLayout.dismiss();
         });
-        binding.button3.setOnClickListener(v -> {
+        button3.setOnClickListener(v -> {
             if (sheetLayout.isDismissing()) return;
             setResult(requestUid, requestPid, requestCode, false, false, false);
             sheetLayout.dismiss();
         });
 
-        TextViewKt.applyCountdown(binding.button1Root, 1, null, 0);
-        TextViewKt.applyCountdown(binding.button1Shell, 1, null, 0);
-        TextViewKt.applyCountdown(binding.button2, 1, null, 0);
-        TextViewKt.applyCountdown(binding.button3, 1, null, 0);
+        TextViewKt.applyCountdown(button1Root, 1, null, 0);
+        TextViewKt.applyCountdown(button1Shell, 1, null, 0);
+        TextViewKt.applyCountdown(button2, 1, null, 0);
+        TextViewKt.applyCountdown(button3, 1, null, 0);
 
         float density = context.getResources().getDisplayMetrics().density;
-        float dynamicRadiusPx = MiuixSquircleUtils.INSTANCE.getBottomCornerRadius(context) + 12f * density;
-        int sheetColor = resources.getColor(R.color.miuix_bottom_sheet_bg_color, context.getTheme());
-        binding.getRoot().setBackground(new MiuixSmoothCardDrawable(dynamicRadiusPx, sheetColor, false));
-
-        int primaryColor = -1;
-        if (monetEnabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            try {
-                int sysColorId = isNight ? android.R.color.system_accent1_200 : android.R.color.system_accent1_600;
-                primaryColor = context.getResources().getColor(sysColorId, context.getTheme());
-            } catch (Exception ignored) {
-            }
-        }
-        if (primaryColor == -1) {
-            primaryColor = ResourcesKt.resolveColor(context.getTheme(), androidx.appcompat.R.attr.colorPrimary);
-        }
-
-        int btnColor;
-        if (monetEnabled) {
-            btnColor = isNight
-                    ? ColorUtils.blendARGB(sheetColor, primaryColor, 0.20f)
-                    : ColorUtils.blendARGB(sheetColor, primaryColor, 0.10f);
+        if (materialUi) {
+            float corner = 28f * density;
+            ShapeAppearanceModel shape = ShapeAppearanceModel.builder()
+                    .setTopLeftCorner(CornerFamily.ROUNDED, corner)
+                    .setTopRightCorner(CornerFamily.ROUNDED, corner)
+                    .build();
+            MaterialShapeDrawable sheetBackground = new MaterialShapeDrawable(shape);
+            sheetBackground.setFillColor(ColorStateList.valueOf(
+                    MaterialColors.getColor(view, com.google.android.material.R.attr.colorSurfaceContainerHigh)));
+            view.setBackground(sheetBackground);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+                int navigationBar =
+                        insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars()).bottom;
+                v.setPadding(
+                        v.getPaddingLeft(),
+                        v.getPaddingTop(),
+                        v.getPaddingRight(),
+                        Math.max((int) (24f * density), navigationBar + (int) (12f * density)));
+                return insets;
+            });
         } else {
-            btnColor = resources.getColor(R.color.miuix_button_bg_color, context.getTheme());
+            float dynamicRadiusPx = MiuixSquircleUtils.INSTANCE.getBottomCornerRadius(context) + 12f * density;
+            int sheetColor = resources.getColor(R.color.miuix_bottom_sheet_bg_color, context.getTheme());
+            int primaryColor = ResourcesKt.resolveColor(context.getTheme(), androidx.appcompat.R.attr.colorPrimary);
+            if (monetEnabled) {
+                int accent = MaterialColors.getColor(context, androidx.appcompat.R.attr.colorAccent, primaryColor);
+                MiuixTonalColors.Palette palette = MiuixTonalColors.fromAccent(accent, isNight);
+                sheetColor = palette.surfaceContainerHigh;
+                primaryColor = palette.primary;
+            }
+            view.setBackground(new MiuixSmoothCardDrawable(dynamicRadiusPx, sheetColor, false));
+
+            int btnColor;
+            if (monetEnabled) {
+                btnColor = isNight
+                        ? ColorUtils.blendARGB(sheetColor, primaryColor, 0.20f)
+                        : ColorUtils.blendARGB(sheetColor, primaryColor, 0.10f);
+            } else {
+                btnColor = resources.getColor(R.color.miuix_button_bg_color, context.getTheme());
+            }
+
+            float btnRadiusPx = 16f * density;
+            button1Root.setBackground(
+                    MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
+            button1Shell.setBackground(
+                    MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
+            button2.setBackground(
+                    MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
+            button3.setBackground(
+                    MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
+
+            float dialogDiagonalOffset = dynamicRadiusPx * 0.2928f;
+            float buttonDiagonalOffset = btnRadiusPx * 0.2928f;
+            float bottomPaddingOffset = Math.max(0f, dialogDiagonalOffset - buttonDiagonalOffset);
+
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(view, (v, insets) -> {
+                androidx.core.graphics.Insets navBars =
+                        insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars());
+
+                float basePadding = navBars.bottom > 0 ? (32f * density) : (16f * density);
+                int extraPadding = (int) Math.max(0, navBars.bottom - basePadding);
+
+                v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), (int)
+                        (basePadding + bottomPaddingOffset + extraPadding));
+                return insets;
+            });
         }
-
-        float btnRadiusPx = 16f * density;
-        binding.button1Root.setBackground(
-                MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
-        binding.button1Shell.setBackground(
-                MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
-        binding.button2.setBackground(
-                MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
-        binding.button3.setBackground(
-                MiuixSmoothCardDrawable.Companion.createSelectorWithOverlay(context, btnColor, 16f, false));
-
-        float dialogDiagonalOffset = dynamicRadiusPx * 0.2928f;
-        float buttonDiagonalOffset = btnRadiusPx * 0.2928f;
-        float bottomPaddingOffset = Math.max(0f, dialogDiagonalOffset - buttonDiagonalOffset);
-
-        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
-            androidx.core.graphics.Insets navBars =
-                    insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.navigationBars());
-
-            float basePadding = navBars.bottom > 0 ? (32f * density) : (16f * density);
-            int extraPadding = (int) Math.max(0, navBars.bottom - basePadding);
-
-            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), (int)
-                    (basePadding + bottomPaddingOffset + extraPadding));
-            return insets;
-        });
 
         WindowManager.LayoutParams attr = new WindowManager.LayoutParams();
         attr.width = ViewGroup.LayoutParams.MATCH_PARENT;

@@ -19,12 +19,14 @@
   -->
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <item
         android:id="@+id/action_search"
         android:icon="@drawable/ic_search_24"
         android:title="Search"
+        tools:ignore="HardcodedText"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="ifRoom|collapseActionView"
         app:iconTint="?attr/colorControlNormal"/>
@@ -32,6 +34,7 @@
         android:id="@+id/action_overflow"
         android:icon="@drawable/ic_miuix_more_circle"
         android:title="More"
+        tools:ignore="HardcodedText"
         app:showAsAction="always"
         app:iconTint="?attr/colorControlNormal"/>
 

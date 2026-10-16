@@ -1607,6 +1607,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         if (code == ServerConstants.BINDER_TRANSACTION_getGlobalSettings) {
             data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
             try {
+                enforceManagerPermission("getGlobalSettings");
                 int settingFlags = configManager.getGlobalSettings();
                 reply.writeNoException();
                 reply.writeInt(settingFlags);
@@ -1631,6 +1632,26 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
             } catch (Throwable e) {
                 LOGGER.w(e, "setGlobalSettings");
                 reply.writeException(new RuntimeException("Failed to set global settings", e));
+            }
+            return true;
+        }
+        if (code == ServerConstants.BINDER_TRANSACTION_updateGlobalSettings) {
+            data.enforceInterface(ShizukuApiConstants.BINDER_DESCRIPTOR);
+            int mask = data.readInt();
+            int value = data.readInt();
+            try {
+                enforceManagerPermission("updateGlobalSettings");
+                boolean changed = configManager.updateGlobalSettings(mask, value);
+                if (changed
+                        && (mask & ~SuiConfigManager.MASK_UI_APPEARANCE) != 0
+                        && !shellMode
+                        && !syncUidsToSystemServer()) {
+                    throw new IllegalStateException("global settings saved but system_server sync pending");
+                }
+                reply.writeNoException();
+            } catch (Throwable e) {
+                LOGGER.w(e, "updateGlobalSettings");
+                reply.writeException(new RuntimeException("Failed to update global settings", e));
             }
             return true;
         }

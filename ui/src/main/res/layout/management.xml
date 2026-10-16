@@ -36,4 +36,13 @@
             android:layoutAnimation="@anim/stagger_layout_animation"
             app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
 
+        <com.google.android.material.loadingindicator.LoadingIndicator
+            android:id="@+id/material_loading_indicator"
+            style="@style/Widget.Material3.LoadingIndicator.Contained"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|center_horizontal"
+            android:visibility="gone"
+            app:indicatorSize="34dp" />
+
 </FrameLayout>

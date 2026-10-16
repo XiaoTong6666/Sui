@@ -16,6 +16,7 @@
 
 package rikka.sui.ktx
 
+import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.graphics.Bitmap.Config
 import android.graphics.Canvas
@@ -35,6 +36,7 @@ import androidx.annotation.Px
  * @param config Bitmap config of the desired bitmap. Null attempts to use the native config, if
  * any. Defaults to [Config.ARGB_8888] otherwise.
  */
+@SuppressLint("UseKtx")
 fun Drawable.toBitmap(
     @Px width: Int = intrinsicWidth,
     @Px height: Int = intrinsicHeight,

@@ -12,4 +12,9 @@
         <item name="popupMenuStyle">@style/Widget.Sui.PopupMenu</item>
         <item name="android:popupMenuStyle">@style/Widget.Sui.PopupMenu</item>
     </style>
+
+    <style name="Theme.Sui.Material" parent="Theme.Material3Expressive.DayNight.NoActionBar">
+        <item name="popupMenuStyle">@style/Widget.Sui.Material.PopupMenu</item>
+        <item name="android:popupMenuStyle">@style/Widget.Sui.Material.PopupMenu</item>
+    </style>
 </resources>

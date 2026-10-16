@@ -14,6 +14,7 @@ fragment = "1.9.1"
 recyclerview = "1.4.0"
 lifecycle = "2.11.0"
 material = "1.14.0"
+material-color-utilities = "5.0.1"
 dynamicanimation = "1.1.0"
 appiconloader = "1.5.0"
 spotless = "8.10.4"
@@ -36,6 +37,7 @@ androidx-fragment = { group = "androidx.fragment", name = "fragment", version.re
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }
 androidx-lifecycle-viewmodel-ktx = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 google-material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+material-color-utilities = { group = "com.materialkolor", name = "material-color-utilities-android", version.ref = "material-color-utilities" }
 androidx-dynamicanimation = { group = "androidx.dynamicanimation", name = "dynamicanimation", version.ref = "dynamicanimation" }
 appiconloader = { group = "me.zhanghai.android.appiconloader", name = "appiconloader", version.ref = "appiconloader" }
 support-annotations = { group = "com.android.support", name = "support-annotations", version.ref = "support-annotations" }

@@ -38,10 +38,11 @@ import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.widget.ListView
 import android.widget.PopupWindow
+import android.widget.TextView
 import androidx.appcompat.widget.ListPopupWindow
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.graphics.toColorInt
 import androidx.core.view.get
 import androidx.core.view.size
@@ -109,7 +110,7 @@ class MiuixPressHelper : View.OnTouchListener {
     }
 }
 
-fun PopupMenu.applyMiuixPopupStyle() {
+fun PopupMenu.applyMiuixPopupStyle(trailingArrowIds: Set<Int> = emptySet()) {
     try {
         val mAnchorField = this.javaClass.getDeclaredField("mAnchor")
         mAnchorField.isAccessible = true
@@ -196,8 +197,25 @@ fun PopupMenu.applyMiuixPopupStyle() {
                     super.setBounds(left, newTop, right, newBottom)
                 }
             }
+
+            if (trailingArrowIds.isNotEmpty()) {
+                it.post {
+                    for (index in 0 until it.childCount) {
+                        val menuIndex = it.firstVisiblePosition + index
+                        val visibleItems = (0 until menu.size).map(menu::getItem).filter { item -> item.isVisible }
+                        val menuItem = visibleItems.getOrNull(menuIndex) ?: continue
+                        if (menuItem.itemId !in trailingArrowIds) continue
+                        val title = it.getChildAt(index)?.findViewById<TextView>(androidx.appcompat.R.id.title) ?: continue
+                        val arrow = ContextCompat.getDrawable(it.context, R.drawable.ic_miuix_popup_next)?.mutate() ?: continue
+                        DrawableCompat.setTint(arrow, title.context.theme.resolveColor(android.R.attr.textColorSecondary))
+                        title.compoundDrawablePadding = (12 * it.resources.displayMetrics.density).toInt()
+                        title.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, arrow, null)
+                    }
+                }
+            }
         }
 
+        var popupBackgroundColor: Int? = null
         try {
             (listPopupWindow as? ListPopupWindow)?.let {
                 try {
@@ -205,10 +223,11 @@ fun PopupMenu.applyMiuixPopupStyle() {
                         val radiusPx = 16f * listView.context.resources.displayMetrics.density
                         var bgColor = ContextCompat.getColor(listView.context, R.color.miuix_card_normal)
                         val isNight = (listView.context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-                        if (!isNight && MonetSettings.isMonetEnabled(listView.context)) {
-                            val primaryColor = listView.context.theme.resolveColor(androidx.appcompat.R.attr.colorPrimary)
-                            bgColor = ColorUtils.blendARGB(bgColor, primaryColor, 0.10f)
+                        if (MonetSettings.isMonetEnabled(listView.context)) {
+                            val accent = listView.context.theme.resolveColor(androidx.appcompat.R.attr.colorAccent)
+                            bgColor = MiuixTonalColors.fromAccent(accent, isNight).surfaceContainerHigh
                         }
+                        popupBackgroundColor = bgColor
                         it.setBackgroundDrawable(MiuixSmoothCardDrawable(radiusPx, bgColor, false))
                     }
                 } catch (e: Exception) {
@@ -237,14 +256,25 @@ fun PopupMenu.applyMiuixPopupStyle() {
 
                         internalPopupWindow?.let { pw ->
                             pw.isClippingEnabled = false
+                            popupBackgroundColor?.let { backgroundColor ->
+                                pw.setBackgroundDrawable(MiuixSmoothCardDrawable(16f * (listView?.resources?.displayMetrics?.density ?: 1f), backgroundColor))
+                            }
                             try {
                                 val setIsLaidOutInScreen = pw.javaClass.getMethod("setIsLaidOutInScreen", Boolean::class.javaPrimitiveType)
                                 setIsLaidOutInScreen.invoke(pw, true)
                             } catch (_: Exception) {}
 
                             pw.contentView?.let { cv ->
+                                popupBackgroundColor?.let { backgroundColor ->
+                                    cv.background = MiuixSmoothCardDrawable(16f * cv.resources.displayMetrics.density, backgroundColor)
+                                }
                                 cv.outlineProvider = MiuixSquircleProvider(16f)
                                 cv.clipToOutline = true
+                            }
+                            listView?.let { lv ->
+                                popupBackgroundColor?.let { backgroundColor ->
+                                    lv.background = MiuixSmoothCardDrawable(16f * lv.resources.displayMetrics.density, backgroundColor)
+                                }
                             }
                         }
                     }
@@ -260,7 +290,7 @@ fun PopupMenu.applyMiuixPopupStyle() {
 }
 
 fun PopupMenu.colorCheckedItemsMiuixBlue(context: Context) {
-    val highlightColor = context.theme.resolveColor(R.attr.colorPrimary)
+    val highlightColor = MiuixTonalColors.primaryForTheme(context)
     val menu = this.menu
     for (i in 0 until menu.size) {
         val item = menu[i]

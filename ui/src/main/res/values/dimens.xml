@@ -18,7 +18,7 @@
   ~ Copyright (c) 2026 Sui Contributors
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <dimen name="expected_app_icon_max_size">40dp</dimen>
 
     <dimen name="miuix_pull_to_refresh_circle_size">20dp</dimen>
@@ -32,9 +32,9 @@
     <dimen name="miuix_drag_handle_pressed_width">55dp</dimen>
     <dimen name="miuix_drag_handle_default_height">4dp</dimen>
 
-    <dimen name="afs_min_touch_target_size">22dp</dimen>
+    <dimen name="afs_min_touch_target_size" tools:ignore="UnusedResources">22dp</dimen>
     
-    <dimen name="afs_md2_popup_text_size">0sp</dimen>
-    <dimen name="afs_md2_popup_min_height">0dp</dimen>
-    <dimen name="afs_md2_popup_min_width">0dp</dimen>
+    <dimen name="afs_md2_popup_text_size" tools:ignore="UnusedResources">0sp</dimen>
+    <dimen name="afs_md2_popup_min_height" tools:ignore="UnusedResources">0dp</dimen>
+    <dimen name="afs_md2_popup_min_width" tools:ignore="UnusedResources">0dp</dimen>
 </resources>

@@ -30,6 +30,7 @@
     android:clickable="true"
     android:clipChildren="false"
     android:clipToOutline="true"
+    tools:ignore="UnusedAttribute"
     android:clipToPadding="false"
     android:focusable="true"
     android:minHeight="70dp"

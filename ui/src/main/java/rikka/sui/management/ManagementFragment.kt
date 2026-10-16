@@ -18,6 +18,7 @@
  */
 package rikka.sui.management
 
+import android.content.DialogInterface
 import android.content.res.Configuration
 import android.graphics.Typeface
 import android.os.Bundle
@@ -39,6 +40,9 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.DecelerateInterpolator
+import android.widget.FrameLayout
+import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
@@ -48,11 +52,14 @@ import androidx.core.view.MenuHost
 import androidx.core.view.MenuProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.get
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.core.view.size
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DefaultItemAnimator
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import rikka.sui.BuildConfig
 import rikka.sui.R
 import rikka.sui.app.AppFragment
@@ -62,14 +69,18 @@ import rikka.sui.model.AppInfo
 import rikka.sui.server.SuiConfig
 import rikka.sui.util.BridgeServiceClient
 import rikka.sui.util.EdgeDragFastScroller
+import rikka.sui.util.MaterialPullToRefresh
 import rikka.sui.util.MiuixBounceEdgeEffectFactory
 import rikka.sui.util.MiuixPopupDimOverlay
 import rikka.sui.util.MiuixPressHelper
 import rikka.sui.util.MiuixPullToRefreshView
 import rikka.sui.util.MiuixSmoothCardDrawable
 import rikka.sui.util.MiuixSquircleUtils
+import rikka.sui.util.MiuixTonalColors
+import rikka.sui.util.UiStyleSettings
 import rikka.sui.util.applyMiuixPopupStyle
 import rikka.sui.widget.MiuixBottomSheetDialog
+import rikka.sui.widget.showMaterialMenu
 
 class ManagementFragment : AppFragment() {
 
@@ -86,12 +97,68 @@ class ManagementFragment : AppFragment() {
             context?.let { viewModel.reload(it) }
         }
     }
+    private val materialPullToRefresh by lazy {
+        MaterialPullToRefresh(
+            onProgress = { progress, refreshing -> updateMaterialPull(progress, refreshing) },
+            onRefresh = { context?.let(viewModel::reload) },
+        )
+    }
 
     private var lastMenuClickTime = 0L
     private var lastPopupDismissTime = 0L
     private var overflowPopupMenu: PopupMenu? = null
+    private var materialOverflowPopup: PopupWindow? = null
+    private val materialUi get() = UiStyleSettings.isMaterial(requireContext())
+
+    private fun setMaterialLoadingCentered(center: Boolean) {
+        val indicator = _binding?.materialLoadingIndicator ?: return
+        val params = indicator.layoutParams as FrameLayout.LayoutParams
+        val gravity = if (center) Gravity.CENTER else Gravity.TOP or Gravity.CENTER_HORIZONTAL
+        if (params.gravity != gravity) {
+            params.gravity = gravity
+            indicator.layoutParams = params
+        }
+        if (center) {
+            indicator.translationY = 0f
+            indicator.scaleX = 1f
+            indicator.scaleY = 1f
+            indicator.alpha = 1f
+        }
+    }
+
+    private fun updateMaterialPull(progress: Float, refreshing: Boolean) {
+        val indicator = _binding?.materialLoadingIndicator ?: return
+        indicator.isVisible = progress > 0f || refreshing
+        if (!indicator.isVisible) return
+
+        setMaterialLoadingCentered(false)
+        val fraction = progress.coerceIn(0f, 1f)
+        val height = indicator.containerHeight.toFloat()
+        val restingOffset = 40f * resources.displayMetrics.density
+        // Slide the contained indicator down from above the list; do not translate the list.
+        indicator.translationY = -height + (height + restingOffset) * fraction
+        indicator.scaleX = 1f
+        indicator.scaleY = 1f
+        indicator.alpha = fraction.coerceAtLeast(0.15f)
+    }
+
+    private fun PopupMenu.showForUi(anchorView: View, onDismiss: () -> Unit = {}) {
+        if (materialUi) showMaterialMenu(anchorView, endInsetDp = 20, onDismiss = onDismiss) else applyMiuixPopupStyle()
+    }
+
+    private fun popupContext(overflow: Boolean = false): android.content.Context = when {
+        materialUi -> requireContext()
+        overflow -> ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu_OverflowRightOffset)
+        else -> ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu)
+    }
 
     private fun cancelRefreshForFastScroll() {
+        if (materialUi) {
+            if (!materialPullToRefresh.isRefreshing && viewModel.appList.value?.status != Status.LOADING) return
+            materialPullToRefresh.finishRefresh()
+            viewModel.cancelReload()
+            return
+        }
         if (!bounceEdgeEffectFactory.isRefreshActive() && viewModel.appList.value?.status != Status.LOADING) {
             return
         }
@@ -132,9 +199,12 @@ class ManagementFragment : AppFragment() {
                         }
                     })
                     val overflowItem = menu.findItem(R.id.action_overflow)
+                    if (materialUi) {
+                        overflowItem.setIcon(R.drawable.ic_more_vert_material_24)
+                    }
                     requireActivity().findViewById<View>(R.id.toolbar)?.post {
                         val searchButtonView = requireActivity().findViewById<View>(R.id.action_search)
-                        if (searchButtonView != null) {
+                        if (searchButtonView != null && !materialUi) {
                             searchButtonView.background = ContextCompat.getDrawable(requireContext(), R.drawable.miuix_action_icon_bg)
                             searchButtonView.setOnLongClickListener { true }
                             searchButtonView.setOnTouchListener(MiuixPressHelper())
@@ -142,9 +212,11 @@ class ManagementFragment : AppFragment() {
 
                         val overflowButtonView = requireActivity().findViewById<View>(R.id.action_overflow)
                         if (overflowButtonView != null) {
-                            overflowButtonView.background = ContextCompat.getDrawable(requireContext(), R.drawable.miuix_action_icon_bg)
-                            overflowButtonView.setOnLongClickListener { true }
-                            overflowButtonView.setOnTouchListener(MiuixPressHelper())
+                            if (!materialUi) {
+                                overflowButtonView.background = ContextCompat.getDrawable(requireContext(), R.drawable.miuix_action_icon_bg)
+                                overflowButtonView.setOnLongClickListener { true }
+                                overflowButtonView.setOnTouchListener(MiuixPressHelper())
+                            }
                             overflowButtonView.setOnClickListener { anchorView ->
                                 showOverflowPopupMenu(anchorView)
                             }
@@ -181,6 +253,8 @@ class ManagementFragment : AppFragment() {
         }
         val density = requireContext().resources.displayMetrics.density
 
+        if (materialUi) binding.pullToRefreshIndicator.isGone = true
+
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, insets ->
             val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
 
@@ -214,7 +288,12 @@ class ManagementFragment : AppFragment() {
             setHasFixedSize(true)
             adapter = this@ManagementFragment.adapter
             (itemAnimator as DefaultItemAnimator).supportsChangeAnimations = false
-            this.edgeEffectFactory = bounceEdgeEffectFactory
+            if (materialUi) {
+                edgeEffectFactory = materialPullToRefresh.edgeEffectFactory
+                addOnItemTouchListener(materialPullToRefresh)
+            } else {
+                edgeEffectFactory = bounceEdgeEffectFactory
+            }
             this.setItemViewCacheSize(20)
             this.recycledViewPool.setMaxRecycledViews(0, 20)
             EdgeDragFastScroller(this) {
@@ -241,29 +320,37 @@ class ManagementFragment : AppFragment() {
         }
         lastMenuClickTime = currentTime
 
+        if (materialOverflowPopup != null) {
+            materialOverflowPopup?.dismiss()
+            materialOverflowPopup = null
+            return
+        }
         if (overflowPopupMenu != null) {
             overflowPopupMenu?.dismiss()
             overflowPopupMenu = null
             return
         }
 
-        val contextWrapper = ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu_OverflowRightOffset)
-        val popupMenu = PopupMenu(contextWrapper, anchorView, Gravity.END)
-        overflowPopupMenu = popupMenu
+        val popupMenu = PopupMenu(popupContext(overflow = true), anchorView, Gravity.END)
+        if (!materialUi) overflowPopupMenu = popupMenu
         popupMenu.inflate(R.menu.overflow_popup_menu)
 
         anchorView.isActivated = true
         popupMenu.setOnDismissListener {
-            MiuixPopupDimOverlay.hide()
+            if (!materialUi) MiuixPopupDimOverlay.hide()
             anchorView.isActivated = false
             lastPopupDismissTime = SystemClock.elapsedRealtime()
             if (overflowPopupMenu === popupMenu) {
                 overflowPopupMenu = null
             }
         }
-        MiuixPopupDimOverlay.show(requireActivity())
+        if (!materialUi) MiuixPopupDimOverlay.show(requireActivity())
 
-        val highlightColor = requireContext().theme.resolveColor(R.attr.colorPrimary)
+        val highlightColor = if (materialUi) {
+            requireContext().theme.resolveColor(R.attr.colorPrimary)
+        } else {
+            MiuixTonalColors.primaryForTheme(requireContext())
+        }
         val filterItem = popupMenu.menu.findItem(R.id.action_filter_shizuku)
         val isChecked = viewModel.showOnlyShizukuApps
         filterItem?.isChecked = isChecked
@@ -285,7 +372,7 @@ class ManagementFragment : AppFragment() {
         }
 
         val monetItem = popupMenu.menu.findItem(R.id.action_monet)
-        val isMonetEnabled = viewModel.isMonetEnabled
+        val isMonetEnabled = if (materialUi) UiStyleSettings.isMaterialDynamicColorEnabled(requireContext()) else viewModel.isMonetEnabled
         monetItem?.isChecked = isMonetEnabled
 
         monetItem?.title?.let { title ->
@@ -397,13 +484,30 @@ class ManagementFragment : AppFragment() {
 
                 R.id.action_monet -> {
                     val context = requireContext()
-                    viewModel.toggleMonetSetting(context) { success ->
-                        if (success) {
-                            activity?.recreate()
-                        } else {
-                            android.widget.Toast.makeText(context, "Failed to toggle Monet", android.widget.Toast.LENGTH_SHORT).show()
+                    if (materialUi) {
+                        val enabled = !UiStyleSettings.isMaterialDynamicColorEnabled(context)
+                        viewModel.saveUiAppearance(context, UiStyleSettings.MATERIAL, enabled) { success ->
+                            if (success) {
+                                UiStyleSettings.setMaterialDynamicColorEnabled(context, enabled)
+                                activity?.recreate()
+                            } else {
+                                Toast.makeText(context, "Failed to update UI settings", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        viewModel.toggleMonetSetting(context) { success ->
+                            if (success) {
+                                activity?.recreate()
+                            } else {
+                                android.widget.Toast.makeText(context, "Failed to toggle Monet", android.widget.Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
+                    true
+                }
+
+                R.id.action_ui_style -> {
+                    showUiStyleOptionsMenu(anchorView)
                     true
                 }
 
@@ -445,20 +549,70 @@ class ManagementFragment : AppFragment() {
                 else -> false
             }
         }
-        popupMenu.applyMiuixPopupStyle()
+        if (materialUi) {
+            materialOverflowPopup = popupMenu.showMaterialMenu(anchorView, endInsetDp = 20) {
+                anchorView.isActivated = false
+                lastPopupDismissTime = SystemClock.elapsedRealtime()
+                materialOverflowPopup = null
+            }
+        } else {
+            popupMenu.applyMiuixPopupStyle(setOf(R.id.action_batch_unconfigured, R.id.action_ui_style, R.id.action_adb_root))
+        }
+    }
+
+    private fun showUiStyleOptionsMenu(anchorView: View) {
+        val popupMenu = PopupMenu(popupContext(overflow = true), anchorView, Gravity.END)
+        popupMenu.inflate(R.menu.ui_style_options_menu)
+        val selectedId = if (materialUi) R.id.action_ui_material else R.id.action_ui_miuix
+        if (materialUi) {
+            popupMenu.menu.findItem(R.id.action_ui_miuix)?.isCheckable = true
+            popupMenu.menu.findItem(R.id.action_ui_material)?.isCheckable = true
+            popupMenu.menu.findItem(selectedId)?.isCheckable = true
+            popupMenu.menu.findItem(selectedId)?.isChecked = true
+        } else {
+            val item = requireNotNull(popupMenu.menu.findItem(selectedId))
+            item.title = SpannableString(item.title).apply {
+                setSpan(ForegroundColorSpan(MiuixTonalColors.primaryForTheme(requireContext())), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        anchorView.isActivated = true
+        if (!materialUi) MiuixPopupDimOverlay.show(requireActivity())
+        popupMenu.setOnDismissListener {
+            if (!materialUi) MiuixPopupDimOverlay.hide()
+            anchorView.isActivated = false
+        }
+        popupMenu.setOnMenuItemClickListener { item ->
+            val style = when (item.itemId) {
+                R.id.action_ui_miuix -> UiStyleSettings.MIUIX
+                R.id.action_ui_material -> UiStyleSettings.MATERIAL
+                else -> return@setOnMenuItemClickListener false
+            }
+            if (UiStyleSettings.getStyle(requireContext()) != style) {
+                val context = requireContext()
+                viewModel.saveUiAppearance(context, style, UiStyleSettings.isMaterialDynamicColorEnabled(context)) { success ->
+                    if (success) {
+                        UiStyleSettings.setStyle(context, style)
+                        activity?.recreate()
+                    } else {
+                        Toast.makeText(context, "Failed to update UI settings", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            true
+        }
+        popupMenu.showForUi(anchorView) { anchorView.isActivated = false }
     }
 
     private fun showAdbRootOptionsMenu(anchorView: View) {
-        val contextWrapper = ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu_OverflowRightOffset)
-        val popupMenu = PopupMenu(contextWrapper, anchorView, Gravity.END)
+        val popupMenu = PopupMenu(popupContext(overflow = true), anchorView, Gravity.END)
         popupMenu.inflate(R.menu.adb_root_options_menu)
 
         anchorView.isActivated = true
         popupMenu.setOnDismissListener {
-            MiuixPopupDimOverlay.hide()
+            if (!materialUi) MiuixPopupDimOverlay.hide()
             anchorView.isActivated = false
         }
-        MiuixPopupDimOverlay.show(requireActivity())
+        if (!materialUi) MiuixPopupDimOverlay.show(requireActivity())
 
         when (viewModel.adbRootMode) {
             ManagementViewModel.ADB_ROOT_ONCE -> popupMenu.menu.findItem(R.id.adb_root_once)?.isChecked = true
@@ -466,10 +620,14 @@ class ManagementFragment : AppFragment() {
             else -> popupMenu.menu.findItem(R.id.adb_root_off)?.isChecked = true
         }
 
-        val highlightColor = requireContext().theme.resolveColor(R.attr.colorPrimary)
+        val highlightColor = if (materialUi) {
+            requireContext().theme.resolveColor(R.attr.colorPrimary)
+        } else {
+            MiuixTonalColors.primaryForTheme(requireContext())
+        }
         val menu = popupMenu.menu
-        for (i in 0 until menu.size()) {
-            val item = menu.getItem(i)
+        for (i in 0 until menu.size) {
+            val item = menu[i]
             if (item.isChecked) {
                 val title = item.title?.toString() ?: continue
                 val spannableTitle = SpannableString(title)
@@ -500,29 +658,32 @@ class ManagementFragment : AppFragment() {
             }
             true
         }
-        popupMenu.applyMiuixPopupStyle()
+        popupMenu.showForUi(anchorView) { anchorView.isActivated = false }
     }
 
     private fun showBatchOptionsMenu(anchorView: View) {
-        val contextWrapper = ContextThemeWrapper(requireContext(), R.style.Theme_Sui_PopupMenu_OverflowRightOffset)
-        val popupMenu = PopupMenu(contextWrapper, anchorView, Gravity.END)
+        val popupMenu = PopupMenu(popupContext(overflow = true), anchorView, Gravity.END)
         popupMenu.inflate(R.menu.batch_options_menu)
 
         anchorView.isActivated = true
         popupMenu.setOnDismissListener {
-            MiuixPopupDimOverlay.hide()
+            if (!materialUi) MiuixPopupDimOverlay.hide()
             anchorView.isActivated = false
         }
-        MiuixPopupDimOverlay.show(requireActivity())
+        if (!materialUi) MiuixPopupDimOverlay.show(requireActivity())
 
         val currentDefaultMode = viewModel.appList.value?.data?.firstOrNull()?.defaultFlags
             ?.and(SuiConfig.MASK_PERMISSION) ?: 0
 
-        val highlightColor = requireContext().theme.resolveColor(R.attr.colorPrimary)
+        val highlightColor = if (materialUi) {
+            requireContext().theme.resolveColor(R.attr.colorPrimary)
+        } else {
+            MiuixTonalColors.primaryForTheme(requireContext())
+        }
 
         val menu = popupMenu.menu
-        for (i in 0 until menu.size()) {
-            val item = menu.getItem(i)
+        for (i in 0 until menu.size) {
+            val item = menu[i]
 
             val isSelected = when (item.itemId) {
                 R.id.batch_allow -> currentDefaultMode == SuiConfig.FLAG_ALLOWED
@@ -566,11 +727,16 @@ class ManagementFragment : AppFragment() {
             }
             true
         }
-        popupMenu.applyMiuixPopupStyle()
+        popupMenu.showForUi(anchorView) { anchorView.isActivated = false }
     }
     private fun performBatchUpdate(targetMode: Int) {
         if (adapter.itemCount == 0) {
-            binding.pullToRefreshIndicator.state = MiuixPullToRefreshView.RefreshState.REFRESHING
+            if (materialUi) {
+                setMaterialLoadingCentered(true)
+                binding.materialLoadingIndicator.isVisible = true
+            } else {
+                binding.pullToRefreshIndicator.state = MiuixPullToRefreshView.RefreshState.REFRESHING
+            }
         }
         viewModel.batchUpdate(targetMode, requireContext())
     }
@@ -633,7 +799,49 @@ class ManagementFragment : AppFragment() {
             append(spannableContributors)
         }
 
-        val contentView = layoutInflater.inflate(R.layout.miuix_about_bottom_sheet, null)
+        if (materialUi) {
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle("Sui")
+                .setMessage(message)
+                .setPositiveButton(R.string.about_button_ok, null)
+                .create()
+            // Window animations are resolved by the system using the host package.
+            // In Settings, Sui's private style IDs do not belong to that package.
+            dialog.window?.setWindowAnimations(0)
+            val decor = dialog.window?.decorView
+            decor?.apply {
+                alpha = 0f
+                scaleX = 0.94f
+                scaleY = 0.94f
+            }
+            dialog.show()
+            decor?.animate()
+                ?.alpha(1f)
+                ?.scaleX(1f)
+                ?.scaleY(1f)
+                ?.setDuration(220L)
+                ?.setInterpolator(DecelerateInterpolator())
+                ?.start()
+
+            dialog.getButton(DialogInterface.BUTTON_POSITIVE)?.setOnClickListener {
+                if (decor == null) {
+                    dialog.dismiss()
+                } else {
+                    decor.animate().cancel()
+                    decor.animate()
+                        .alpha(0f)
+                        .scaleX(0.98f)
+                        .scaleY(0.98f)
+                        .setDuration(160L)
+                        .withEndAction { dialog.dismiss() }
+                        .start()
+                }
+            }
+            dialog.findViewById<android.widget.TextView>(android.R.id.message)?.movementMethod = LinkMovementMethod.getInstance()
+            return
+        }
+
+        val contentView = layoutInflater.inflate(R.layout.miuix_about_bottom_sheet, binding.root, false)
 
         val root = contentView.findViewById<android.widget.LinearLayout>(R.id.miuix_bottom_sheet_root)
         val titleView = contentView.findViewById<android.widget.TextView>(R.id.text_title)
@@ -641,14 +849,18 @@ class ManagementFragment : AppFragment() {
         val buttonOk = contentView.findViewById<android.widget.TextView>(R.id.button_ok)
         val density = requireContext().resources.displayMetrics.density
 
-        val sheetColor = ContextCompat.getColor(requireContext(), R.color.miuix_bottom_sheet_bg_color)
+        val primaryColor = MiuixTonalColors.primaryForTheme(requireContext())
+        val isNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        val isMonetEnabled = viewModel.isMonetEnabled
+        val sheetColor = if (isMonetEnabled) {
+            val accent = requireContext().theme.resolveColor(androidx.appcompat.R.attr.colorAccent)
+            MiuixTonalColors.fromAccent(accent, isNight).surfaceContainerHigh
+        } else {
+            ContextCompat.getColor(requireContext(), R.color.miuix_bottom_sheet_bg_color)
+        }
         val baseRadiusPx = MiuixSquircleUtils.getBottomCornerRadius(requireContext())
         val dynamicRadiusPx = baseRadiusPx + 12f * density
         root?.background = MiuixSmoothCardDrawable(dynamicRadiusPx, sheetColor, topCornersOnly = false)
-
-        val primaryColor = requireContext().theme.resolveColor(R.attr.colorPrimary)
-        val isNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        val isMonetEnabled = viewModel.isMonetEnabled
 
         val btnColor = if (isMonetEnabled) {
             if (isNight) {
@@ -685,7 +897,7 @@ class ManagementFragment : AppFragment() {
             }
         }
 
-        titleView?.text = "Sui"
+        titleView?.setText(R.string.about_title)
         textView?.text = message
         textView?.movementMethod = LinkMovementMethod.getInstance()
 
@@ -698,6 +910,10 @@ class ManagementFragment : AppFragment() {
     }
 
     override fun onDestroyView() {
+        if (materialUi) {
+            binding.list.removeOnItemTouchListener(materialPullToRefresh)
+            materialPullToRefresh.finishRefresh()
+        }
         super.onDestroyView()
         MiuixPopupDimOverlay.cleanUp()
         _binding = null
@@ -706,15 +922,21 @@ class ManagementFragment : AppFragment() {
     private fun onLoading() {
         if (adapter.itemCount == 0) {
             binding.list.isGone = true
-            binding.pullToRefreshIndicator.apply {
-                state = MiuixPullToRefreshView.RefreshState.REFRESHING
-                pullProgress = 1f
+            if (materialUi) {
+                setMaterialLoadingCentered(true)
+                binding.materialLoadingIndicator.isVisible = true
+            }
+            if (!materialUi) {
+                binding.pullToRefreshIndicator.apply {
+                    state = MiuixPullToRefreshView.RefreshState.REFRESHING
+                    pullProgress = 1f
 
-                post {
-                    val targetOffset = (parent as? View)?.height?.toFloat() ?: (resources.displayMetrics.heightPixels.toFloat() * 0.8f)
-                    thresholdOffset = targetOffset
-                    dragOffset = targetOffset
-                    invalidate()
+                    post {
+                        val targetOffset = (parent as? View)?.height?.toFloat() ?: (resources.displayMetrics.heightPixels.toFloat() * 0.8f)
+                        thresholdOffset = targetOffset
+                        dragOffset = targetOffset
+                        invalidate()
+                    }
                 }
             }
         }
@@ -722,14 +944,22 @@ class ManagementFragment : AppFragment() {
 
     private fun onError(e: Throwable?) {
         binding.list.isVisible = true
-        bounceEdgeEffectFactory.finishRefresh()
-        binding.pullToRefreshIndicator.state = MiuixPullToRefreshView.RefreshState.IDLE
+        if (materialUi) materialPullToRefresh.finishRefresh()
+        binding.materialLoadingIndicator.isGone = true
+        if (!materialUi) {
+            bounceEdgeEffectFactory.finishRefresh()
+            binding.pullToRefreshIndicator.state = MiuixPullToRefreshView.RefreshState.IDLE
+        }
     }
 
     private fun onSuccess(data: Resource<List<AppInfo>?>) {
         binding.list.isVisible = true
-        bounceEdgeEffectFactory.finishRefresh()
-        binding.pullToRefreshIndicator.state = MiuixPullToRefreshView.RefreshState.IDLE
+        if (materialUi) materialPullToRefresh.finishRefresh()
+        binding.materialLoadingIndicator.isGone = true
+        if (!materialUi) {
+            bounceEdgeEffectFactory.finishRefresh()
+            binding.pullToRefreshIndicator.state = MiuixPullToRefreshView.RefreshState.IDLE
+        }
 
         data.data?.let {
             adapter.updateData(it)

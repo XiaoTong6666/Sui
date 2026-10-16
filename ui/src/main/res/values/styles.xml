@@ -19,6 +19,15 @@
   -->
 
 <resources>
+    <style name="Widget.Sui.Material.PopupMenu" parent="Widget.Material3.PopupMenu.Overflow">
+        <item name="android:popupBackground">@drawable/material_popup_background</item>
+        <item name="android:popupElevation">8dp</item>
+        <item name="overlapAnchor">false</item>
+        <item name="android:dropDownVerticalOffset">4dp</item>
+        <item name="android:listPreferredItemPaddingLeft">20dp</item>
+        <item name="android:listPreferredItemPaddingRight">20dp</item>
+    </style>
+
     <style name="Widget.Sui.PopupMenu.Base" parent="Widget.Material3.PopupMenu.Overflow">
         <item name="android:popupBackground">@drawable/miuix_popup_background</item>
         <item name="android:popupElevation">8dp</item>

@@ -18,7 +18,7 @@
   ~ Copyright (c) 2026 Sui Contributors
   -->
 
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="permission_warning_template">要允許「%1$s」%2$s嗎？</string>
     <string name="permission_description">擁有裝置的 Root 權限</string>
     <string name="grant_dialog_button_allow_always">一律 (root)</string>
@@ -40,6 +40,7 @@
     <string name="action_batch_unconfigured">修改預設值</string>
     <string name="action_filter_shizuku_apps">僅顯示 Shizuku 應用</string>
     <string name="action_monet">動態取色</string>
+    <string name="action_ui_style">介面風格</string>
     <string name="action_legacy_shizuku_binder_compat">舊版 Shizuku 相容</string>
     <string name="action_ksu_no_escape">禁止 Shell 提權 (KSU)</string>
     <string name="toast_ksu_no_escape_failed">KSU 提權保護設定失敗</string>
@@ -52,9 +53,9 @@
     <string name="about_version">v%1$s</string>
     <string name="about_license_part1">本專案遵循 GPLv3 協議，並於 </string>
     <string name="about_license_part2">GitHub</string>
-    <string name="about_license_part3"> 開源 \nCopyright (c) 2021-2026 Sui Contributors</string>
+    <string name="about_license_part3" tools:ignore="TypographyOther,TypographyDashes"> 開源 \nCopyright (c) 2021-2026 Sui Contributors</string>
     <string name="about_contributors">貢獻者: %1$s</string>
-    <string name="toast_request_shortcut">在嘗試建立喵...</string>
+    <string name="toast_request_shortcut" tools:ignore="TypographyEllipsis">在嘗試建立喵...</string>
     <string name="toast_request_shortcut_failed">建立失敗喵: %1$s</string>
     <string name="toast_legacy_shizuku_binder_compat_failed">相容模式更新失敗</string>
 </resources>

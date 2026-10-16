@@ -18,7 +18,9 @@
   ~ Copyright (c) 2026 Sui Contributors
   -->
 
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="UnusedResources">
     <solid android:color="?android:colorBackground"/>
     <corners android:radius="24dp"/>
 </shape>

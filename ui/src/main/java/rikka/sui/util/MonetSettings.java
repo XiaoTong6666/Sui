@@ -41,6 +41,10 @@ public final class MonetSettings {
         return getPrefs(context).getBoolean(KEY_MONET_ENABLED, false);
     }
 
+    public static void setMonetEnabled(Context context, boolean enabled) {
+        getPrefs(context).edit().putBoolean(KEY_MONET_ENABLED, enabled).apply();
+    }
+
     public static boolean syncFromServer(Context context) {
         SharedPreferences prefs = getPrefs(context);
         Integer flags = BridgeServiceClient.getGlobalSettingsOrNull();
@@ -49,7 +53,7 @@ public final class MonetSettings {
         }
 
         boolean enabled = (flags & BridgeServiceClient.FLAG_MONET_DISABLED) == 0;
-        prefs.edit().putBoolean(KEY_MONET_ENABLED, enabled).apply();
+        setMonetEnabled(context, enabled);
         return enabled;
     }
 

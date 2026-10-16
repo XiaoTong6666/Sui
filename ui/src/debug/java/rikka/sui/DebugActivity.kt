@@ -24,9 +24,14 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.Toolbar
+import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.ViewCompat
+import com.google.android.material.color.MaterialColors
 import rikka.sui.management.ManagementFragment
+import rikka.sui.util.MaterialTonalColors
+import rikka.sui.util.MiuixTonalColors
 import rikka.sui.util.MonetSettings
+import rikka.sui.util.UiStyleSettings
 
 class DebugActivity : AppCompatActivity() {
     companion object {
@@ -36,9 +41,9 @@ class DebugActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(R.style.Theme_Sui)
-        val monetEnabled = MonetSettings.isMonetEnabled(this)
-        MonetSettings.syncFromServerAsync(this)
+        val materialUi = UiStyleSettings.isMaterial(this)
+        setTheme(if (materialUi) R.style.Theme_Sui_Material else R.style.Theme_Sui)
+        val monetEnabled = if (materialUi) UiStyleSettings.isMaterialDynamicColorEnabled(this) else MonetSettings.isMonetEnabled(this)
         if (monetEnabled) {
             com.google.android.material.color.DynamicColors
                 .applyToActivityIfAvailable(this)
@@ -47,6 +52,28 @@ class DebugActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.appbar_fragment_activity)
+
+        if (materialUi) {
+            val root: android.view.View = findViewById(R.id.root)
+            val accent = MaterialColors.getColor(root, androidx.appcompat.R.attr.colorAccent)
+            val dark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val background = MaterialTonalColors.surfaceContainerFromAccent(accent, dark)
+            root.setBackgroundColor(background)
+            findViewById<android.view.View>(R.id.toolbar_container).setBackgroundColor(background)
+            findViewById<android.view.View>(R.id.toolbar).setBackgroundColor(background)
+            window.setBackgroundDrawable(background.toDrawable())
+        } else if (monetEnabled) {
+            val root: android.view.View = findViewById(R.id.root)
+            val accent = MaterialColors.getColor(root, androidx.appcompat.R.attr.colorAccent)
+            val dark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val surface = MiuixTonalColors.fromAccent(accent, dark).surface
+            root.setBackgroundColor(surface)
+            findViewById<android.view.View>(R.id.toolbar_container).setBackgroundColor(surface)
+            findViewById<android.view.View>(R.id.toolbar).setBackgroundColor(surface)
+            window.setBackgroundDrawable(surface.toDrawable())
+        }
 
         val toolbarContainer: android.view.ViewGroup = findViewById(R.id.toolbar_container)
         ViewCompat.setOnApplyWindowInsetsListener(toolbarContainer) { v, insets ->

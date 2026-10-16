@@ -40,6 +40,7 @@ class MiuixBottomSheetLayout @JvmOverloads constructor(
     var onDimAlphaChange: ((Float) -> Unit)? = null
     var onDimAlphaAnimate: ((Float, Long) -> Unit)? = null
 
+    @get:SuppressLint("UseKtx")
     private val sheet: View? get() = if (childCount > 0) getChildAt(0) else null
 
     init {
