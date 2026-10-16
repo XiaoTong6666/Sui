@@ -90,7 +90,7 @@ class ManagementFragment : AppFragment() {
     private val viewModel by lazy {
         ViewModelProvider(this)[ManagementViewModel::class.java]
     }
-    private val adapter by lazy { ManagementAdapter(requireContext()) }
+    private val adapter by lazy { ManagementAdapter(requireContext(), viewModel.isUiDebugMode) }
 
     private val bounceEdgeEffectFactory by lazy {
         MiuixBounceEdgeEffectFactory {
@@ -142,8 +142,16 @@ class ManagementFragment : AppFragment() {
         indicator.alpha = fraction.coerceAtLeast(0.15f)
     }
 
-    private fun PopupMenu.showForUi(anchorView: View, onDismiss: () -> Unit = {}) {
-        if (materialUi) showMaterialMenu(anchorView, endInsetDp = 20, onDismiss = onDismiss) else applyMiuixPopupStyle()
+    private fun PopupMenu.showForUi(
+        anchorView: View,
+        trailingCheckIds: Set<Int> = emptySet(),
+        onDismiss: () -> Unit = {},
+    ) {
+        if (materialUi) {
+            showMaterialMenu(anchorView, endInsetDp = 20, onDismiss = onDismiss)
+        } else {
+            applyMiuixPopupStyle(trailingCheckIds = trailingCheckIds)
+        }
     }
 
     private fun popupContext(overflow: Boolean = false): android.content.Context = when {
@@ -467,12 +475,14 @@ class ManagementFragment : AppFragment() {
                 }
 
                 R.id.action_add_shortcut -> {
-                    try {
-                        BridgeServiceClient.requestPinnedShortcut()
-                        Toast.makeText(requireContext(), R.string.toast_request_shortcut, Toast.LENGTH_SHORT).show()
-                    } catch (e: Throwable) {
-                        android.util.Log.e("SuiShortcutRPC", "Failed to request pinned shortcut via RPC", e)
-                        Toast.makeText(requireContext(), getString(R.string.toast_request_shortcut_failed, e.message), Toast.LENGTH_LONG).show()
+                    if (!viewModel.isUiDebugMode) {
+                        try {
+                            BridgeServiceClient.requestPinnedShortcut()
+                            Toast.makeText(requireContext(), R.string.toast_request_shortcut, Toast.LENGTH_SHORT).show()
+                        } catch (e: Throwable) {
+                            android.util.Log.e("SuiShortcutRPC", "Failed to request pinned shortcut via RPC", e)
+                            Toast.makeText(requireContext(), getString(R.string.toast_request_shortcut_failed, e.message), Toast.LENGTH_LONG).show()
+                        }
                     }
                     true
                 }
@@ -600,7 +610,9 @@ class ManagementFragment : AppFragment() {
             }
             true
         }
-        popupMenu.showForUi(anchorView) { anchorView.isActivated = false }
+        popupMenu.showForUi(anchorView, trailingCheckIds = if (materialUi) emptySet() else setOf(selectedId)) {
+            anchorView.isActivated = false
+        }
     }
 
     private fun showAdbRootOptionsMenu(anchorView: View) {

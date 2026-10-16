@@ -63,6 +63,7 @@ import rikka.sui.widget.showMaterialMenu
 class ManagementAppItemViewHolder private constructor(
     view: View,
     private val materialUi: Boolean,
+    private val debugPreview: Boolean,
 ) : RecyclerView.ViewHolder(view) {
 
     companion object {
@@ -70,9 +71,10 @@ class ManagementAppItemViewHolder private constructor(
         private var lastMenuClickTime = 0L
         private var lastPopupDismissTime = 0L
 
-        fun create(inflater: LayoutInflater, parent: ViewGroup, materialUi: Boolean): ManagementAppItemViewHolder = ManagementAppItemViewHolder(
+        fun create(inflater: LayoutInflater, parent: ViewGroup, materialUi: Boolean, debugPreview: Boolean): ManagementAppItemViewHolder = ManagementAppItemViewHolder(
             inflater.inflate(if (materialUi) R.layout.management_app_item_material else R.layout.management_app_item, parent, false),
             materialUi,
+            debugPreview,
         )
     }
 
@@ -219,10 +221,12 @@ class ManagementAppItemViewHolder private constructor(
                 else -> return@setOnMenuItemClickListener false
             }
 
-            try {
-                BridgeServiceClient.getService().updateFlagsForUid(uid, SuiConfig.MASK_PERMISSION, newValue)
-            } catch (e: Throwable) {
-                Log.e("SuiSettings", "updateFlagsForUid", e)
+            if (!debugPreview) {
+                try {
+                    BridgeServiceClient.getService().updateFlagsForUid(uid, SuiConfig.MASK_PERMISSION, newValue)
+                } catch (e: Throwable) {
+                    Log.e("SuiSettings", "updateFlagsForUid", e)
+                }
             }
 
             data.flags = data.flags and SuiConfig.MASK_PERMISSION.inv() or newValue

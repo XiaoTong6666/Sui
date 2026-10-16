@@ -41,6 +41,7 @@ import rikka.sui.R;
 import rikka.sui.util.MaterialTonalColors;
 import rikka.sui.util.MiuixTonalColors;
 import rikka.sui.util.MonetSettings;
+import rikka.sui.util.UiDebugMode;
 import rikka.sui.util.UiStyleSettings;
 
 public class AppActivity extends AppCompatActivity {
@@ -80,19 +81,21 @@ public class AppActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
-        UiStyleSettings.syncFromServerAsync(this, changed -> {
-            if (changed) {
-                runOnUiThread(() -> {
-                    if (!isFinishing() && !isDestroyed()) recreate();
-                });
-            }
-        });
+        if (!UiDebugMode.ENABLED) {
+            UiStyleSettings.syncFromServerAsync(this, changed -> {
+                if (changed) {
+                    runOnUiThread(() -> {
+                        if (!isFinishing() && !isDestroyed()) recreate();
+                    });
+                }
+            });
+        }
         final boolean materialUi = UiStyleSettings.isMaterial(this);
         setTheme(materialUi ? R.style.Theme_Sui_Material : R.style.Theme_Sui);
 
         final boolean monetEnabled =
                 materialUi ? UiStyleSettings.isMaterialDynamicColorEnabled(this) : MonetSettings.isMonetEnabled(this);
-        if (!materialUi) {
+        if (!materialUi && !UiDebugMode.ENABLED) {
             MonetSettings.syncFromServerAsync(this, (changed, enabled) -> {
                 if (!changed) {
                     return;

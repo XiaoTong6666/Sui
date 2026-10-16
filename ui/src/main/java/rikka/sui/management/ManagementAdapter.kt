@@ -35,6 +35,7 @@ import rikka.sui.util.UiStyleSettings
 
 class ManagementAdapter(
     context: Context,
+    private val debugPreview: Boolean,
 ) : RecyclerView.Adapter<ManagementAppItemViewHolder>() {
 
     private val inflater = LayoutInflater.from(context)
@@ -55,7 +56,7 @@ class ManagementAdapter(
         return uid * 31L + item.packageInfo.packageName.hashCode().toLong()
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ManagementAppItemViewHolder = ManagementAppItemViewHolder.create(inflater, parent, materialUi)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ManagementAppItemViewHolder = ManagementAppItemViewHolder.create(inflater, parent, materialUi, debugPreview)
 
     override fun onBindViewHolder(holder: ManagementAppItemViewHolder, position: Int) {
         holder.bind(items[position], this)

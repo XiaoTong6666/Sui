@@ -110,7 +110,10 @@ class MiuixPressHelper : View.OnTouchListener {
     }
 }
 
-fun PopupMenu.applyMiuixPopupStyle(trailingArrowIds: Set<Int> = emptySet()) {
+fun PopupMenu.applyMiuixPopupStyle(
+    trailingArrowIds: Set<Int> = emptySet(),
+    trailingCheckIds: Set<Int> = emptySet(),
+) {
     try {
         val mAnchorField = this.javaClass.getDeclaredField("mAnchor")
         mAnchorField.isAccessible = true
@@ -198,18 +201,26 @@ fun PopupMenu.applyMiuixPopupStyle(trailingArrowIds: Set<Int> = emptySet()) {
                 }
             }
 
-            if (trailingArrowIds.isNotEmpty()) {
+            if (trailingArrowIds.isNotEmpty() || trailingCheckIds.isNotEmpty()) {
                 it.post {
+                    val visibleItems = (0 until menu.size).map(menu::getItem).filter { item -> item.isVisible }
                     for (index in 0 until it.childCount) {
                         val menuIndex = it.firstVisiblePosition + index
-                        val visibleItems = (0 until menu.size).map(menu::getItem).filter { item -> item.isVisible }
                         val menuItem = visibleItems.getOrNull(menuIndex) ?: continue
-                        if (menuItem.itemId !in trailingArrowIds) continue
                         val title = it.getChildAt(index)?.findViewById<TextView>(androidx.appcompat.R.id.title) ?: continue
-                        val arrow = ContextCompat.getDrawable(it.context, R.drawable.ic_miuix_popup_next)?.mutate() ?: continue
-                        DrawableCompat.setTint(arrow, title.context.theme.resolveColor(android.R.attr.textColorSecondary))
+                        val drawable = when (menuItem.itemId) {
+                            in trailingArrowIds -> ContextCompat.getDrawable(it.context, R.drawable.ic_miuix_popup_next)?.mutate()?.also { arrow ->
+                                DrawableCompat.setTint(arrow, title.context.theme.resolveColor(android.R.attr.textColorSecondary))
+                            }
+
+                            in trailingCheckIds -> ContextCompat.getDrawable(it.context, R.drawable.ic_miuix_check)?.mutate()?.also { check ->
+                                DrawableCompat.setTint(check, MiuixTonalColors.primaryForTheme(it.context))
+                            }
+
+                            else -> null
+                        } ?: continue
                         title.compoundDrawablePadding = (12 * it.resources.displayMetrics.density).toInt()
-                        title.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, arrow, null)
+                        title.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, drawable, null)
                     }
                 }
             }

@@ -19,6 +19,7 @@
 package rikka.sui.management
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import androidx.core.content.edit
@@ -33,17 +34,20 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import rikka.sui.app.AppActivity
 import rikka.sui.model.AppInfo
 import rikka.sui.util.AppInfoComparator
 import rikka.sui.util.AppLabelCache
 import rikka.sui.util.BridgeServiceClient
 import rikka.sui.util.MonetSettings
+import rikka.sui.util.UiDebugMode
 import rikka.sui.util.UiStyleSettings
 
 class ManagementViewModel : ViewModel() {
 
-    private val uiDebugMode = false
+    private val uiDebugMode = UiDebugMode.ENABLED
+    val isUiDebugMode get() = uiDebugMode
+    private val previewPrefs = "sui_debug_preview"
+    private var previewSettings: SharedPreferences? = null
     private val fullList = ArrayList<AppInfo>()
     var showOnlyShizukuApps = false
     var isMonetEnabled = false
@@ -83,6 +87,16 @@ class ManagementViewModel : ViewModel() {
             return
         }
 
+        if (uiDebugMode) {
+            showOnlyShizukuApps = enable
+            context.getSharedPreferences(previewPrefs, Context.MODE_PRIVATE).edit {
+                putBoolean("show_only_shizuku", enable)
+            }
+            displayList()
+            onResult(true)
+            return
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             val mask = BridgeServiceClient.FLAG_SHOW_ONLY_SHIZUKU_APPS
             val success = BridgeServiceClient.updateGlobalSettings(mask, if (enable) mask else 0)
@@ -100,7 +114,7 @@ class ManagementViewModel : ViewModel() {
     fun toggleMonetSetting(context: Context, onResult: (Boolean) -> Unit) {
         val newState = !isMonetEnabled
 
-        if (uiDebugMode || context !is AppActivity) {
+        if (uiDebugMode) {
             isMonetEnabled = newState
             MonetSettings.setMonetEnabled(context, newState)
             onResult(true)
@@ -122,7 +136,7 @@ class ManagementViewModel : ViewModel() {
     }
 
     fun saveUiAppearance(context: Context, style: String, materialDynamicColor: Boolean, onResult: (Boolean) -> Unit) {
-        if (context !is AppActivity) {
+        if (uiDebugMode) {
             onResult(true)
             return
         }
@@ -136,6 +150,12 @@ class ManagementViewModel : ViewModel() {
 
     fun toggleLegacyShizukuBinderCompat(onResult: (Boolean) -> Unit) {
         val newState = !isLegacyShizukuBinderCompatEnabled
+        if (uiDebugMode) {
+            isLegacyShizukuBinderCompatEnabled = newState
+            previewSettings?.edit { putBoolean("legacy_compat", newState) }
+            onResult(true)
+            return
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             val mask = BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT
@@ -152,6 +172,12 @@ class ManagementViewModel : ViewModel() {
 
     fun toggleKsuNoEscape(onResult: (Boolean) -> Unit) {
         val newState = !isKsuNoEscapeEnabled
+        if (uiDebugMode) {
+            isKsuNoEscapeEnabled = newState
+            previewSettings?.edit { putBoolean("ksu_no_escape", newState) }
+            onResult(true)
+            return
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             val mask = BridgeServiceClient.FLAG_KSU_NO_ESCAPE
@@ -167,6 +193,12 @@ class ManagementViewModel : ViewModel() {
     }
 
     fun setAdbRootMode(mode: Int, onResult: (Boolean) -> Unit) {
+        if (uiDebugMode) {
+            adbRootMode = mode
+            previewSettings?.edit { putInt("adb_root_mode", mode) }
+            onResult(true)
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val mask = BridgeServiceClient.FLAG_ADB_ROOT_ONCE or BridgeServiceClient.FLAG_ADB_ROOT_ALWAYS
             val value = when (mode) {
@@ -188,7 +220,13 @@ class ManagementViewModel : ViewModel() {
     fun batchUpdate(targetMode: Int, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             if (uiDebugMode) {
-                fullList.forEach { it.defaultFlags = targetMode }
+                previewSettings?.edit { putInt("default_mode", targetMode) }
+                fullList.forEach {
+                    it.defaultFlags = targetMode
+                    if (it.flags and rikka.sui.server.SuiConfig.MASK_PERMISSION == 0) {
+                        it.effectiveFlags = targetMode
+                    }
+                }
                 displayList()
                 return@launch
             }
@@ -209,7 +247,13 @@ class ManagementViewModel : ViewModel() {
         appList.postValue(Resource.loading(null))
 
         if (uiDebugMode) {
+            val prefs = context.getSharedPreferences(previewPrefs, Context.MODE_PRIVATE)
+            previewSettings = prefs
+            showOnlyShizukuApps = prefs.getBoolean("show_only_shizuku", showOnlyShizukuApps)
             isMonetEnabled = MonetSettings.isMonetEnabled(context)
+            isLegacyShizukuBinderCompatEnabled = prefs.getBoolean("legacy_compat", false)
+            isKsuNoEscapeEnabled = prefs.getBoolean("ksu_no_escape", false)
+            adbRootMode = prefs.getInt("adb_root_mode", ADB_ROOT_OFF)
             reloadJob = viewModelScope.launch(Dispatchers.IO) {
                 val fakeData = createFakeAppList()
                 fullList.clear()
@@ -225,11 +269,7 @@ class ManagementViewModel : ViewModel() {
                 if (!hasLoadedGlobalSettings) {
                     val flags = BridgeServiceClient.getGlobalSettings()
                     showOnlyShizukuApps = (flags and BridgeServiceClient.FLAG_SHOW_ONLY_SHIZUKU_APPS) != 0
-                    isMonetEnabled = if (context is AppActivity) {
-                        (flags and BridgeServiceClient.FLAG_MONET_DISABLED) == 0
-                    } else {
-                        MonetSettings.isMonetEnabled(context)
-                    }
+                    isMonetEnabled = (flags and BridgeServiceClient.FLAG_MONET_DISABLED) == 0
                     isLegacyShizukuBinderCompatEnabled =
                         (flags and BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT) != 0
                     isKsuNoEscapeEnabled = (flags and BridgeServiceClient.FLAG_KSU_NO_ESCAPE) != 0
@@ -300,7 +340,8 @@ class ManagementViewModel : ViewModel() {
                 label = name
                 flags = 0
                 effectiveFlags = 0
-                defaultFlags = 0
+                defaultFlags = previewSettings?.getInt("default_mode", 0) ?: 0
+                effectiveFlags = defaultFlags
             }
         }
     }
