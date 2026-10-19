@@ -1,14 +1,17 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `567`
-- **Commit:** [`ff78053`](https://github.com/XiaoTong6666/Sui/commit/ff780530053b6a48a5cfd1c82d32a78b70bf3c91)
-- **Build time:** `1m 53s`
-- **SHA256:** `75adcf66efa22f08305bd438d639fc401ab2c8945298851375b0a21d7f2fcd42`
+- **VersionCode:** `568`
+- **Commit:** [`d92eb95`](https://github.com/XiaoTong6666/Sui/commit/d92eb95aed8854368497fa713aa80d2974a4bc91)
+- **Build time:** `2m 39s`
+- **SHA256:** `ad4746d41e9933fa3fb2a5235ed7348c0e28233e6cc64fa9436cd8dc2ff0d7a2`
 
 ## Message
 
 ```text
-fix(rish): read synchronous Binder replies
+build(deps): bump material-color-utilities-android to 6.0.0
 
+Upgrade MaterialKolor color utilities from 5.0.1 to 6.0.0.
+
+Update the DynamicScheme import to its new dynamiccolor package for 6.0 compatibility.
 ```
