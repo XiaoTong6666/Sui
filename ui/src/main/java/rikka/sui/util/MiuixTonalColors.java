@@ -23,7 +23,7 @@ import android.content.res.Configuration;
 import com.google.android.material.color.MaterialColors;
 import com.materialkolor.dynamiccolor.ColorSpec;
 import com.materialkolor.hct.Hct;
-import com.materialkolor.scheme.DynamicScheme;
+import com.materialkolor.dynamiccolor.DynamicScheme;
 import com.materialkolor.scheme.SchemeTonalSpot;
 
 public final class MiuixTonalColors {
