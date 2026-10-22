@@ -101,7 +101,10 @@ log -p i -t "Sui" "Module path $MODDIR"
 
 enable_once="/data/adb/sui/enable_adb_root_once"
 enable_forever="/data/adb/sui/enable_adb_root"
+inject_opt_in="/data/adb/sui/enable_adb_root_injection"
+inject_prepared="/data/adb/sui/adbd_inject_prepared"
 adb_root_exit=0
+rm -f "$inject_prepared"
 
 if [ -f $enable_once ]; then
   log -p i -t "Sui" "adb root support is enabled for this time of boot"
@@ -132,8 +135,21 @@ if [ "$enable_adb_root" = true ]; then
   rm "$MODDIR/bin/adb_root"
   ln -s "$MODDIR/bin/sui" "$MODDIR/bin/adb_root"
   chmod 700 "$MODDIR/bin/adb_root"
-  "$MODDIR/bin/adb_root" "$MODDIR"
-  adb_root_exit=$?
+  # Use the selected backend without automatic fallback.
+  if [ -f "$inject_opt_in" ]; then
+    if [ -f "$MODDIR/lib/libadbd_inject.so" ]; then
+      log -p i -t "Sui" "ADB Root backend: ZN injection"
+      "$MODDIR/bin/adb_root" "$MODDIR" --inject
+      adb_root_exit=$?
+    else
+      log -p e -t "Sui" "ZN injection selected, but libadbd_inject.so is missing"
+      adb_root_exit=1
+    fi
+  else
+    log -p i -t "Sui" "ADB Root backend: Bind Mount"
+    "$MODDIR/bin/adb_root" "$MODDIR"
+    adb_root_exit=$?
+  fi
   log -p i -t "Sui" "Exited with $adb_root_exit"
 else
   log -p i -t "Sui" "adb root support is disabled"

@@ -116,10 +116,14 @@ extract "$ZIPFILE" "lib/$ARCH_NAME/libmain.so" "$MODPATH/bin" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/librish.so" "$MODPATH" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/libadbd_wrapper.so" "$MODPATH/bin" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/libadbd_preload.so" "$MODPATH/lib" true
+extract "$ZIPFILE" "lib/$ARCH_NAME/libadbd_inject.so" "$MODPATH/lib" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/libsepolicy_checker.so" "$MODPATH/bin" true
 
 mv "$MODPATH/bin/libmain.so" "$MODPATH/bin/sui"
 mv "$MODPATH/bin/libadbd_wrapper.so" "$MODPATH/bin/adbd_wrapper"
+
+# Declare the adbd injection module.
+printf 'name=adbd lib/libadbd_inject.so\n' > "$MODPATH/zn_modules.txt"
 mv "$MODPATH/bin/libsepolicy_checker.so" "$MODPATH/bin/sepolicy_checker"
 
 set_perm "$MODPATH/bin/sepolicy_checker" 0 0 0755

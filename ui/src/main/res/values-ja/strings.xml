@@ -44,6 +44,7 @@
     <string name="action_ksu_no_escape">Shell の昇格を禁止 (KSU)</string>
     <string name="toast_ksu_no_escape_failed">KSU 昇格保護の設定に失敗しました</string>
     <string name="action_adb_root">ADB Root</string>
+    <string name="adb_root_zn_injection">ZN インジェクション</string>
     <string name="adb_root_off">無効</string>
     <string name="adb_root_once">次回起動時のみ有効</string>
     <string name="adb_root_always">常に有効</string>

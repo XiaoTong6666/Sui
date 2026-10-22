@@ -54,6 +54,7 @@ class ManagementViewModel : ViewModel() {
     var isLegacyShizukuBinderCompatEnabled = false
     var isKsuNoEscapeEnabled = false
     var adbRootMode = ADB_ROOT_OFF
+    var isAdbRootZnInjectionEnabled = false
     private var hasLoadedGlobalSettings = false
     val appList = MutableLiveData<Resource<List<AppInfo>?>?>(null)
     private var currentQuery: String? = null
@@ -217,6 +218,25 @@ class ManagementViewModel : ViewModel() {
         }
     }
 
+    fun toggleAdbRootZnInjection(onResult: (Boolean) -> Unit) {
+        val newState = !isAdbRootZnInjectionEnabled
+        if (uiDebugMode) {
+            isAdbRootZnInjectionEnabled = newState
+            previewSettings?.edit { putBoolean("adb_root_zn_injection", newState) }
+            onResult(true)
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val mask = BridgeServiceClient.FLAG_ADB_ROOT_ZN_INJECTION
+            val success = BridgeServiceClient.updateGlobalSettings(mask, if (newState) mask else 0)
+            withContext(Dispatchers.Main) {
+                if (success) isAdbRootZnInjectionEnabled = newState
+                onResult(success)
+            }
+        }
+    }
+
     fun batchUpdate(targetMode: Int, context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
             if (uiDebugMode) {
@@ -254,6 +274,7 @@ class ManagementViewModel : ViewModel() {
             isLegacyShizukuBinderCompatEnabled = prefs.getBoolean("legacy_compat", false)
             isKsuNoEscapeEnabled = prefs.getBoolean("ksu_no_escape", false)
             adbRootMode = prefs.getInt("adb_root_mode", ADB_ROOT_OFF)
+            isAdbRootZnInjectionEnabled = prefs.getBoolean("adb_root_zn_injection", false)
             reloadJob = viewModelScope.launch(Dispatchers.IO) {
                 val fakeData = createFakeAppList()
                 fullList.clear()
@@ -273,6 +294,8 @@ class ManagementViewModel : ViewModel() {
                     isLegacyShizukuBinderCompatEnabled =
                         (flags and BridgeServiceClient.FLAG_LEGACY_SHIZUKU_BINDER_COMPAT) != 0
                     isKsuNoEscapeEnabled = (flags and BridgeServiceClient.FLAG_KSU_NO_ESCAPE) != 0
+                    isAdbRootZnInjectionEnabled =
+                        (flags and BridgeServiceClient.FLAG_ADB_ROOT_ZN_INJECTION) != 0
                     adbRootMode = when {
                         (flags and BridgeServiceClient.FLAG_ADB_ROOT_ALWAYS) != 0 -> ADB_ROOT_ALWAYS
                         (flags and BridgeServiceClient.FLAG_ADB_ROOT_ONCE) != 0 -> ADB_ROOT_ONCE

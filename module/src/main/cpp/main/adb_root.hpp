@@ -522,7 +522,7 @@ inline int setup_adb_root_non_apex(const char* root_path, const char* adbd_wrapp
     return EXIT_SUCCESS;
 }
 
-static int setup_adb_root(const char* root_path) {
+static int setup_adb_root(const char* root_path, bool inject_mode) {
     if (selinux_check_access("u:r:adbd:s0", "u:r:adbd:s0", "process", "setcurrent", nullptr) != 0) {
         PLOGE("u:r:adbd:s0 u:r:adbd:s0 process setcurrent not allowed");
         return ERR_SELINUX;
@@ -610,6 +610,33 @@ static int setup_adb_root(const char* root_path) {
 
     freecon(curr_con);
 
+    if (inject_mode) {
+        // Prepare ZN injection without wrapper mounts.
+        const char* adbd = access("/apex/com.android.adbd/bin/adbd", F_OK) == 0
+                               ? "/apex/com.android.adbd/bin/adbd"
+                               : "/system/bin/adbd";
+        if (!is_dynamically_linked(adbd)) {
+            LOGE("adbd injection requires a dynamically linked executable: %s", adbd);
+            return ERR_ADBD_IS_STATIC;
+        }
+
+        constexpr const char* marker = "/data/adb/sui/adbd_inject_prepared";
+        attrs marker_attr{};
+        if (getattrs("/data/adb/sui/seclabel", &marker_attr) != 0) {
+            return ERR_OTHER;
+        }
+        marker_attr.mode = 0600;
+        ScopedFd marker_fd(open(marker, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+        if (marker_fd.get() < 0 || setattrs(marker, &marker_attr) != 0 ||
+            write(marker_fd.get(), "v4\n", 3) != 3) {
+            PLOGE("prepare %s", marker);
+            unlink(marker);
+            return ERR_OTHER;
+        }
+        LOGI("Prepared adbd injection without Bind Mount");
+        return EXIT_SUCCESS;
+    }
+
     char adbd_wrapper[PATH_MAX]{0};
     if (!build_path(adbd_wrapper, sizeof(adbd_wrapper), "%s/bin/adbd_wrapper", root_path)) {
         PLOGE("build_path %s/bin/adbd_wrapper", root_path);
@@ -643,11 +670,15 @@ static int setup_adb_root(const char* root_path) {
 }
 
 inline int adb_root_main(int argc, char** argv) {
+    if (argc < 2)
+        return ERR_OTHER;
     LOGI("Setup adb root support: %s", argv[1]);
+
+    const bool inject_mode = argc > 2 && strcmp(argv[2], "--inject") == 0;
 
     if (init_selinux()) {
         auto root_path = argv[1];
-        return setup_adb_root(root_path);
+        return setup_adb_root(root_path, inject_mode);
     } else {
         LOGW("Cannot load libselinux");
         return 1;

@@ -626,6 +626,8 @@ class ManagementFragment : AppFragment() {
         }
         if (!materialUi) MiuixPopupDimOverlay.show(requireActivity())
 
+        popupMenu.menu.findItem(R.id.adb_root_zn_injection)?.isChecked =
+            viewModel.isAdbRootZnInjectionEnabled
         when (viewModel.adbRootMode) {
             ManagementViewModel.ADB_ROOT_ONCE -> popupMenu.menu.findItem(R.id.adb_root_once)?.isChecked = true
             ManagementViewModel.ADB_ROOT_ALWAYS -> popupMenu.menu.findItem(R.id.adb_root_always)?.isChecked = true
@@ -654,6 +656,17 @@ class ManagementFragment : AppFragment() {
         }
 
         popupMenu.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.adb_root_zn_injection) {
+                val context = requireContext()
+                viewModel.toggleAdbRootZnInjection { success ->
+                    Toast.makeText(
+                        context,
+                        if (success) R.string.toast_restart_device else R.string.toast_adb_root_failed,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+                return@setOnMenuItemClickListener true
+            }
             val mode = when (item.itemId) {
                 R.id.adb_root_once -> ManagementViewModel.ADB_ROOT_ONCE
                 R.id.adb_root_always -> ManagementViewModel.ADB_ROOT_ALWAYS

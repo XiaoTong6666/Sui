@@ -44,10 +44,12 @@ public class SuiConfigManager extends ConfigManager {
     private static final int FLAG_KSU_NO_ESCAPE = 1 << 3;
     private static final int FLAG_ADB_ROOT_ONCE = 1 << 4;
     private static final int FLAG_ADB_ROOT_ALWAYS = 1 << 5;
+    private static final int FLAG_ADB_ROOT_ZN_INJECTION = 1 << 8;
     public static final int MASK_UI_APPEARANCE = (1 << 6) | (1 << 7);
     private static final File KSU_NO_ESCAPE_MARKER = new File("/data/adb/sui/ksu_no_escape");
     private static final File ADB_ROOT_ONCE_MARKER = new File("/data/adb/sui/enable_adb_root_once");
     private static final File ADB_ROOT_ALWAYS_MARKER = new File("/data/adb/sui/enable_adb_root");
+    private static final File ADB_ROOT_ZN_INJECTION_MARKER = new File("/data/adb/sui/enable_adb_root_injection");
     private static final String LEGACY_SHELL_DIR = "/data/local/tmp/sui_shell";
     private static final String SHELL_BASE_DIR = "/data/local/tmp";
     private static final String SHELL_DIR_MARKER = "/data/adb/sui/shell_dir_name";
@@ -408,6 +410,10 @@ public class SuiConfigManager extends ConfigManager {
                 flags &= ~FLAG_KSU_NO_ESCAPE;
             }
             flags &= ~(FLAG_ADB_ROOT_ONCE | FLAG_ADB_ROOT_ALWAYS);
+            flags &= ~FLAG_ADB_ROOT_ZN_INJECTION;
+            if (ADB_ROOT_ZN_INJECTION_MARKER.exists()) {
+                flags |= FLAG_ADB_ROOT_ZN_INJECTION;
+            }
             if (ADB_ROOT_ALWAYS_MARKER.exists()) {
                 flags |= FLAG_ADB_ROOT_ALWAYS;
             } else if (ADB_ROOT_ONCE_MARKER.exists()) {
@@ -469,6 +475,22 @@ public class SuiConfigManager extends ConfigManager {
             }
         } catch (java.io.IOException | android.system.ErrnoException e) {
             throw new IllegalStateException("Failed to update adb root setting", e);
+        }
+        try {
+            if ((flags & FLAG_ADB_ROOT_ZN_INJECTION) != 0) {
+                File parent = ADB_ROOT_ZN_INJECTION_MARKER.getParentFile();
+                if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                    throw new java.io.IOException("cannot create " + parent);
+                }
+                if (!ADB_ROOT_ZN_INJECTION_MARKER.exists() && !ADB_ROOT_ZN_INJECTION_MARKER.createNewFile()) {
+                    throw new java.io.IOException("cannot create " + ADB_ROOT_ZN_INJECTION_MARKER);
+                }
+                android.system.Os.chmod(ADB_ROOT_ZN_INJECTION_MARKER.getAbsolutePath(), 0600);
+            } else if (ADB_ROOT_ZN_INJECTION_MARKER.exists() && !ADB_ROOT_ZN_INJECTION_MARKER.delete()) {
+                throw new java.io.IOException("cannot delete " + ADB_ROOT_ZN_INJECTION_MARKER);
+            }
+        } catch (java.io.IOException | android.system.ErrnoException e) {
+            throw new IllegalStateException("Failed to update ADB Root ZN injection setting", e);
         }
         update(UID_GLOBAL_SETTINGS, 0xFFFFFFFF, flags | FLAG_GLOBAL_SETTINGS_INITIALIZED);
     }

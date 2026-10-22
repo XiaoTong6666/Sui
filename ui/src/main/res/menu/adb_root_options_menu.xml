@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
+        android:id="@+id/adb_root_zn_injection"
+        android:title="@string/adb_root_zn_injection"
+        android:checkable="true" />
+    <item
         android:id="@+id/adb_root_off"
         android:title="@string/adb_root_off"
         android:checkable="true" />

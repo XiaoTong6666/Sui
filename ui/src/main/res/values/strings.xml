@@ -48,6 +48,7 @@
     <string name="action_ksu_no_escape">Block Shell root (KSU)</string>
     <string name="toast_ksu_no_escape_failed">Failed to update KSU root protection</string>
     <string name="action_adb_root">ADB Root</string>
+    <string name="adb_root_zn_injection">ZN injection</string>
     <string name="adb_root_off">Off</string>
     <string name="adb_root_once">Enable for next boot once</string>
     <string name="adb_root_always">Always enable</string>

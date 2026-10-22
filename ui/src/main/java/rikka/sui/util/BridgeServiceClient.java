@@ -41,6 +41,7 @@ public class BridgeServiceClient {
     public static final int FLAG_ADB_ROOT_ALWAYS = 1 << 5;
     public static final int FLAG_UI_MATERIAL = 1 << 6;
     public static final int FLAG_MATERIAL_DYNAMIC_DISABLED = 1 << 7;
+    public static final int FLAG_ADB_ROOT_ZN_INJECTION = 1 << 8;
 
     private static final int BINDER_TRANSACTION_getApplications = 10001;
     private static final int BINDER_TRANSACTION_REQUEST_PINNED_SHORTCUT_FROM_UI = 10005;

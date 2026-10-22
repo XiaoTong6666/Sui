@@ -45,6 +45,7 @@
     <string name="action_ksu_no_escape">禁止 Shell 提权 (KSU)</string>
     <string name="toast_ksu_no_escape_failed">KSU 提权保护设置失败喵</string>
     <string name="action_adb_root">ADB Root</string>
+    <string name="adb_root_zn_injection">ZN 注入</string>
     <string name="adb_root_off">关闭</string>
     <string name="adb_root_once">下次启动启用一次</string>
     <string name="adb_root_always">始终启用</string>

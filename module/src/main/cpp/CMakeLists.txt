@@ -64,6 +64,11 @@ add_library(adbd_preload SHARED
 target_link_libraries(adbd_preload cxx::cxx log)
 set_target_properties(adbd_preload PROPERTIES LINK_FLAGS_RELEASE -s)
 
+add_library(adbd_inject SHARED
+        adbd/adbd_inject.cpp)
+target_link_libraries(adbd_inject cxx::cxx log)
+set_target_properties(adbd_inject PROPERTIES LINK_FLAGS_RELEASE -s)
+
 add_executable(libsepolicy_checker.so checker/checker_main.cpp)
 target_link_libraries(libsepolicy_checker.so util cxx::cxx log nativehelper::nativehelper_header_only)
 set_target_properties(libsepolicy_checker.so PROPERTIES LINK_FLAGS_RELEASE -s)
@@ -80,6 +85,9 @@ if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 
     add_custom_command(TARGET adbd_preload POST_BUILD
             COMMAND ${CMAKE_STRIP} --strip-all --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libadbd_preload.so")
+
+    add_custom_command(TARGET adbd_inject POST_BUILD
+            COMMAND ${CMAKE_STRIP} --strip-all --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libadbd_inject.so")
 
     add_custom_command(TARGET libsepolicy_checker.so POST_BUILD
             COMMAND ${CMAKE_STRIP} --strip-all --remove-section=.comment "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libsepolicy_checker.so")
