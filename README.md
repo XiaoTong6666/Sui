@@ -2,9 +2,9 @@
 
 - **Version:** `v13.5.4.3`
 - **VersionCode:** `570`
-- **Commit:** [`374ff72`](https://github.com/XiaoTong6666/Sui/commit/374ff72a5bee94ea6c472d23469bb6113fd47466)
-- **Build time:** `3m 12s`
-- **SHA256:** `e6f6f68b4b658815437c4d6be1c6300e416e07ef73e4428028c2ae79aa318e08`
+- **Commit:** [`f81d431`](https://github.com/XiaoTong6666/Sui/commit/f81d4312ba9b27f11229111ec5f4c8254f999e7b)
+- **Build time:** `1m 13s`
+- **SHA256:** `3855842020cab5e443c954bf888afd534eacd1d6f3a01eac0c6b3dadb443d7bf`
 
 ## Message
 
@@ -25,4 +25,5 @@ updated-dependencies:
 
 Signed-off-by: dependabot[bot] <support@github.com>
 Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
+
 ```
