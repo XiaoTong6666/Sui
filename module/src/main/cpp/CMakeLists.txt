@@ -40,6 +40,7 @@ target_link_libraries(util cxx::cxx log nativehelper::nativehelper_header_only)
 add_definitions(-DZYGISK_MODULE_ID=${ZYGISK_MODULE_ID})
 
 add_library(sui SHARED
+        core/local_atexit.cpp
         core/main_zygisk.cpp
         core/main.cpp
         core/system_server.cpp
@@ -48,6 +49,7 @@ add_library(sui SHARED
         core/manager_process.cpp
         core/settings_process.cpp)
 target_link_libraries(sui util cxx::cxx log nativehelper::nativehelper_header_only)
+set_source_files_properties(core/local_atexit.cpp PROPERTIES COMPILE_OPTIONS "-fvisibility=hidden")
 set_target_properties(sui PROPERTIES LINK_FLAGS_RELEASE -s)
 
 add_executable(libmain.so main/main.cpp)
