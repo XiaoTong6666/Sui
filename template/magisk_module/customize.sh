@@ -142,9 +142,25 @@ set_perm "$MODPATH/sui.dex" 0 0 0600
 set_perm "$MODPATH/sui.apk" 0 0 0655
 set_perm_recursive "$MODPATH/res" 0 0 0700 0600
 
+valid_package_metadata() {
+  [ -f "$1" ] || return 1
+  awk '
+    NR == 1 && $0 == "" { exit 1 }
+    NR == 2 && $0 !~ /^[0-9]+$/ { exit 1 }
+    NR == 3 && $0 == "" { exit 1 }
+    NR > 3 { exit 1 }
+    END { if (NR != 3) exit 1 }
+  ' "$1"
+}
+
 ui_print "- Fetching information for SystemUI and Settings"
-run_sui_logged_command "SuiInstaller" /system/bin/app_process -Djava.class.path="$MODPATH"/sui.dex /system/bin \
-  --nice-name=sui_installer rikka.sui.installer.Installer "$MODPATH"
+if ! run_sui_logged_command "SuiInstaller" /system/bin/app_process -Djava.class.path="$MODPATH"/sui.dex /system/bin \
+  --nice-name=sui_installer rikka.sui.installer.Installer "$MODPATH"; then
+  abort "! Sui Installer failed to resolve system packages"
+fi
+if ! valid_package_metadata "$MODPATH/system_ui" || ! valid_package_metadata "$MODPATH/settings"; then
+  abort "! Sui Installer produced invalid package metadata"
+fi
 
 ui_print "- Extracting files for rish"
 extract "$ZIPFILE" 'rish' "$MODPATH"

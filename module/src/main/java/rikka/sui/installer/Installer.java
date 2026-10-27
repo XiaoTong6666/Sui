@@ -61,6 +61,13 @@ public class Installer {
             temporaryFile.delete();
             throw new IOException("Can't replace " + file);
         }
+        SystemPackage saved = SystemPackages.readPackageMetadata(path, fileName);
+        if (saved == null
+                || !systemPackage.packageName.equals(saved.packageName)
+                || systemPackage.uid != saved.uid
+                || !systemPackage.processName.equals(saved.processName)) {
+            throw new IOException("Invalid package metadata in " + file);
+        }
         return true;
     }
 

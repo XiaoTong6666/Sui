@@ -91,7 +91,7 @@ ensure_sui_log_collector() {
 
 pipe_sui_output_to_logcat() {
     while IFS= read -r line || [ -n "$line" ]; do
-        log -p i -t "Sui" "$line"
+        log -p i -t "Sui" -- "$line"
     done
 }
 
@@ -99,16 +99,23 @@ run_sui_logged_command() {
     log_tag="$1"
     shift
     output_file="$SUI_LOG_DIR/command-output.$$"
-    rm -f "$output_file" 2>/dev/null
+    error_file="$SUI_LOG_DIR/command-error.$$"
+    rm -f "$output_file" "$error_file" 2>/dev/null
 
-    "$@" >"$output_file" 2>&1
+    "$@" >"$output_file" 2>"$error_file"
     command_status=$?
 
     cat "$output_file"
+    if [ "$command_status" -ne 0 ]; then
+        cat "$error_file" >&2
+    fi
     while IFS= read -r line || [ -n "$line" ]; do
-        log -p i -t "$log_tag" "$line"
+        log -p i -t "$log_tag" -- "$line"
     done < "$output_file"
-    rm -f "$output_file"
+    while IFS= read -r line || [ -n "$line" ]; do
+        log -p e -t "$log_tag" -- "$line"
+    done < "$error_file"
+    rm -f "$output_file" "$error_file"
     return "$command_status"
 }
 
