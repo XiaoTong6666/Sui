@@ -1,18 +1,18 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `571`
-- **Commit:** [`af5447f`](https://github.com/XiaoTong6666/Sui/commit/af5447f4313e2abc15fc36e729ac0f296da95d2c)
-- **Build time:** `2m 33s`
-- **SHA256:** `fcf9ad2b3f9ff4ccee62d43bed4b6abe71ff71ddb89acbb1485148873bcb5270`
+- **VersionCode:** `572`
+- **Commit:** [`2aac56d`](https://github.com/XiaoTong6666/Sui/commit/2aac56dccde14c9b9d5f008c1fcc035c5d8195d3)
+- **Build time:** `2m 17s`
+- **SHA256:** `18eae4e6ccf885a1c6f12928a2a6a1bb3abe776fedcf0d9e089da80205262d26`
 
 ## Message
 
 ```text
-fix(native): Isolate C++ exit handlers from Bionic, Meow
+fix(installer): Guard metadata and log forwarding, Meow
 
-为 libsui.so 接入本地 __cxa_atexit/__cxa_finalize，避免将模块析构记录写入 Bionic 全局表喵（当然znlinker也会替我们处理这些了喵）
+给日志转发加上 --，避免以 - 开头的输出被 log 当成参数喵（甩甩尾巴）
 
-Co-authored-by: 5ec1cff <56485584+5ec1cff@users.noreply.github.com>
+安装时检查 Installer 退出状态和元数据格式，写入后再回读核对，不让失败悄悄混过去喵（认真检查）
 
 ```
