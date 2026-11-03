@@ -1,35 +1,16 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `573`
-- **Commit:** [`cab27cf`](https://github.com/XiaoTong6666/Sui/commit/cab27cf1a4c019c9c7f52b15391eb91ae86ad2fb)
-- **Build time:** `4m 12s`
-- **SHA256:** `645aa8a50462774b9e67a8fb62f8b263d9457e83c8f2136771653cfb3046a99a`
+- **VersionCode:** `574`
+- **Commit:** [`746c06c`](https://github.com/XiaoTong6666/Sui/commit/746c06c66a9fa19ba4bb469a0657c108a10e3fae)
+- **Build time:** `1m 33s`
+- **SHA256:** `047364c1f474cdc68e0f28ea2a71e872410395b310f8af9d860b4d9bf0b66637`
 
 ## Message
 
 ```text
-build(deps): bump agp from 9.4.1 to 9.5.0 (#140)
+fix(bridge): Stop Zygote restarts, Meow #141
 
-Bumps `agp` from 9.4.1 to 9.5.0.
-
-Updates `com.android.application` from 9.4.1 to 9.5.0
-
-Updates `com.android.library` from 9.4.1 to 9.5.0
-
----
-updated-dependencies:
-- dependency-name: com.android.application
-  dependency-version: 9.5.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-- dependency-name: com.android.library
-  dependency-version: 9.5.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+删掉 Binder 注册失败自动重启 Zygote ，但保留重试
 
 ```
