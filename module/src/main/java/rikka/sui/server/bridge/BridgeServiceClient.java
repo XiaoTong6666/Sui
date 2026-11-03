@@ -22,21 +22,15 @@ package rikka.sui.server.bridge;
 import static rikka.sui.server.ServerConstants.LOGGER;
 
 import android.annotation.SuppressLint;
-import android.os.Build;
 import android.os.IBinder;
 import android.os.Parcel;
 import android.os.ServiceManager;
-import android.os.SystemProperties;
 import java.lang.reflect.Field;
 import java.util.Map;
 import rikka.sui.server.SuiService;
 import rikka.sui.util.BridgeConstants;
 
 public class BridgeServiceClient {
-
-    private static final int MAX_ZYGOTE_RESTART = 1;
-    private static int remainingRestart = MAX_ZYGOTE_RESTART;
-    private static boolean systemServerRequested = false;
 
     private static class DeathRecipient implements IBinder.DeathRecipient {
 
@@ -167,34 +161,10 @@ public class BridgeServiceClient {
             }
         }
 
+        // Registration failures are retried by SuiService. Never restart Zygote
+        // here: Zygisk may be disabled or Sui may have been loaded late.
         if (listener != null) {
             listener.onResponseFromBridgeService(res);
-        }
-
-        if (res) {
-            systemServerRequested = true;
-        } else {
-            maybeRestartZygote();
-        }
-    }
-
-    private static void maybeRestartZygote() {
-        if (systemServerRequested) {
-            return;
-        }
-        if (remainingRestart <= 0) {
-            LOGGER.w("zygote restart quota exhausted, skip restart");
-            return;
-        }
-        remainingRestart--;
-        LOGGER.w("System server injection failed, try restarting zygote (remaining=%d)", remainingRestart);
-        try {
-            boolean has64 = Build.SUPPORTED_64_BIT_ABIS != null && Build.SUPPORTED_64_BIT_ABIS.length > 0;
-            boolean has32 = Build.SUPPORTED_32_BIT_ABIS != null && Build.SUPPORTED_32_BIT_ABIS.length > 0;
-            String target = (has64 && has32) ? "zygote_secondary" : "zygote";
-            SystemProperties.set("ctl.restart", target);
-        } catch (Throwable e) {
-            LOGGER.w(e, "Failed to restart zygote");
         }
     }
 
