@@ -1,29 +1,17 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `576`
-- **Commit:** [`3af0920`](https://github.com/XiaoTong6666/Sui/commit/3af0920efc8091ac11da9bdd0981357701c53c0b)
-- **Build time:** `4m 02s`
-- **SHA256:** `b402be4be3cb38a6b0c7310bbba2be7a08d863354ffcb78911ee44e8b636c2c4`
+- **VersionCode:** `577`
+- **Commit:** [`c5cbf06`](https://github.com/XiaoTong6666/Sui/commit/c5cbf06db2bacff2d6100ba7623051a91190aee5)
+- **Build time:** `2m 31s`
+- **SHA256:** `fbcc286344fdb729df42e834a7d7699356afc502e86ebdd207e83d2aca8048df`
 
 ## Message
 
 ```text
-build(deps): bump com.diffplug.spotless from 8.10.4 to 8.11.0 (#143)
+fix(legacy): Harden Sui DEX directory permissions, Meow
 
-Bumps [com.diffplug.spotless](https://github.com/diffplug/spotless) from 8.10.4 to 8.11.0.
-- [Release notes](https://github.com/diffplug/spotless/releases)
-- [Changelog](https://github.com/diffplug/spotless/blob/main/CHANGES.md)
-- [Commits](https://github.com/diffplug/spotless/compare/gradle/8.10.4...gradle/8.11.0)
+修复旧版 Android 首次启动时 /data/system/sui 权限异常导致 system_server DEX 注入失败的问题喵
+注入前校验工作目录的属主及类型，并在权限异常时自动恢复；将共享目录收紧为 0751、oat 收紧为 0700，同时清理缓存的组与其他用户权限，补充启动脚本的失败日志喵
 
----
-updated-dependencies:
-- dependency-name: com.diffplug.spotless
-  dependency-version: 8.11.0
-  dependency-type: direct:production
-  update-type: version-update:semver-minor
-...
-
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 ```
