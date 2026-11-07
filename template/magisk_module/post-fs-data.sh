@@ -16,7 +16,7 @@ fix_oat_permissions_until_ready() {
 
     while [ "$attempts" -lt "$max_attempts" ]; do
         if [ -d "$SUI_WORK_DIR/oat" ]; then
-            chmod -R a+rX "$SUI_WORK_DIR/oat" 2>/dev/null
+            chmod -R u+rX,go-rwx "$SUI_WORK_DIR/oat" 2>/dev/null
             if find "$SUI_WORK_DIR/oat" -type f 2>/dev/null | read -r _; then
                 settle_rounds=$((settle_rounds + 1))
                 if [ "$settle_rounds" -ge 5 ]; then
@@ -34,14 +34,19 @@ fix_oat_permissions_until_ready() {
 }
 
 if [ "$API_LEVEL" -lt 26 ] && [ -d "$SUI_WORK_DIR" ]; then
-    rm -rf "$SUI_WORK_DIR"
+    if ! rm -rf "$SUI_WORK_DIR"; then
+        log -p w -t "Sui" "Cannot clear legacy DEX directory $SUI_WORK_DIR"
+    fi
 fi
 
 if [ "$API_LEVEL" -le 27 ]; then
-    mkdir -p "$SUI_WORK_DIR/oat"
-    chown -R 1000:1000 "$SUI_WORK_DIR"
-    chmod 771 "$SUI_WORK_DIR"
-    chmod 777 "$SUI_WORK_DIR/oat"
+    if ! mkdir -p "$SUI_WORK_DIR/oat" ||
+       ! chown -R 1000:1000 "$SUI_WORK_DIR" ||
+       ! chmod -R go-rwx "$SUI_WORK_DIR/oat" ||
+       ! chmod 751 "$SUI_WORK_DIR" ||
+       ! chmod 700 "$SUI_WORK_DIR/oat"; then
+        log -p e -t "Sui" "Cannot prepare legacy DEX directory $SUI_WORK_DIR"
+    fi
 fi
 
 if [ "$API_LEVEL" -lt 26 ]; then
