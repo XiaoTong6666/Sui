@@ -74,9 +74,8 @@ public class BridgeService {
 
         try {
             if (isRoot) {
-                if (rootServiceBinder == null) {
-                    PackageReceiver.register();
-                } else {
+                PackageReceiver.register();
+                if (rootServiceBinder != null) {
                     rootServiceBinder.unlinkToDeath(DEATH_RECIPIENT_ROOT, 0);
                 }
             } else {

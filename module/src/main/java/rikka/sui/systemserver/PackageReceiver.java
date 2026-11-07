@@ -48,35 +48,35 @@ public class PackageReceiver {
 
     private static boolean isRegistered = false;
 
-    public static void register() {
-        if (isRegistered) {
-            return;
-        }
-
+    public static synchronized void register() {
         ActivityThread activityThread = ActivityThread.currentActivityThread();
-        if (activityThread == null) {
-            LOGGER.w("ActivityThread is null");
+        if (activityThread == null || Looper.getMainLooper() == null) {
+            LOGGER.w("Cannot register system receivers: ActivityThread or main looper is null");
             return;
         }
 
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
-        intentFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
-        intentFilter.addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED);
-        intentFilter.addDataScheme("package");
-        intentFilter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
-
+        Context systemContext = activityThread.getSystemContext();
         Handler handler = new Handler(Looper.getMainLooper());
 
-        try {
-            Refine.<ContextHidden>unsafeCast(
-                            ActivityThread.currentActivityThread().getSystemContext())
-                    .registerReceiverAsUser(
-                            RECEIVER, Refine.unsafeCast(UserHandleHidden.ALL), intentFilter, null, handler);
-            isRegistered = true;
-            LOGGER.d("register package receiver");
-        } catch (Throwable e) {
-            LOGGER.w("registerReceiver failed", e);
+        if (!isRegistered) {
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
+            intentFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+            intentFilter.addAction(Intent.ACTION_PACKAGE_FULLY_REMOVED);
+            intentFilter.addDataScheme("package");
+            intentFilter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
+
+            try {
+                Refine.<ContextHidden>unsafeCast(systemContext)
+                        .registerReceiverAsUser(
+                                RECEIVER, Refine.unsafeCast(UserHandleHidden.ALL), intentFilter, null, handler);
+                isRegistered = true;
+                LOGGER.d("register package receiver");
+            } catch (Throwable e) {
+                LOGGER.w("registerReceiver failed", e);
+            }
         }
+        // Retry the Shizuku alias registration independently of package broadcasts.
+        ShizukuBinderReceiver.register(systemContext, handler);
     }
 }
