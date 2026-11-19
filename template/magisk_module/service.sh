@@ -10,22 +10,22 @@ print_log() {
     log -p i -t Sui "[Daemon] $1"
 }
 
-get_sui_root_pids() {
-    if command -v pidof >/dev/null 2>&1; then
-        pidof sui 2>/dev/null
-        return
-    fi
+get_sui_server_pids() {
+    expected_name="$1"
+    expected_uid="$2"
+    for candidate in $(get_process_pids "$expected_name"); do
+        [ "$(get_pid_uid "$candidate")" = "$expected_uid" ] || continue
+        [ "$(get_pid_process_name "$candidate")" = "$expected_name" ] || continue
+        printf '%s\n' "$candidate"
+    done
+}
 
-    ps -A 2>/dev/null | awk '$NF == "sui" { print $2 }'
+get_sui_root_pids() {
+    get_sui_server_pids sui 0
 }
 
 get_sui_shell_pids() {
-    if command -v pidof >/dev/null 2>&1; then
-        pidof sui_shell 2>/dev/null
-        return
-    fi
-
-    ps -A 2>/dev/null | awk '$NF == "sui_shell" { print $2 }'
+    get_sui_server_pids sui_shell 2000
 }
 
 count_pids() {
@@ -79,12 +79,7 @@ read_metadata() {
 }
 
 get_process_pids() {
-    if command -v pidof >/dev/null 2>&1; then
-        pidof "$1" 2>/dev/null
-        return
-    fi
-
-    ps -A 2>/dev/null | awk -v process="$1" '$NF == process { print $2 }'
+    pidof "$1" 2>/dev/null
 }
 
 metadata_field() {
@@ -100,7 +95,7 @@ get_pid_start_time() {
 }
 
 get_pid_process_name() {
-    tr '\000' '\n' < "/proc/$1/cmdline" 2>/dev/null | awk 'NR == 1 { print; exit }'
+    tr '\000' '\n' < "/proc/$1/cmdline" 2>/dev/null | awk 'NR == 1 { print $1; exit }'
 }
 
 kill_process_identity_once() {
@@ -207,48 +202,11 @@ start_sui() {
     start_sui_logged_daemon 0
 }
 
-acquire_private_watchdog_lock() {
-    FALLBACK_LOCK_DIR="$SUI_LOG_DIR/.watchdog.lock"
-    if ! mkdir "$FALLBACK_LOCK_DIR" 2>/dev/null; then
-        read -r owner owner_start < "$FALLBACK_LOCK_DIR/owner" 2>/dev/null || :
-        if sui_process_alive "$owner" "$owner_start"; then
-            return 1
-        fi
-        sleep 2
-        read -r owner owner_start < "$FALLBACK_LOCK_DIR/owner" 2>/dev/null || :
-        if sui_process_alive "$owner" "$owner_start"; then
-            return 1
-        fi
-        rm -f "$FALLBACK_LOCK_DIR/owner"
-        rmdir "$FALLBACK_LOCK_DIR" 2>/dev/null || return 1
-        mkdir "$FALLBACK_LOCK_DIR" 2>/dev/null || return 1
-    fi
-
-    read -r lock_owner _ < /proc/self/stat
-    lock_start="$(awk '{print $22}' "/proc/$lock_owner/stat" 2>/dev/null)"
-    printf '%s %s\n' "$lock_owner" "$lock_start" > "$FALLBACK_LOCK_DIR/owner"
-    trap 'rm -f "$FALLBACK_LOCK_DIR/owner"; rmdir "$FALLBACK_LOCK_DIR" 2>/dev/null' EXIT
-}
-
 LOCK_FILE="$SUI_LOG_DIR/watchdog.lock.v2"
 if ! exec 9>> "$LOCK_FILE"; then
     exit 1
 fi
-if command -v flock >/dev/null 2>&1; then
-    if ! flock -n 9 2>/dev/null; then
-        exit 0
-    fi
-elif [ -x /system/bin/toybox ]; then
-    if /system/bin/toybox flock --help >/dev/null 2>&1; then
-        if ! /system/bin/toybox flock -n 9 2>/dev/null; then
-            exit 0
-        fi
-    else
-        acquire_private_watchdog_lock || exit 0
-    fi
-else
-    acquire_private_watchdog_lock || exit 0
-fi
+flock -n 9 2>/dev/null || exit 0
 trap 'exit 0' INT TERM
 
 start_sui_log_collector

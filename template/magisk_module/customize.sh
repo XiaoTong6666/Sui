@@ -130,7 +130,6 @@ mv "$MODPATH/bin/libadbd_wrapper.so" "$MODPATH/bin/adbd_wrapper"
 printf 'name=adbd lib/libadbd_inject.so\n' > "$MODPATH/zn_modules.txt"
 mv "$MODPATH/bin/libsepolicy_checker.so" "$MODPATH/bin/sepolicy_checker"
 
-set_perm "$MODPATH/bin/sepolicy_checker" 0 0 0755
 if [ "$API" -ge 24 ]; then
   ui_print "- Setting up adbd_wrapper"
 else
@@ -138,6 +137,7 @@ else
 fi
 
 set_perm_recursive "$MODPATH" 0 0 0755 0644
+set_perm "$MODPATH/bin/sepolicy_checker" 0 0 0755
 chmod 0700 "$MODPATH/bin/sui"
 # Native log collector starts only after the binary has been installed.
 # During an upgrade the old reader continues until reboot, avoiding two

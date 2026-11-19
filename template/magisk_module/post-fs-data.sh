@@ -130,14 +130,23 @@ fi
 if [ "$enable_adb_root" = true ]; then
   boot_log i "Setup adb root support"
 
-  chmod 755 "$MODDIR/sepolicy_checker"
-  if ! "$MODDIR/sepolicy_checker"; then
-    boot_log e "RootImpl does not load sepolicy.rule..."
-    boot_log e "Try to load it..."
-    apply_sepolicy "$MODDIR"/sepolicy.rule
-    boot_log i "Apply finished"
+  policy_checker="$MODDIR/bin/sepolicy_checker"
+  if ! chmod 0755 "$policy_checker" 2>/dev/null; then
+    boot_log e "Cannot make sepolicy_checker executable: $policy_checker"
+  fi
+  if [ -x "$policy_checker" ] && "$policy_checker"; then
+    boot_log i "SELinux policy check passed"
   else
-    boot_log i "RootImpl should have loaded sepolicy.rule correctly"
+    boot_log w "SELinux policy check failed, applying sepolicy.rule..."
+    if apply_sepolicy "$MODDIR/sepolicy.rule"; then
+      if [ -x "$policy_checker" ] && "$policy_checker"; then
+        boot_log i "SELinux policy applied and verified"
+      else
+        boot_log e "SELinux policy verification failed after apply"
+      fi
+    else
+      boot_log e "Failed to apply sepolicy.rule"
+    fi
   fi
 
   rm "$MODDIR/bin/adb_root"
