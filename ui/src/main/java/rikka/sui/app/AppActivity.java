@@ -38,6 +38,7 @@ import androidx.core.view.WindowInsetsCompat;
 import com.google.android.material.color.DynamicColors;
 import com.google.android.material.color.MaterialColors;
 import rikka.sui.R;
+import rikka.sui.util.Log;
 import rikka.sui.util.MaterialTonalColors;
 import rikka.sui.util.MiuixTonalColors;
 import rikka.sui.util.MonetSettings;
@@ -123,7 +124,7 @@ public class AppActivity extends AppCompatActivity {
             if (toolbar != null) {
                 setSupportActionBar(toolbar);
             } else {
-                android.util.Log.e("Sui", "Toolbar not found in appbar_fragment_activity layout");
+                Log.e("Sui", "Toolbar not found in appbar_fragment_activity layout");
             }
 
             ViewCompat.setOnApplyWindowInsetsListener(toolbarContainer, (v, insets) -> {
@@ -160,7 +161,7 @@ public class AppActivity extends AppCompatActivity {
                 getWindow().setBackgroundDrawable(new ColorDrawable(surface));
             }
         } catch (Throwable t) {
-            android.util.Log.e("Sui", "Fatal error in AppActivity.onCreate", t);
+            Log.e("Sui", "Fatal error in AppActivity.onCreate", t);
         }
     }
 

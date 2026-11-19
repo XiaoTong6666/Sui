@@ -1,11 +1,16 @@
 #!/system/bin/sh
 MODDIR=${0%/*}
-MODULE_ID=$(basename "$MODDIR")
 
 SUI_WORK_DIR="/data/system/sui"
 API_LEVEL=$(getprop ro.build.version.sdk)
 . "$MODDIR/logging.sh"
 
+boot_log() {
+    log -p "$1" -t Sui "[Boot] $2"
+}
+
+cleanup_sui_legacy_log_files
+chmod 700 "$MODDIR/bin/sui" 2>/dev/null
 start_sui_log_collector
 
 fix_oat_permissions_until_ready() {
@@ -35,7 +40,7 @@ fix_oat_permissions_until_ready() {
 
 if [ "$API_LEVEL" -lt 26 ] && [ -d "$SUI_WORK_DIR" ]; then
     if ! rm -rf "$SUI_WORK_DIR"; then
-        log -p w -t "Sui" "Cannot clear legacy DEX directory $SUI_WORK_DIR"
+        boot_log w "Cannot clear legacy DEX directory $SUI_WORK_DIR"
     fi
 fi
 
@@ -45,7 +50,7 @@ if [ "$API_LEVEL" -le 27 ]; then
        ! chmod -R go-rwx "$SUI_WORK_DIR/oat" ||
        ! chmod 751 "$SUI_WORK_DIR" ||
        ! chmod 700 "$SUI_WORK_DIR/oat"; then
-        log -p e -t "Sui" "Cannot prepare legacy DEX directory $SUI_WORK_DIR"
+        boot_log e "Cannot prepare legacy DEX directory $SUI_WORK_DIR"
     fi
 fi
 
@@ -70,13 +75,13 @@ elif [ "$API_LEVEL" -le 27 ]; then
 fi
 
 if [ "$ZYGISK_ENABLED" = false ]; then
-  log -p w -t "Sui" "Zygisk is disabled"
+  boot_log w "Zygisk is disabled"
   exit 1
 fi
 
 if [ "$KSU" = true ]; then
-  log -p i -t "Sui" "KernelSU ksud version $KSU_VER ($KSU_VER_CODE)"
-  log -p i -t "Sui" "KernelSU kernel version $KSU_KERNEL_VER_CODE"
+  boot_log i "KernelSU ksud version $KSU_VER ($KSU_VER_CODE)"
+  boot_log i "KernelSU kernel version $KSU_KERNEL_VER_CODE"
   apply_sepolicy() {
     ksud sepolicy apply "$1"
   }
@@ -88,21 +93,21 @@ elif [  "$KERNELPATCH" = true  ]; then
   kp_minor=$(( 10 + ${kp_minor_patch:0:1} ))
   kp_patch=${kp_minor_patch:1}
 
-  log -p i -t "Sui" "APatch version $APATCH_VER ($APATCH_VER_CODE)"
-  log -p i -t "Sui" "KernelPatch version $kp_major.$kp_minor.$kp_patch"
+  boot_log i "APatch version $APATCH_VER ($APATCH_VER_CODE)"
+  boot_log i "KernelPatch version $kp_major.$kp_minor.$kp_patch"
   apply_sepolicy() {
     apd sepolicy apply "$1"
   }
 else
   MAGISK_VER_CODE=$(magisk -V 2>/dev/null)
 
-  log -p i -t "Sui" "Magisk version $MAGISK_VER_CODE"
+  boot_log i "Magisk version $MAGISK_VER_CODE"
   apply_sepolicy() {
     magiskpolicy --live --apply "$1" 2>/dev/null
   }
 fi
 
-log -p i -t "Sui" "Module path $MODDIR"
+boot_log i "Module path $MODDIR"
 
 enable_once="/data/adb/sui/enable_adb_root_once"
 enable_forever="/data/adb/sui/enable_adb_root"
@@ -112,72 +117,58 @@ adb_root_exit=0
 rm -f "$inject_prepared"
 
 if [ -f $enable_once ]; then
-  log -p i -t "Sui" "adb root support is enabled for this time of boot"
+  boot_log i "adb root support is enabled for this time of boot"
   rm $enable_once
   enable_adb_root=true
 fi
 
 if [ -f $enable_forever ]; then
-  log -p i -t "Sui" "adb root support is enabled forever"
+  boot_log i "adb root support is enabled forever"
   enable_adb_root=true
 fi
 
 if [ "$enable_adb_root" = true ]; then
-  log -p i -t "Sui" "Setup adb root support"
+  boot_log i "Setup adb root support"
 
-  # Make sure sepolicy.rule be loaded
   chmod 755 "$MODDIR/sepolicy_checker"
   if ! "$MODDIR/sepolicy_checker"; then
-    log -p e -t "Sui" "RootImpl does not load sepolicy.rule..."
-    log -p e -t "Sui" "Try to load it..."
+    boot_log e "RootImpl does not load sepolicy.rule..."
+    boot_log e "Try to load it..."
     apply_sepolicy "$MODDIR"/sepolicy.rule
-    log -p i -t "Sui" "Apply finished"
+    boot_log i "Apply finished"
   else
-    log -p i -t "Sui" "RootImpl should have loaded sepolicy.rule correctly"
+    boot_log i "RootImpl should have loaded sepolicy.rule correctly"
   fi
 
-  # Setup adb root support
   rm "$MODDIR/bin/adb_root"
   ln -s "$MODDIR/bin/sui" "$MODDIR/bin/adb_root"
   chmod 700 "$MODDIR/bin/adb_root"
-  # Use the selected backend without automatic fallback.
   if [ -f "$inject_opt_in" ]; then
     if [ -f "$MODDIR/lib/libadbd_inject.so" ]; then
-      log -p i -t "Sui" "ADB Root backend: ZN injection"
+      boot_log i "ADB Root backend: ZN injection"
       "$MODDIR/bin/adb_root" "$MODDIR" --inject
       adb_root_exit=$?
     else
-      log -p e -t "Sui" "ZN injection selected, but libadbd_inject.so is missing"
+      boot_log e "ZN injection selected, but libadbd_inject.so is missing"
       adb_root_exit=1
     fi
   else
-    log -p i -t "Sui" "ADB Root backend: Bind Mount"
+    boot_log i "ADB Root backend: Bind Mount"
     "$MODDIR/bin/adb_root" "$MODDIR"
     adb_root_exit=$?
   fi
-  log -p i -t "Sui" "Exited with $adb_root_exit"
+  boot_log i "Exited with $adb_root_exit"
 else
-  log -p i -t "Sui" "adb root support is disabled"
+  boot_log i "adb root support is disabled"
 fi
 
-# Setup uninstaller
 rm "$MODDIR/bin/uninstall"
 ln -s "$MODDIR/bin/sui" "$MODDIR/bin/uninstall"
 
-# Run Sui server
-chmod 700 "$MODDIR"/bin/sui
+log -p i -t Sui "[Daemon] Starting Sui native daemon..."
 
-# define print_log
-print_log() {
-    log -p i -t "SuiDaemon" "$1"
-}
+start_sui_logged_daemon "$adb_root_exit"
 
-
-print_log "Starting Sui native daemon..."
-
-# strat the sui daemon
-nohup "$MODDIR"/bin/sui "$MODDIR" "$adb_root_exit" 2>&1 | pipe_sui_output_to_logcat &
-
-print_log "Sui daemon launched"
+log -p i -t Sui "[Daemon] Sui daemon launched"
 
 exit 0

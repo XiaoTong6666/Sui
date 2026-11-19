@@ -22,7 +22,6 @@ package rikka.sui.util
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.util.Log
 import android.widget.TextView
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
@@ -33,6 +32,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import rikka.sui.util.Log
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import kotlin.coroutines.CoroutineContext

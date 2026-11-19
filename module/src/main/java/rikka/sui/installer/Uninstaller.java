@@ -30,12 +30,12 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.system.ErrnoException;
 import android.system.Os;
-import android.util.Log;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import java.util.ArrayList;
 import java.util.List;
 import rikka.sui.shortcut.ShortcutConstants;
+import rikka.sui.util.Log;
 import rikka.sui.util.SystemPackages;
 import rikka.sui.util.SystemPackages.SystemPackage;
 

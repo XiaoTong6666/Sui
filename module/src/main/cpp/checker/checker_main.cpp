@@ -19,6 +19,7 @@
 
 #include <selinux.h>
 #include <android/api-level.h>
+#define SUI_LOG_COMPONENT "PolicyCheck"
 #include <logging.h>
 #include <cstring>
 #include <unistd.h>

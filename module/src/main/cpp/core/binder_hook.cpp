@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include "binder_hook.h"
+#define SUI_LOG_COMPONENT "BinderHook"
 #include "logging.h"
 #include <android.h>
 #include <plt.h>
@@ -54,7 +55,7 @@ static jboolean new_CallBooleanMethodV(JNIEnv* env, jobject obj, jmethodID metho
         while (logCount < 16) {
             if (execTransactDispatchLogCount.compare_exchange_weak(logCount, logCount + 1,
                                                                    std::memory_order_relaxed)) {
-                LOGI("BinderHook: intercepted Binder.execTransact (sample=%d)", logCount + 1);
+                LOGI("intercepted Binder.execTransact (sample=%d)", logCount + 1);
                 break;
             }
         }
@@ -107,17 +108,17 @@ void BinderHook::Install(JavaVM* javaVm, JNIEnv* env, ExecTransact_t* callback) 
     // Binder
     ScopedLocalRef<jclass> binderClass(env, env->FindClass("android/os/Binder"));
     if (binderClass.get() == nullptr) {
-        LOGE("BinderHook: cannot find android/os/Binder");
+        LOGE("cannot find android/os/Binder");
         env->ExceptionClear();
         return;
     }
     original_execTransactMethodID = env->GetMethodID(binderClass.get(), "execTransact", "(IJJI)Z");
     if (!original_execTransactMethodID) {
-        LOGE("BinderHook: cannot resolve Binder.execTransact(IJJI)Z");
+        LOGE("cannot resolve Binder.execTransact(IJJI)Z");
         env->ExceptionClear();
         return;
     }
-    LOGI("BinderHook: Binder.execTransact resolved");
+    LOGI("Binder.execTransact resolved");
 
     // JNIEnv
     old_JNINativeInterface = env->functions;

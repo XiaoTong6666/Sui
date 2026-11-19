@@ -26,12 +26,12 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.os.Parcel;
 import android.os.ServiceManager;
-import android.util.Log;
 import android.util.Pair;
 import moe.shizuku.server.IShizukuService;
 import rikka.shizuku.server.UserService;
 import rikka.sui.server.ServerConstants;
 import rikka.sui.util.BridgeConstants;
+import rikka.sui.util.Log;
 
 public class Starter {
 

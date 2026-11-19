@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <dlfcn.h>
 #include <fcntl.h>
+#define SUI_LOG_COMPONENT "Adbd"
 #include <logging.h>
 #include <sys/system_properties.h>
 #include <unistd.h>

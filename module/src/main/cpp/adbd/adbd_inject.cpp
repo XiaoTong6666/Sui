@@ -25,6 +25,7 @@
 #include <link.h>
 #include <sys/auxv.h>
 #include <unistd.h>
+#define SUI_LOG_COMPONENT "Adbd"
 #include <logging.h>
 #include <time.h>
 #include <initializer_list>

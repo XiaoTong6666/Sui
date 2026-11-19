@@ -24,7 +24,6 @@ import android.content.ContextWrapper
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.os.Build
-import android.util.Log
 import android.widget.ImageView
 import androidx.collection.LruCache
 import kotlinx.coroutines.CancellationException
@@ -36,6 +35,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.zhanghai.android.appiconloader.AppIconLoader
+import rikka.sui.util.Log
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors

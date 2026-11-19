@@ -21,8 +21,8 @@ package rikka.sui.ktx
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
 import android.view.LayoutInflater
+import rikka.sui.util.Log
 
 @SuppressLint("PrivateApi")
 private val constructor =

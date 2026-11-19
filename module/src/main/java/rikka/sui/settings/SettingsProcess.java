@@ -36,13 +36,13 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.UserManager;
-import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import java.util.Arrays;
 import rikka.sui.resource.SuiApk;
 import rikka.sui.shortcut.SuiShortcut;
 import rikka.sui.util.BridgeServiceClient;
+import rikka.sui.util.Log;
 
 public class SettingsProcess {
 

@@ -38,6 +38,7 @@ import rikka.sui.model.AppInfo
 import rikka.sui.util.AppInfoComparator
 import rikka.sui.util.AppLabelCache
 import rikka.sui.util.BridgeServiceClient
+import rikka.sui.util.Log
 import rikka.sui.util.MonetSettings
 import rikka.sui.util.UiDebugMode
 import rikka.sui.util.UiStyleSettings
@@ -254,7 +255,7 @@ class ManagementViewModel : ViewModel() {
             try {
                 BridgeServiceClient.batchUpdateUnconfigured(targetMode)
             } catch (e: Throwable) {
-                android.util.Log.e("SuiViewModel", "update failed", e)
+                Log.e("SuiViewModel", "update failed", e)
                 appList.postValue(Resource.error(e, null))
                 return@launch
             }
@@ -324,7 +325,7 @@ class ManagementViewModel : ViewModel() {
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Throwable) {
-                android.util.Log.e("SuiViewModel", "THE SMOKING GUN! The final error is:", e)
+                Log.e("SuiViewModel", "THE SMOKING GUN! The final error is:", e)
                 appList.postValue(Resource.error(e, null))
             }
         }

@@ -23,7 +23,6 @@ import android.annotation.SuppressLint;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Build;
-import android.util.Log;
 import java.io.File;
 
 public class SQLiteDataBaseRemoteCompat {

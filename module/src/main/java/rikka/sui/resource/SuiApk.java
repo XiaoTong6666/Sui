@@ -30,7 +30,6 @@ import android.content.res.AssetManager;
 import android.content.res.Resources;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
-import android.util.Log;
 import dalvik.system.PathClassLoader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -38,6 +37,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
 import rikka.sui.util.BridgeServiceClient;
+import rikka.sui.util.Log;
 
 @SuppressLint({"DiscouragedPrivateApi", "BlockedPrivateApi"})
 @SuppressWarnings("JavaReflectionMemberAccess")

@@ -3,6 +3,7 @@
 #include <cstring>
 #include <cerrno>
 #include <limits>
+#define SUI_LOG_COMPONENT "Zygisk"
 #include <logging.h>
 #include <cstdio>
 #include <sys/socket.h>
@@ -75,8 +76,8 @@ class ZygiskModule : public zygisk::ModuleBase {
             }
         }
 
-        LOGI("SuiZygisk: preAppSpecialize: uid=%d, process=%s, app_data_dir=%s", args->uid,
-             process_name, app_data_dir);
+        LOGI("preAppSpecialize: uid=%d, process=%s, app_data_dir=%s", args->uid, process_name,
+             app_data_dir);
 
         InitCompanion(false, args->uid, process_name);
 
@@ -94,25 +95,25 @@ class ZygiskModule : public zygisk::ModuleBase {
             return;
         }
 
-        LOGI("SuiZygisk: postAppSpecialize start for identity %d", whoami);
+        LOGI("postAppSpecialize start for identity %d", whoami);
         char app_data_dir[PATH_MAX]{0};
 
         if (args->app_data_dir) {
             ScopedUtfChars appDataDir{env_, args->app_data_dir};
             CopyString(app_data_dir, sizeof(app_data_dir), appDataDir.c_str());
-            LOGI("SuiZygisk: app_data_dir is %s", app_data_dir);
+            LOGI("app_data_dir is %s", app_data_dir);
         } else {
-            LOGI("SuiZygisk: app_data_dir is NULL");
+            LOGI("app_data_dir is NULL");
         }
 
         if (whoami == Identity::SETTINGS) {
-            LOGI("SuiZygisk: Calling Settings::main");
+            LOGI("Calling Settings::main");
             Settings::main(env_, app_data_dir, dex.get());
         } else if (whoami == Identity::SYSTEM_UI) {
-            LOGI("SuiZygisk: Calling Manager::main");
+            LOGI("Calling Manager::main");
             Manager::main(env_, app_data_dir, dex.get());
         }
-        LOGI("SuiZygisk: postAppSpecialize finished");
+        LOGI("postAppSpecialize finished");
     }
 
     void preServerSpecialize(zygisk::ServerSpecializeArgs* args) override {
@@ -367,14 +368,14 @@ static void CompanionEntry(int socket) {
         int uid = read_int(socket);
         read_full(socket, process_name, kProcessNameMax);
 
-        LOGI("SuiCompanion: Checking app: uid=%d, process=%s", uid, process_name);
+        LOGI("Companion: Checking app: uid=%d, process=%s", uid, process_name);
         if (uid == manager_snapshot.uid && strcmp(process_name, manager_snapshot.process) == 0) {
             whoami = Identity::SYSTEM_UI;
-            LOGI("SuiCompanion: Matched SYSTEM_UI!");
+            LOGI("Companion: Matched SYSTEM_UI!");
         } else if (uid == settings_snapshot.uid &&
                    strcmp(process_name, settings_snapshot.process) == 0) {
             whoami = Identity::SETTINGS;
-            LOGI("SuiCompanion: Matched SETTINGS!");
+            LOGI("Companion: Matched SETTINGS!");
         } else {
             whoami = Identity::IGNORE;
         }

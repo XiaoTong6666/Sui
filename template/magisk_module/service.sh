@@ -4,13 +4,10 @@ MODDIR=${0%/*}
 
 . "$MODDIR/logging.sh"
 
-SUI_DIR="$SUI_LOG_DIR"
-TAG="SuiDaemon"
-
-mkdir -p "$SUI_DIR" 2>/dev/null
+mkdir -p "$SUI_LOG_DIR" 2>/dev/null
 
 print_log() {
-    log -p i -t "$TAG" "$1"
+    log -p i -t Sui "[Daemon] $1"
 }
 
 get_sui_root_pids() {
@@ -61,7 +58,6 @@ kill_pid_list() {
         return 0
     fi
 
-    # shellcheck disable=SC2086
     kill "$signal" $pids 2>/dev/null
 }
 
@@ -180,9 +176,9 @@ refresh_metadata() {
 
     print_log "Refreshing SystemUI and Settings package metadata..."
     refresh_status=0
-    run_sui_logged_command "SuiInstaller" /system/bin/app_process -Djava.class.path="$MODDIR"/sui.dex /system/bin \
+    run_sui_installer_command /system/bin/app_process -Djava.class.path="$MODDIR"/sui.dex /system/bin \
         --nice-name=sui_installer rikka.sui.installer.Installer "$MODDIR" \
-        9>&- >/dev/null 2>&1 || refresh_status=$?
+        </dev/null >/dev/null 2>&1 || refresh_status=$?
 
     new_system_ui="$(read_metadata "$MODDIR/system_ui")"
     new_settings="$(read_metadata "$MODDIR/settings")"
@@ -208,10 +204,33 @@ refresh_metadata() {
 
 start_sui() {
     chmod 700 "$MODDIR/bin/sui" 2>/dev/null
-    nohup "$MODDIR/bin/sui" "$MODDIR" 0 9>&- 2>&1 | pipe_sui_output_to_logcat 9>&- &
+    start_sui_logged_daemon 0
 }
 
-LOCK_FILE="$SUI_DIR/watchdog.lock.v2"
+acquire_private_watchdog_lock() {
+    FALLBACK_LOCK_DIR="$SUI_LOG_DIR/.watchdog.lock"
+    if ! mkdir "$FALLBACK_LOCK_DIR" 2>/dev/null; then
+        read -r owner owner_start < "$FALLBACK_LOCK_DIR/owner" 2>/dev/null || :
+        if sui_process_alive "$owner" "$owner_start"; then
+            return 1
+        fi
+        sleep 2
+        read -r owner owner_start < "$FALLBACK_LOCK_DIR/owner" 2>/dev/null || :
+        if sui_process_alive "$owner" "$owner_start"; then
+            return 1
+        fi
+        rm -f "$FALLBACK_LOCK_DIR/owner"
+        rmdir "$FALLBACK_LOCK_DIR" 2>/dev/null || return 1
+        mkdir "$FALLBACK_LOCK_DIR" 2>/dev/null || return 1
+    fi
+
+    read -r lock_owner _ < /proc/self/stat
+    lock_start="$(awk '{print $22}' "/proc/$lock_owner/stat" 2>/dev/null)"
+    printf '%s %s\n' "$lock_owner" "$lock_start" > "$FALLBACK_LOCK_DIR/owner"
+    trap 'rm -f "$FALLBACK_LOCK_DIR/owner"; rmdir "$FALLBACK_LOCK_DIR" 2>/dev/null' EXIT
+}
+
+LOCK_FILE="$SUI_LOG_DIR/watchdog.lock.v2"
 if ! exec 9>> "$LOCK_FILE"; then
     exit 1
 fi
@@ -225,22 +244,14 @@ elif [ -x /system/bin/toybox ]; then
             exit 0
         fi
     else
-        FALLBACK_LOCK_DIR="/dev/.sui-watchdog.lock"
-        if ! mkdir "$FALLBACK_LOCK_DIR" 2>/dev/null; then
-            exit 0
-        fi
-        trap 'rmdir "$FALLBACK_LOCK_DIR" 2>/dev/null' EXIT
+        acquire_private_watchdog_lock || exit 0
     fi
 else
-    FALLBACK_LOCK_DIR="/dev/.sui-watchdog.lock"
-    if ! mkdir "$FALLBACK_LOCK_DIR" 2>/dev/null; then
-        exit 0
-    fi
-    trap 'rmdir "$FALLBACK_LOCK_DIR" 2>/dev/null' EXIT
+    acquire_private_watchdog_lock || exit 0
 fi
 trap 'exit 0' INT TERM
 
-ensure_sui_log_collector
+start_sui_log_collector
 
 metadata_ready=0
 metadata_changed=0
@@ -259,7 +270,7 @@ backoff_max=60
 interval=5
 
 while true; do
-    ensure_sui_log_collector
+    start_sui_log_collector
 
     if is_sui_pair_healthy; then
         if [ "$metadata_ready" -eq 0 ] && refresh_metadata; then

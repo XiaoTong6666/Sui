@@ -38,6 +38,7 @@
 #include <vector>
 
 #include "android.h"
+#define SUI_LOG_COMPONENT "Settings"
 #include "logging.h"
 #include "misc.h"
 #include "dex_file.h"

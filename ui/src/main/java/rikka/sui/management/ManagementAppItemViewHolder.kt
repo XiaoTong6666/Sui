@@ -23,7 +23,6 @@ import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Typeface
 import android.os.SystemClock
-import android.util.Log
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -47,6 +46,7 @@ import rikka.sui.model.AppInfo
 import rikka.sui.server.SuiConfig
 import rikka.sui.util.AppIconCache
 import rikka.sui.util.BridgeServiceClient
+import rikka.sui.util.Log
 import rikka.sui.util.MaterialTonalColors
 import rikka.sui.util.MiuixPopupDimOverlay
 import rikka.sui.util.MiuixPressHelper

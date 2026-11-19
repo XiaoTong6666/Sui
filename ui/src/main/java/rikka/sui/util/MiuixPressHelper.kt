@@ -31,7 +31,6 @@ import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -50,6 +49,7 @@ import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
 import rikka.sui.R
 import rikka.sui.ktx.resolveColor
+import rikka.sui.util.Log
 import java.lang.ref.WeakReference
 import java.lang.reflect.Field
 

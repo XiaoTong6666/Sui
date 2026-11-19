@@ -1,12 +1,12 @@
 MODDIR=${0%/*}
 if [ ! -r "$MODDIR/system_ui" ]; then
-  log -t Sui "SystemUI package metadata is missing"
+  log -t Sui "[Action] SystemUI package metadata is missing"
   exit 1
 fi
 
 IFS= read -r SYSTEMUI_PACKAGE < "$MODDIR/system_ui"
 if [ -z "$SYSTEMUI_PACKAGE" ]; then
-  log -t Sui "SystemUI package metadata is empty"
+  log -t Sui "[Action] SystemUI package metadata is empty"
   exit 1
 fi
 

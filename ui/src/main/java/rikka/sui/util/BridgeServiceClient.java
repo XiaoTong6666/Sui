@@ -33,6 +33,8 @@ import rikka.sui.model.AppInfo;
 
 public class BridgeServiceClient {
 
+    private static final String TAG = "SuiBridgeDebug";
+
     public static final int FLAG_SHOW_ONLY_SHIZUKU_APPS = 1 << 0;
     public static final int FLAG_MONET_DISABLED = 1 << 1;
     public static final int FLAG_LEGACY_SHIZUKU_BINDER_COMPAT = 1 << 2;
@@ -55,10 +57,10 @@ public class BridgeServiceClient {
     private static IShizukuService service;
 
     @Nullable public static Integer getGlobalSettingsOrNull() {
-        android.util.Log.d("SuiBridgeDebug", "Fetching global settings via BINDER_TRANSACTION_getGlobalSettings.");
+        Log.d(TAG, "Fetching global settings via BINDER_TRANSACTION_getGlobalSettings.");
         IShizukuService s = getService();
         if (s == null) {
-            android.util.Log.e("SuiBridgeDebug", "Service is null when fetching global settings.");
+            Log.e(TAG, "Service is null when fetching global settings.");
             return null;
         }
 
@@ -69,13 +71,13 @@ public class BridgeServiceClient {
             s.asBinder().transact(BINDER_TRANSACTION_getGlobalSettings, data, reply, 0);
             reply.readException();
             int flags = reply.readInt();
-            android.util.Log.i("SuiBridgeDebug", "Successfully fetched global settings flags: " + flags);
+            Log.i(TAG, "Successfully fetched global settings flags: " + flags);
             return flags;
         } catch (RemoteException e) {
-            android.util.Log.e("SuiBridgeDebug", "RemoteException when calling getGlobalSettings via binder", e);
+            Log.e(TAG, "RemoteException when calling getGlobalSettings via binder", e);
             return null;
         } catch (Throwable e) {
-            android.util.Log.e("SuiBridgeDebug", "Exception when calling getGlobalSettings via binder", e);
+            Log.e(TAG, "Exception when calling getGlobalSettings via binder", e);
             return null;
         } finally {
             data.recycle();
@@ -89,11 +91,10 @@ public class BridgeServiceClient {
     }
 
     public static boolean setGlobalSettings(int flags) {
-        android.util.Log.d(
-                "SuiBridgeDebug", "Setting global settings via BINDER_TRANSACTION_setGlobalSettings. Flags = " + flags);
+        Log.d(TAG, "Setting global settings via BINDER_TRANSACTION_setGlobalSettings. Flags = " + flags);
         IShizukuService s = getService();
         if (s == null) {
-            android.util.Log.e("SuiBridgeDebug", "Service is null when setting global settings.");
+            Log.e(TAG, "Service is null when setting global settings.");
             return false;
         }
 
@@ -104,13 +105,13 @@ public class BridgeServiceClient {
             data.writeInt(flags);
             s.asBinder().transact(BINDER_TRANSACTION_setGlobalSettings, data, reply, 0);
             reply.readException();
-            android.util.Log.i("SuiBridgeDebug", "Successfully set global settings flags: " + flags);
+            Log.i(TAG, "Successfully set global settings flags: " + flags);
             return true;
         } catch (RemoteException e) {
-            android.util.Log.e("SuiBridgeDebug", "RemoteException when calling setGlobalSettings via binder", e);
+            Log.e(TAG, "RemoteException when calling setGlobalSettings via binder", e);
             return false;
         } catch (Throwable e) {
-            android.util.Log.e("SuiBridgeDebug", "Exception when calling setGlobalSettings via binder", e);
+            Log.e(TAG, "Exception when calling setGlobalSettings via binder", e);
             return false;
         } finally {
             data.recycle();
@@ -134,7 +135,7 @@ public class BridgeServiceClient {
             reply.readException();
             return true;
         } catch (Throwable e) {
-            android.util.Log.e("SuiBridgeDebug", "Failed to update masked global settings", e);
+            Log.e(TAG, "Failed to update masked global settings", e);
             return false;
         } finally {
             data.recycle();
@@ -143,8 +144,7 @@ public class BridgeServiceClient {
     }
 
     private static final IBinder.DeathRecipient DEATH_RECIPIENT = () -> {
-        final String TAG = "SuiBridgeDebug";
-        android.util.Log.w(TAG, "Bridge binder died. Resetting connection.");
+        Log.w(TAG, "Bridge binder died. Resetting connection.");
         synchronized (BridgeServiceClient.class) {
             binder = null;
             service = null;
@@ -152,20 +152,19 @@ public class BridgeServiceClient {
     };
 
     private static IBinder requestBinderFromBridge() {
-        final String TAG = "SuiBridgeDebug";
 
-        android.util.Log.d(TAG, "Attempting to request binder from bridge...");
+        Log.d(TAG, "Attempting to request binder from bridge...");
 
         for (int i = 0; i < RETRY_MAX; i++) {
             IBinder activityBinder = ServiceManager.getService(BridgeConstants.SERVICE_NAME);
 
             if (activityBinder == null) {
-                android.util.Log.e(
+                Log.e(
                         TAG,
                         "CRITICAL FAILURE: ServiceManager.getService(\"activity\") returned null! Retry count: "
                                 + (i + 1));
             } else {
-                android.util.Log.d(TAG, "'activity' service binder obtained. Preparing custom transact...");
+                Log.d(TAG, "'activity' service binder obtained. Preparing custom transact...");
 
                 Parcel data = Parcel.obtain();
                 Parcel reply = Parcel.obtain();
@@ -173,26 +172,25 @@ public class BridgeServiceClient {
                     data.writeInterfaceToken(BridgeConstants.SERVICE_DESCRIPTOR);
                     data.writeInt(BridgeConstants.ACTION_GET_BINDER);
 
-                    android.util.Log.d(TAG, "Executing binder.transact with custom code...");
+                    Log.d(TAG, "Executing binder.transact with custom code...");
                     activityBinder.transact(BridgeConstants.TRANSACTION_CODE, data, reply, 0);
-                    android.util.Log.d(TAG, "Transact call has returned. Reading reply...");
+                    Log.d(TAG, "Transact call has returned. Reading reply...");
 
                     reply.readException();
-                    android.util.Log.d(TAG, "readException() completed without throwing an exception.");
+                    Log.d(TAG, "readException() completed without throwing an exception.");
 
                     IBinder received = reply.readStrongBinder();
                     if (received != null) {
-                        android.util.Log.i(TAG, "SUCCESS! Received a non-null binder from the bridge.");
+                        Log.i(TAG, "SUCCESS! Received a non-null binder from the bridge.");
                         return received;
                     } else {
-                        android.util.Log.w(
+                        Log.w(
                                 TAG,
                                 "FAILURE: Transact was successful, but the returned binder is NULL. The bridge likely rejected the request (or not ready). Retry count: "
                                         + (i + 1));
                     }
                 } catch (Throwable e) {
-                    android.util.Log.e(
-                            TAG, "FATAL FAILURE: An exception was thrown during the transact/reply process.", e);
+                    Log.e(TAG, "FATAL FAILURE: An exception was thrown during the transact/reply process.", e);
                 } finally {
                     data.recycle();
                     reply.recycle();
@@ -207,7 +205,7 @@ public class BridgeServiceClient {
             }
         }
 
-        android.util.Log.e(TAG, "requestBinderFromBridge is returning NULL after all retries.");
+        Log.e(TAG, "requestBinderFromBridge is returning NULL after all retries.");
         return null;
     }
 
@@ -247,12 +245,12 @@ public class BridgeServiceClient {
         while (retryCount < 3) {
             IShizukuService s = getService();
             if (s == null) {
-                android.util.Log.e("SuiBridgeDebug", "getApplications: Service is null! (Retry " + retryCount + ")");
+                Log.e(TAG, "getApplications: Service is null! (Retry " + retryCount + ")");
                 try {
                     Thread.sleep(retryDelay);
                     retryDelay *= 2;
                 } catch (InterruptedException ie) {
-                    android.util.Log.w("SuiBridgeDebug", "Retry sleep interrupted");
+                    Log.w(TAG, "Retry sleep interrupted");
                     Thread.currentThread().interrupt();
                     return Collections.emptyList();
                 }
@@ -270,8 +268,8 @@ public class BridgeServiceClient {
                 try {
                     s.asBinder().transact(BINDER_TRANSACTION_getApplications, data, reply, 0);
                 } catch (android.os.DeadObjectException e) {
-                    android.util.Log.w(
-                            "SuiBridgeDebug",
+                    Log.w(
+                            TAG,
                             "DeadObjectException explicitly caught in getApplications. Invalidating binder and retrying...",
                             e);
                     setBinder(null);
@@ -279,17 +277,14 @@ public class BridgeServiceClient {
                         Thread.sleep(retryDelay);
                         retryDelay *= 2;
                     } catch (InterruptedException ie) {
-                        android.util.Log.w("SuiBridgeDebug", "Retry sleep interrupted");
+                        Log.w(TAG, "Retry sleep interrupted");
                         Thread.currentThread().interrupt();
                         return Collections.emptyList();
                     }
                     retryCount++;
                     continue;
                 } catch (android.os.TransactionTooLargeException e) {
-                    android.util.Log.e(
-                            "SuiBridgeDebug",
-                            "TransactionTooLargeException in getApplications. The list is too big.",
-                            e);
+                    Log.e(TAG, "TransactionTooLargeException in getApplications. The list is too big.", e);
                     return Collections.emptyList();
                 } catch (Throwable e) {
                     throw new RuntimeException(e);
@@ -306,7 +301,7 @@ public class BridgeServiceClient {
                 data.recycle();
             }
         }
-        android.util.Log.e("SuiBridgeDebug", "getApplications failed after max retries.");
+        Log.e(TAG, "getApplications failed after max retries.");
         return Collections.emptyList();
     }
 

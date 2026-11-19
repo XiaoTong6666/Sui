@@ -70,6 +70,9 @@ fun sha256(file: File): String {
 
 android {
     namespace = "rikka.sui"
+    sourceSets {
+        getByName("main").java.directories.add(rootProject.file("module/src/shared/java").absolutePath)
+    }
     defaultConfig {
         minSdk = 23
         versionCode = gitCommitCount

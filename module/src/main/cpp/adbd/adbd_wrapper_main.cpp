@@ -22,6 +22,7 @@
 #include <sched.h>
 #include <unistd.h>
 #include <sys/mount.h>
+#define SUI_LOG_COMPONENT "Adbd"
 #include <logging.h>
 #include <string_view>
 

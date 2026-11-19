@@ -37,9 +37,11 @@ extract "$ZIPFILE" 'service.sh' "$MODPATH"
 extract "$ZIPFILE" 'logging.sh' "$MODPATH"
 extract "$ZIPFILE" 'uninstall.sh' "$MODPATH"
 extract "$ZIPFILE" 'sepolicy.rule' "$MODPATH"
+# Upgrades can reuse an existing module directory.
+rm -f "$MODPATH/logcat.sh"
 
+MODDIR="$MODPATH"
 . "$MODPATH/logging.sh"
-start_sui_log_collector
 
 ui_print "- Extracting action script"
 extract "$ZIPFILE" 'action.sh' "$MODPATH"
@@ -120,6 +122,8 @@ extract "$ZIPFILE" "lib/$ARCH_NAME/libadbd_inject.so" "$MODPATH/lib" true
 extract "$ZIPFILE" "lib/$ARCH_NAME/libsepolicy_checker.so" "$MODPATH/bin" true
 
 mv "$MODPATH/bin/libmain.so" "$MODPATH/bin/sui"
+rm -f "$MODPATH/bin/Sui"
+ln -sf sui "$MODPATH/bin/sui_logcat"
 mv "$MODPATH/bin/libadbd_wrapper.so" "$MODPATH/bin/adbd_wrapper"
 
 # Declare the adbd injection module.
@@ -134,6 +138,11 @@ else
 fi
 
 set_perm_recursive "$MODPATH" 0 0 0755 0644
+chmod 0700 "$MODPATH/bin/sui"
+# Native log collector starts only after the binary has been installed.
+# During an upgrade the old reader continues until reboot, avoiding two
+# processes writing the same log file.
+start_sui_log_collector
 
 extract "$ZIPFILE" 'sui.dex' "$MODPATH"
 extract "$ZIPFILE" 'sui.apk' "$MODPATH"
@@ -154,7 +163,7 @@ valid_package_metadata() {
 }
 
 ui_print "- Fetching information for SystemUI and Settings"
-if ! run_sui_logged_command "SuiInstaller" /system/bin/app_process -Djava.class.path="$MODPATH"/sui.dex /system/bin \
+if ! run_sui_installer_command /system/bin/app_process -Djava.class.path="$MODPATH"/sui.dex /system/bin \
   --nice-name=sui_installer rikka.sui.installer.Installer "$MODPATH"; then
   abort "! Sui Installer failed to resolve system packages"
 fi

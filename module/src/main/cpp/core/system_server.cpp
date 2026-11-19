@@ -42,6 +42,7 @@
 #include <shared_mutex>
 
 #include "android.h"
+#define SUI_LOG_COMPONENT "SystemServer"
 #include "logging.h"
 #include "misc.h"
 #include "dex_file.h"

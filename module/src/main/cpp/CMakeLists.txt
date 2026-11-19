@@ -52,8 +52,13 @@ target_link_libraries(sui util cxx::cxx log nativehelper::nativehelper_header_on
 set_source_files_properties(core/local_atexit.cpp PROPERTIES COMPILE_OPTIONS "-fvisibility=hidden")
 set_target_properties(sui PROPERTIES LINK_FLAGS_RELEASE -s)
 
-add_executable(libmain.so main/main.cpp)
-target_link_libraries(libmain.so util cxx::cxx log nativehelper::nativehelper_header_only)
+add_executable(libmain.so
+        main/main.cpp
+        main/daemon_main.cpp
+        main/adb_root_main.cpp
+        main/uninstaller_main.cpp
+        main/logcat_main.cpp)
+target_link_libraries(libmain.so util cxx::cxx log dl nativehelper::nativehelper_header_only)
 set_target_properties(libmain.so PROPERTIES LINK_FLAGS_RELEASE -s)
 
 add_executable(libadbd_wrapper.so

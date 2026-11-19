@@ -18,6 +18,7 @@
  */
 
 #include <jni.h>
+#define SUI_LOG_COMPONENT "BridgeService"
 #include "logging.h"
 #include "bridge_service.h"
 

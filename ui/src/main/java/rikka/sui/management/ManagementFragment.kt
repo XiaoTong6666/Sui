@@ -69,6 +69,7 @@ import rikka.sui.model.AppInfo
 import rikka.sui.server.SuiConfig
 import rikka.sui.util.BridgeServiceClient
 import rikka.sui.util.EdgeDragFastScroller
+import rikka.sui.util.Log
 import rikka.sui.util.MaterialPullToRefresh
 import rikka.sui.util.MiuixBounceEdgeEffectFactory
 import rikka.sui.util.MiuixPopupDimOverlay
@@ -480,7 +481,7 @@ class ManagementFragment : AppFragment() {
                             BridgeServiceClient.requestPinnedShortcut()
                             Toast.makeText(requireContext(), R.string.toast_request_shortcut, Toast.LENGTH_SHORT).show()
                         } catch (e: Throwable) {
-                            android.util.Log.e("SuiShortcutRPC", "Failed to request pinned shortcut via RPC", e)
+                            Log.e("SuiShortcutRPC", "Failed to request pinned shortcut via RPC", e)
                             Toast.makeText(requireContext(), getString(R.string.toast_request_shortcut_failed, e.message), Toast.LENGTH_LONG).show()
                         }
                     }
