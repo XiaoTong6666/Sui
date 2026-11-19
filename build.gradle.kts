@@ -28,7 +28,7 @@ buildscript {
             force("org.apache.commons:commons-lang3:3.21.0")
             force("org.bouncycastle:bcpkix-jdk18on:1.86")
             force("org.bouncycastle:bcprov-jdk18on:1.86")
-            force("org.bouncycastle:bcutil-jdk18on:1.86")
+            force("org.bouncycastle:bcutil-jdk18on:1.87")
         }
     }
 }
@@ -48,7 +48,7 @@ val forcedDependencies = listOf(
     "org.apache.commons:commons-lang3:3.21.0",  // Fix CVE-2025-48924
     "org.bouncycastle:bcpkix-jdk18on:1.86",     // Fix GHSA-8xfc-gm6g-vgpv via AGP classpath
     "org.bouncycastle:bcprov-jdk18on:1.86",
-    "org.bouncycastle:bcutil-jdk18on:1.86"
+    "org.bouncycastle:bcutil-jdk18on:1.87"
 )
 
 fun propertyString(name: String): String = providers.gradleProperty(name).get()
