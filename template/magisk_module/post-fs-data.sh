@@ -3,6 +3,12 @@ MODDIR=${0%/*}
 
 SUI_WORK_DIR="/data/system/sui"
 API_LEVEL=$(getprop ro.build.version.sdk)
+case "$API_LEVEL" in
+    ''|*[!0-9]*) API_LEVEL=$(sed -n 's/^ro\.build\.version\.sdk=//p' /system/build.prop 2>/dev/null | head -n 1) ;;
+esac
+case "$API_LEVEL" in
+    ''|*[!0-9]*) log -p e -t Sui '[Boot] Cannot determine Android API level'; exit 1 ;;
+esac
 . "$MODDIR/logging.sh"
 
 boot_log() {
