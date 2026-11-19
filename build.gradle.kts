@@ -27,7 +27,7 @@ buildscript {
             force("org.jdom:jdom2:2.0.6.1")
             force("org.apache.commons:commons-lang3:3.22.0")
             force("org.bouncycastle:bcpkix-jdk18on:1.87")
-            force("org.bouncycastle:bcprov-jdk18on:1.86")
+            force("org.bouncycastle:bcprov-jdk18on:1.87")
             force("org.bouncycastle:bcutil-jdk18on:1.87")
         }
     }
@@ -47,7 +47,7 @@ val forcedDependencies = listOf(
     "org.jdom:jdom2:2.0.6.1",                    // Fix CVE-2021-33813
     "org.apache.commons:commons-lang3:3.22.0",  // Fix CVE-2025-48924
     "org.bouncycastle:bcpkix-jdk18on:1.87",     // Fix GHSA-8xfc-gm6g-vgpv via AGP classpath
-    "org.bouncycastle:bcprov-jdk18on:1.86",
+    "org.bouncycastle:bcprov-jdk18on:1.87",
     "org.bouncycastle:bcutil-jdk18on:1.87"
 )
 
