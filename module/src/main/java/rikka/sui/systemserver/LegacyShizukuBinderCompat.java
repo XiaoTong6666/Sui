@@ -107,7 +107,11 @@ final class LegacyShizukuBinderCompat {
         }
 
         int callingUid = Binder.getCallingUid();
-        if (SystemProcess.isUidHiddenEffective(callingUid)) {
+        // Mirror the native _SUI gate: an isolated process must never obtain
+        // the Sui binder, even when its host app is not Hidden.
+        int appId = callingUid % 100000;
+        if ((callingUid >= 10000 && appId >= 90000 && appId <= 99999)
+                || SystemProcess.isUidHiddenEffective(callingUid)) {
             return false;
         }
 

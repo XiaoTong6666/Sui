@@ -159,6 +159,14 @@ static bool isUidHidden(uid_t uid) {
     return isUidHiddenLocked(uid);
 }
 
+static bool isIsolatedAppUid(uid_t uid) {
+    if (uid < 10000)
+        return false;
+    const uid_t appId = uid % 100000;
+    // Includes App Zygote isolated UIDs (90000-98999) and regular isolated UIDs (99000-99999).
+    return appId >= 90000 && appId <= 99999;
+}
+
 static bool shouldSkipLegacy(uid_t uid) {
     std::shared_lock lock(hiddenUidsMutex);
     return !legacyCompatEnabled || isUidHiddenLocked(uid);
@@ -372,9 +380,7 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
         uid_t uid = getCallingUid(env);
 
         if (uid != (uid_t)-1 && uid >= 10000) {
-            uid_t app_id = uid % 100000;
-
-            if (app_id >= 99000 && app_id <= 99999) {
+            if (isIsolatedAppUid(uid)) {
                 return false;
             }
 
@@ -404,7 +410,7 @@ static bool ExecTransact(jboolean* res, JNIEnv* env, jobject obj, va_list args) 
         if (!legacyCompatFastEnabled.load(std::memory_order_acquire))
             return false;
         uid_t uid = getCallingUid(env);
-        if (uid == (uid_t)-1 || shouldSkipLegacy(uid))
+        if (uid == (uid_t)-1 || isIsolatedAppUid(uid) || shouldSkipLegacy(uid))
             return false;
 
         *res = env->CallStaticBooleanMethod(mainClass, my_execTransactMethodID, obj, code, dataObj,
