@@ -1,24 +1,30 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `589`
-- **Commit:** [`cb157fa`](https://github.com/XiaoTong6666/Sui/commit/cb157fac663b6ff6f3b9bc58e75c07a8f76a1956)
-- **Build time:** `3m 27s`
-- **SHA256:** `58bd8a3e546da2e26994c7ea4d56eddd986552383ee179cd2debf37cf6b3e9a2`
+- **VersionCode:** `590`
+- **Commit:** [`6844d95`](https://github.com/XiaoTong6666/Sui/commit/6844d95bd44deb17c4bd0119c816908c421c3562)
+- **Build time:** `2m 38s`
+- **SHA256:** `fc7363c6815b3f76ac7b55c0fc0b4687a858cea72269e9193f44af6ae3741c25`
 
 ## Message
 
 ```text
-build(deps): bump gradle-wrapper from 9.9.1 to 9.9.2 (#153)
+build(deps): bump agp from 9.5.2 to 9.5.3 (#157)
 
-Bumps [gradle-wrapper](https://github.com/gradle/gradle) from 9.9.1 to 9.9.2.
-- [Release notes](https://github.com/gradle/gradle/releases)
-- [Commits](https://github.com/gradle/gradle/compare/v9.9.1...v9.9.2)
+Bumps `agp` from 9.5.2 to 9.5.3.
+
+Updates `com.android.application` from 9.5.2 to 9.5.3
+
+Updates `com.android.library` from 9.5.2 to 9.5.3
 
 ---
 updated-dependencies:
-- dependency-name: gradle-wrapper
-  dependency-version: 9.9.2
+- dependency-name: com.android.application
+  dependency-version: 9.5.3
+  dependency-type: direct:production
+  update-type: version-update:semver-patch
+- dependency-name: com.android.library
+  dependency-version: 9.5.3
   dependency-type: direct:production
   update-type: version-update:semver-patch
 ...
