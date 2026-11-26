@@ -293,6 +293,7 @@ static bool PrepareCompanion() {
 
     LOGD("Companion: dex size is %" PRIdPTR, size);
 
+    // The ashmem FD feeds the in-memory loader; old ART uses a disk dex path.
     prepared_fd = CreateSharedMem("sui.dex", size);
     if (prepared_fd == -1) {
         PLOGE("CreateSharedMem %s", path);

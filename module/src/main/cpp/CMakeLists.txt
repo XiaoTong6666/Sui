@@ -28,6 +28,7 @@ include_directories("util/include")
 add_library(util STATIC
         util/misc.cpp
         util/dex_file.cpp
+        util/legacy_dex_runtime.cpp
         util/android.cpp
         util/ksu.cpp
         util/plt.c

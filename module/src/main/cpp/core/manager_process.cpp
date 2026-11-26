@@ -57,20 +57,15 @@ static bool installDex(JNIEnv* env, const char* appDataDir, Dex* dexFile) {
 
     int api = android_get_device_api_level();
     if (api <= 25) {
-        char dexPath[PATH_MAX], oatDir[PATH_MAX];
-        snprintf(dexPath, PATH_MAX, "%s/sui.dex", appDataDir);
-        snprintf(oatDir, PATH_MAX, "%s/code_cache", appDataDir);
-
-        LOGI("installDex (Below 7.1): using private paths: dex=%s, oat=%s", dexPath, oatDir);
-        dexFile->setPre26Paths(dexPath, oatDir);
-    } else if (api == 26 || api == 27) {
-        const char* dexPath = "/data/system/sui/sui.dex";
-        const char* oatDir = "/data/system/sui/oat";
-
-        LOGI("installDex (8.0/8.1): using global system paths: dex=%s, oat=%s", dexPath, oatDir);
-        dexFile->setPre26Paths(dexPath, oatDir);
+        if (!dexFile->setPre26AppPaths(appDataDir)) {
+            LOGE("installDex: cannot prepare SystemUI DEX directory");
+            return false;
+        }
     }
-    dexFile->createClassLoader(env);
+    if (!dexFile->createClassLoader(env)) {
+        LOGE("installDex: cannot create DEX class loader");
+        return false;
+    }
 
     mainClass = dexFile->findClass(env, MANAGER_PROCESS_CLASSNAME);
     if (!mainClass) {

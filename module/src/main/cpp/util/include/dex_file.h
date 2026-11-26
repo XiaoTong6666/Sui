@@ -40,7 +40,7 @@ class Buffer {
 
     size_t size() const;
 
-    int writeToFile(const char* path, mode_t mode);
+    bool writeToFile(const char* path, mode_t mode);
 };
 
 class Dex {
@@ -62,11 +62,13 @@ class Dex {
 
     void destroy(JNIEnv* env);
 
-    void createClassLoader(JNIEnv* env);
+    bool createClassLoader(JNIEnv* env);
 
     jclass findClass(JNIEnv* env, const char* name);
 
     void setPre26Paths(const char* dexPath, const char* optDir);
+
+    bool setPre26AppPaths(const char* appDataDir);
 
     bool valid();
 
@@ -75,5 +77,5 @@ class Dex {
 
     void createDexClassLoader(JNIEnv* env, const char* path, const char* optDir);
 
-    void copyDexToFile(const char* dexPath);
+    bool copyDexToFile(const char* dexPath);
 };

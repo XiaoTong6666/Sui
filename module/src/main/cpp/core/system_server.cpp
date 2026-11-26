@@ -46,6 +46,7 @@
 #include "logging.h"
 #include "misc.h"
 #include "dex_file.h"
+#include "legacy_dex_runtime.h"
 #include "bridge_service.h"
 #include "binder_hook.h"
 #include "config.h"
@@ -65,38 +66,6 @@ static jmethodID getCallingUidMethodID = nullptr;
 static jint startShortcutTransactionCode = -1;
 static jint broadcastIntentTransactionCode = -1;
 static jint broadcastIntentWithFeatureTransactionCode = -1;
-
-// On supported Android API 23-26, system_server loads Sui's DEX from disk.
-// Check the work directory at injection time rather than assuming it still
-// has the permissions prepared by post-fs-data.
-static bool ensureLegacyDexDirectory(const char* path, mode_t mode) {
-    struct stat info{};
-    if (lstat(path, &info) == -1) {
-        if (errno != ENOENT || mkdir(path, mode) == -1) {
-            PLOGE("cannot create Sui DEX directory %s", path);
-            return false;
-        }
-        if (lstat(path, &info) == -1) {
-            PLOGE("cannot stat Sui DEX directory %s", path);
-            return false;
-        }
-    }
-
-    if (!S_ISDIR(info.st_mode) || info.st_uid != getuid()) {
-        LOGE("invalid Sui DEX directory %s: mode=%o owner=%u (expected %u)", path, info.st_mode,
-             info.st_uid, getuid());
-        return false;
-    }
-    if ((info.st_mode & 0777) != mode) {
-        if (chmod(path, mode) == -1) {
-            PLOGE("cannot fix Sui DEX directory permissions %s", path);
-            return false;
-        }
-        LOGI("repaired Sui DEX directory %s permissions: %o -> %o", path, info.st_mode & 0777,
-             mode);
-    }
-    return true;
-}
 
 static std::unordered_set<uid_t> hiddenUids;
 static std::unordered_set<uid_t> rootUids;
@@ -235,18 +204,20 @@ static bool installDex(JNIEnv* env, Dex* dexFile) {
         {"setPermissionSnapshot", "([I[I[I[IZZ)Z", (void*)setPermissionSnapshot},
     };
 
-    if (android_get_device_api_level() < 27) {
-        // Repair only directories owned by this process (UID 1000). This is
-        // a fallback for a missed/raced post-fs-data preparation, not a
-        // reason to loosen permissions on an unexpected path.
-        if (!ensureLegacyDexDirectory("/data/system/sui", 0751) ||
-            !ensureLegacyDexDirectory("/data/system/sui/oat", 0700)) {
-            LOGE("cannot prepare Sui DEX directories; aborting system_server injection");
+    if (android_get_device_api_level() < 26) {
+        std::string dex_path;
+        std::string oat_dir;
+        // Create both paths as UID 1000 before DexPathList checks OAT permissions.
+        if (!sui::legacy::CreateDexRuntime(dex_path, oat_dir)) {
+            LOGE("cannot prepare private system_server DEX runtime");
             return false;
         }
-        dexFile->setPre26Paths("/data/system/sui/" DEX_NAME, "/data/system/sui/oat");
+        dexFile->setPre26Paths(dex_path.c_str(), oat_dir.c_str());
     }
-    dexFile->createClassLoader(env);
+    if (!dexFile->createClassLoader(env)) {
+        LOGE("cannot load system_server DEX");
+        return false;
+    }
 
     localMainClass = dexFile->findClass(env, SYSTEM_PROCESS_CLASSNAME);
     if (!localMainClass) {
