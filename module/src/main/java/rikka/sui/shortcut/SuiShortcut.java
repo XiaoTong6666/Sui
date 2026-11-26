@@ -67,7 +67,21 @@ public class SuiShortcut {
         if (settings == null) {
             throw new IllegalStateException("Cannot resolve Settings package");
         }
-        String packageName = settings.packageName;
+
+        // Android 6 (API 23) ART crashes in the AOT-compiled Sui DEX when package
+        // resolution and the activity-selection loop share this method (36ec596).
+        // Keep this boundary: pass plain Strings to the builder rather than
+        // merging the SystemPackage lookup and Intent construction again.
+        return buildShortcutIntent(
+                context, requiresStandardLaunchMode, token, settings.packageName, settings.processName);
+    }
+
+    private static Intent buildShortcutIntent(
+            Context context,
+            boolean requiresStandardLaunchMode,
+            String token,
+            String packageName,
+            String expectedProcessName) {
         String[] actions = new String[] {
             Settings.ACTION_WIFI_SETTINGS,
             Settings.ACTION_NETWORK_OPERATOR_SETTINGS,
@@ -90,7 +104,8 @@ public class SuiShortcut {
                 if (resolveInfo != null
                         && resolveInfo.activityInfo != null
                         && resolveInfo.activityInfo.exported
-                        && settings.processName.equals(getProcessName(resolveInfo.activityInfo))
+                        && expectedProcessName != null
+                        && expectedProcessName.equals(getProcessName(resolveInfo.activityInfo))
                         && (!requiresStandardLaunchMode
                                 || resolveInfo.activityInfo.launchMode == ActivityInfo.LAUNCH_MULTIPLE)) {
                     if (requiresStandardLaunchMode) {
@@ -109,7 +124,8 @@ public class SuiShortcut {
 
         if ("null".equals(intent.getAction())) {
             if (requiresStandardLaunchMode) {
-                intent = getIntent(context, false, token);
+                // Reuse the resolved package/process; do not re-enter getIntent().
+                intent = buildShortcutIntent(context, false, token, packageName, expectedProcessName);
             } else {
                 LOGGER.w("Use launch intent for Sui shortcut");
                 intent = pm.getLaunchIntentForPackage(packageName);

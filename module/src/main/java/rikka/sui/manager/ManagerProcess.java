@@ -51,6 +51,7 @@ public class ManagerProcess {
 
     private static Intent intent;
     private static volatile SuiApk suiApk;
+    private static final Runnable LOAD_APK = ManagerProcess::loadApk;
 
     private static final IShizukuApplication APPLICATION = new IShizukuApplication.Stub() {
 
@@ -180,9 +181,15 @@ public class ManagerProcess {
             return;
         }
 
-        if (suiApk == null) {
-            suiApk = SuiApk.createForSystemUI();
-        }
+        WorkerHandler.get().removeCallbacks(LOAD_APK);
+        loadApk();
+    }
+
+    // Retry independently of Binder reconnection on the same worker thread.
+    private static void loadApk() {
+        if (suiApk != null) return;
+        suiApk = SuiApk.createForSystemUI();
+        if (suiApk == null) WorkerHandler.get().postDelayed(LOAD_APK, 5000);
     }
 
     @SuppressWarnings("deprecation")

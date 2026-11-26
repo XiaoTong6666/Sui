@@ -39,6 +39,7 @@ import android.os.UserManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import rikka.sui.resource.SuiApk;
 import rikka.sui.shortcut.SuiShortcut;
 import rikka.sui.util.BridgeServiceClient;
@@ -49,6 +50,8 @@ public class SettingsProcess {
     private static boolean reflection = false;
     private static Handler handler;
     private static HandlerThread handlerThread;
+    private static final AtomicBoolean apkHookInstalled = new AtomicBoolean();
+    private static final AtomicBoolean apkRetryScheduled = new AtomicBoolean();
 
     @RequiresApi(Build.VERSION_CODES.O)
     private static void shortcutStuff(Application application, SettingsInstrumentation instrumentation) {
@@ -89,12 +92,52 @@ public class SettingsProcess {
 
     @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
     private static void postBindApplication(ActivityThread activityThread) {
+        if (apkHookInstalled.get() || apkRetryScheduled.get()) return;
         LOGGER.i("postBindApplication: Entered.");
         SuiApk suiApk = SuiApk.createForSettings();
         if (suiApk == null) {
-            LOGGER.e("Cannot load apk");
+            LOGGER.w("Sui APK is not ready; deferring initialization");
+            retryApkLoading(activityThread);
             return;
         }
+        installSuiApk(activityThread, suiApk);
+    }
+
+    private static void retryApkLoading(ActivityThread activityThread) {
+        if (apkHookInstalled.get() || !apkRetryScheduled.compareAndSet(false, true)) return;
+        // Avoid waiting on Binder while ActivityThread processes bindApplication.
+        // https://android.googlesource.com/platform/frameworks/base/+/android-6.0.1_r11/core/java/android/app/ActivityThread.java#1402
+        WorkerHandler.get()
+                .postDelayed(
+                        () -> {
+                            if (apkHookInstalled.get()) {
+                                apkRetryScheduled.set(false);
+                                return;
+                            }
+                            SuiApk apk = SuiApk.createForSettings();
+                            if (apk == null) {
+                                apkRetryScheduled.set(false);
+                                retryApkLoading(activityThread);
+                                return;
+                            }
+                            if (!new Handler(Looper.getMainLooper()).post(() -> {
+                                try {
+                                    if (apkHookInstalled.get()) apk.close();
+                                    else installSuiApk(activityThread, apk);
+                                } finally {
+                                    apkRetryScheduled.set(false);
+                                }
+                            })) {
+                                apk.close();
+                                apkRetryScheduled.set(false);
+                            }
+                        },
+                        5000);
+    }
+
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private static void installSuiApk(ActivityThread activityThread, SuiApk suiApk) {
+        if (apkHookInstalled.get()) return;
         LOGGER.d("postBindApplication: SuiApk loaded successfully.");
 
         BridgeServiceClient.prefetchShortcutToken();
@@ -102,6 +145,7 @@ public class SettingsProcess {
         Instrumentation instrumentation = ActivityThreadUtil.getInstrumentation(activityThread);
         SettingsInstrumentation newInstrumentation = new SettingsInstrumentation(instrumentation, suiApk);
         ActivityThreadUtil.setInstrumentation(activityThread, newInstrumentation);
+        apkHookInstalled.set(true);
         LOGGER.i("postBindApplication: Instrumentation hooked: %s -> %s", instrumentation, newInstrumentation);
         new Handler(Looper.getMainLooper()).post(() -> {
             LOGGER.d("postBindApplication [Delayed]: Starting check for Application object...");

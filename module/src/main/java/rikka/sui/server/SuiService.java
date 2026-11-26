@@ -1420,6 +1420,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
     }
 
     private ParcelFileDescriptor openApk() {
+        // Only injected UI callers may receive the APK FD.
         if (!checkCallerManagerPermission("openApk", Binder.getCallingUid(), Binder.getCallingPid())) {
             LOGGER.w("openApk is allowed to be called only from settings and system ui");
             return null;
@@ -1433,6 +1434,7 @@ public class SuiService extends Service<SuiUserServiceManager, SuiClientManager,
         }
 
         try {
+            // Binder transfers the FD, not the module path.
             return ParcelFileDescriptor.open(new File(pathname), ParcelFileDescriptor.MODE_READ_ONLY);
         } catch (FileNotFoundException e) {
             throw new IllegalStateException(e);
