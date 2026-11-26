@@ -89,7 +89,9 @@ Sui 提供交互式 shell。
 
 ### adb root
 
-Sui 还提供可选的 `adb root` 支持。启用后，Sui 会为 `adbd` 配置 wrapper 和 preload hook，使 `adbd` 运行在当前 root 实现对应的 SELinux 域下，同时保持预期的 `adbd` socket label。
+Sui 还提供可选的 `adb root` 支持。ADB Root 仅需支持 **Android 11（API 30）及以上、动态链接的 APEX adbd**，APEX Bind Mount 后端还要求存在带版本号的 APEX。原版非 APEX 兼容分支继续保留，但不属于支持范围，且依赖 Root 实现的模块挂载时序。此范围仅适用于 ADB Root，不影响 Sui 本身的 Android 版本支持。
+
+启用后，Sui 使用 APEX wrapper 和 preload hook，或可选的 ZN 注入方式，使 ADB Root 保持预期的 `adbd` socket label。
 
 该功能默认关闭。打开 Sui 管理界面，点击右上角菜单，进入 **ADB Root**，然后选择：
 

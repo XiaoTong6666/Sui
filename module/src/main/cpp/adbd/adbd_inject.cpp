@@ -30,6 +30,7 @@
 #include <time.h>
 #include <initializer_list>
 #include <adbd_inject_protocol.hpp>
+#include <adbd_boot_marker.h>
 
 #include <zygisk_next_api.h>
 
@@ -137,10 +138,18 @@ int LocateMainExecutable(dl_phdr_info* info, size_t, void* opaque) {
 }
 
 bool ReadRootLabel() {
-    int marker = open(kReadyMarker, O_RDONLY | O_CLOEXEC);
+    char expected[64]{};
+    if (!sui::adbd::CurrentBootMarker(expected, sizeof(expected)))
+        return false;
+    int marker = open(kReadyMarker, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
     if (marker < 0)
         return false;
+    char actual[64]{};
+    ssize_t marker_bytes = read(marker, actual, sizeof(actual));
     close(marker);
+    if (marker_bytes != static_cast<ssize_t>(strlen(expected)) ||
+        memcmp(actual, expected, static_cast<size_t>(marker_bytes)) != 0)
+        return false;
 
     FILE* file = fopen(kRootLabelFile, "re");
     if (!file)

@@ -89,7 +89,9 @@ After the files are correctly copied, use `rish` as `sh` to start an interactive
 
 ### adb root
 
-Sui also provides optional `adb root` support. When enabled, Sui sets up an `adbd` wrapper plus preload hook so that `adbd` can run under the current root implementation's SELinux domain while keeping the expected `adbd` socket label.
+Sui also provides optional `adb root` support. ADB Root supports **Android 11 (API 30) or newer with a dynamically linked APEX adbd**. The APEX Bind Mount backend requires a versioned APEX. The original non-APEX fallback is retained for legacy compatibility, but is outside the supported range and depends on the root implementation's module mount timing. This applies only to ADB Root, not to Sui itself.
+
+When enabled, Sui uses the APEX wrapper and preload hook or optional ZN injection to support ADB Root while retaining the expected `adbd` socket label.
 
 This feature is disabled by default. Open the Sui management UI, tap the top-right menu, choose **ADB Root**, then select one of the following modes:
 

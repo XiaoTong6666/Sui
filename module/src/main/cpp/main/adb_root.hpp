@@ -18,6 +18,9 @@
  */
 
 #include <sys/mount.h>
+#include <sys/file.h>
+#include <sys/system_properties.h>
+#include <cstring>
 #include <private/ScopedFd.h>
 #include <sys/mman.h>
 #include <cinttypes>
@@ -38,6 +41,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <android.h>
+#include <adbd_boot_marker.h>
 #include <cstdarg>
 
 using namespace std::literals::string_view_literals;
@@ -195,10 +199,64 @@ inline bool is_dynamically_linked(const char* path) {
     return is_dynamically_linked;
 }
 
+inline bool ensure_module_directory(const char* path, mode_t mode) {
+    if (mkdir(path, mode & 0777) == 0)
+        return true;
+    if (errno == EEXIST) {
+        struct stat st{};
+        if (lstat(path, &st) != 0) {
+            PLOGE("lstat %s", path);
+            return false;
+        }
+        if (S_ISDIR(st.st_mode))
+            return true;
+        errno = ENOTDIR;
+    }
+    PLOGE("mkdir %s", path);
+    return false;
+}
+
+inline bool same_file_identity(const char* lhs, const char* rhs) {
+    struct stat a{}, b{};
+    return stat(lhs, &a) == 0 && stat(rhs, &b) == 0 && a.st_dev == b.st_dev && a.st_ino == b.st_ino;
+}
+
+inline bool same_file_contents(const char* lhs, const char* rhs) {
+    ScopedFd a(open(lhs, O_RDONLY | O_CLOEXEC));
+    ScopedFd b(open(rhs, O_RDONLY | O_CLOEXEC));
+    struct stat sa{}, sb{};
+    if (a.get() < 0 || b.get() < 0 || fstat(a.get(), &sa) != 0 || fstat(b.get(), &sb) != 0 ||
+        !S_ISREG(sa.st_mode) || !S_ISREG(sb.st_mode) || sa.st_size <= 0 || sa.st_size != sb.st_size)
+        return false;
+    char ab[4096], bb[4096];
+    for (off_t remaining = sa.st_size; remaining > 0;) {
+        size_t count = remaining < static_cast<off_t>(sizeof(ab)) ? remaining : sizeof(ab);
+        if (read_full(a.get(), ab, count) != 0 || read_full(b.get(), bb, count) != 0 ||
+            memcmp(ab, bb, count) != 0)
+            return false;
+        remaining -= count;
+    }
+    return true;
+}
+
+inline bool copy_adbd_backup(const char* source, const char* backup) {
+    char temporary[PATH_MAX];
+    if (!build_path(temporary, sizeof(temporary), "%s.new.XXXXXX", backup))
+        return false;
+    ScopedFd fd(mkstemp(temporary));
+    if (fd.get() < 0)
+        return false;
+    // Never truncate a backup inode that may still be bind-mounted in another namespace.
+    bool ok = copyfile(source, temporary) == 0 && same_file_contents(source, temporary) &&
+              fsync(fd.get()) == 0 && rename(temporary, backup) == 0;
+    if (!ok)
+        unlink(temporary);
+    return ok;
+}
+
 inline int setup_adb_root_apex(const char* root_path, const char* adbd_wrapper,
-                               const char* adbd_preload) {
+                               const char* adbd_preload, bool* already_prepared) {
     char versioned_adbd[PATH_MAX]{0};
-    char path[PATH_MAX]{0};
     char source[PATH_MAX]{0};
     char target[PATH_MAX]{0};
     const char *adbd, *adbd_real, *bin_folder, *lib_folder, *data_adb_folder;
@@ -214,84 +272,104 @@ inline int setup_adb_root_apex(const char* root_path, const char* adbd_wrapper,
 #endif
     data_adb_folder = "/data/adb";
 
-    if (!is_dynamically_linked(adbd)) {
-        LOGE("%s is not dynamically linked (or 32 bit elf on 64 bit machine)", adbd);
-        return ERR_ADBD_IS_STATIC;
-    } else {
-        LOGI("%s is dynamically linked", adbd);
-    }
-
-    if (getattrs(adbd, &file_attr) != 0 || getattrs(bin_folder, &folder_attr) != 0 ||
-        getattrs(data_adb_folder, &data_adb_attr) != 0) {
-        return ERR_OTHER;
-    } else {
-        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s", adbd, file_attr.uid, file_attr.gid,
-             file_attr.mode, file_attr.context);
-        LOGV("%s: uid=%d, gid=%d, mode=%3o, context=%s", bin_folder, folder_attr.uid,
-             folder_attr.gid, folder_attr.mode, folder_attr.context);
-    }
-
-    // Path of real of adbd in module folder
-    char my_backup[PATH_MAX]{0};
-    if (!build_path(my_backup, sizeof(my_backup), "%s/bin/adbd_real", root_path)) {
-        PLOGE("build_path %s/bin/adbd_real", root_path);
-        return ERR_OTHER;
-    }
-
-    if (copyfile(adbd, my_backup) != 0) {
-        PLOGE("copyfile %s -> %s", adbd, my_backup);
-        return ERR_OTHER;
-    }
-
-    // Find /apex/com.android.adbd@version
+    // Resolve the versioned mount backing the active APEX, not the highest installed version.
+    // The APEX root inode remains unchanged when only its bin/lib subdirectories are overlaid.
+    constexpr const char* active_apex = "/apex/com.android.adbd";
     ScopedReaddir dir("/apex");
     if (dir.IsBad()) {
-        PLOGE("opendir %s", "/apex");
+        PLOGE("opendir /apex");
         return ERR_OTHER;
     }
-
-    auto apex = "/apex/"sv;
-    strncpy(versioned_adbd, apex.data(), apex.length());
-
-    bool found = false;
-    uint64_t version = 0;
     auto adbd_prefix = "com.android.adbd@"sv;
+    bool found = false;
     while (dirent* entry = dir.ReadEntry()) {
-        std::string_view d_name{entry->d_name};
-
-        if (d_name.length() <= adbd_prefix.length() ||
-            d_name.substr(0, adbd_prefix.length()) != adbd_prefix)
+        std::string_view name{entry->d_name};
+        if (name.size() <= adbd_prefix.size() || name.substr(0, adbd_prefix.size()) != adbd_prefix)
             continue;
-
-        const char* version_string = entry->d_name + adbd_prefix.length();
-        uint64_t new_version = strtoull(version_string, nullptr, 10);
-        if (new_version >= version) {
-            version = new_version;
-            strncpy(versioned_adbd + apex.length(), d_name.data(), d_name.length());
-            LOGI("Found versioned apex %s", versioned_adbd);
+        if (!build_path(versioned_adbd, sizeof(versioned_adbd), "/apex/%s", entry->d_name))
+            continue;
+        if (same_file_identity(active_apex, versioned_adbd)) {
             found = true;
+            LOGI("Found active versioned apex %s", versioned_adbd);
+            break;
         }
     }
-
     if (!found) {
-        LOGE("Cannot find versioned apex");
+        LOGE("Cannot find active versioned adbd apex");
         return ERR_OTHER;
     }
 
-    if (!build_path(path, sizeof(path),
+    char original_bin[PATH_MAX], original_adbd[PATH_MAX], original_lib[PATH_MAX];
+    char my_backup[PATH_MAX], preload_target[PATH_MAX];
+    if (!build_path(original_bin, sizeof(original_bin), "%s/bin", versioned_adbd) ||
+        !build_path(original_adbd, sizeof(original_adbd), "%s/adbd", original_bin) ||
+        !build_path(original_lib, sizeof(original_lib), "%s/%s", versioned_adbd,
 #ifdef __LP64__
-                    "%s/lib64",
+                    "lib64"
 #else
-                    "%s/lib",
+                    "lib"
 #endif
-                    versioned_adbd)) {
-        PLOGE("build_path %s/lib", versioned_adbd);
+                    ) ||
+        !build_path(my_backup, sizeof(my_backup), "%s/bin/adbd_real", root_path) ||
+        !build_path(preload_target, sizeof(preload_target), "%s/libsui_adbd_preload.so",
+                    lib_folder))
+        return ERR_OTHER;
+
+    const bool pristine = same_file_identity(bin_folder, original_bin) &&
+                          same_file_identity(lib_folder, original_lib) &&
+                          same_file_identity(adbd, original_adbd);
+    if (!pristine) {
+        // A prior supervisor may have completed mounting before it exited. Verify all
+        // of our bind sources and the original backup before declaring it reusable.
+        bool prepared = same_file_identity(adbd, adbd_wrapper) &&
+                        same_file_identity(adbd_real, my_backup) &&
+                        same_file_identity(preload_target, adbd_preload) &&
+                        same_file_contents(adbd_real, original_adbd);
+        if (prepared) {
+            ScopedReaddir original(original_lib);
+            if (original.IsBad())
+                prepared = false;
+            else {
+                while (dirent* entry = original.ReadEntry()) {
+                    if (entry->d_name[0] == '.')
+                        continue;
+                    if (!build_path(source, sizeof(source), "%s/%s", original_lib, entry->d_name) ||
+                        !build_path(target, sizeof(target), "%s/%s", lib_folder, entry->d_name) ||
+                        !same_file_identity(source, target)) {
+                        prepared = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if (prepared) {
+            if (already_prepared)
+                *already_prepared = true;
+            LOGI("APEX adb root already prepared; keeping existing mounts and original backup");
+            return EXIT_SUCCESS;
+        }
+        // An incomplete or foreign overlay must not become the next backup source.
+        // Leave it untouched rather than stacking mounts or unmounting unknown owners.
+        LOGE("APEX adbd has incomplete or unexpected mounts; reboot required before preparation");
         return ERR_OTHER;
     }
 
-    ScopedReaddir lib(path);
+    if (!is_dynamically_linked(original_adbd)) {
+        LOGE("%s is not dynamically linked (or 32 bit elf on 64 bit machine)", original_adbd);
+        return ERR_ADBD_IS_STATIC;
+    }
+
+    if (getattrs(original_adbd, &file_attr) != 0 || getattrs(bin_folder, &folder_attr) != 0 ||
+        getattrs(data_adb_folder, &data_adb_attr) != 0)
+        return ERR_OTHER;
+
+    ScopedReaddir lib(original_lib);
     if (lib.IsBad()) {
-        PLOGE("opendir %s", path);
+        PLOGE("opendir %s", original_lib);
+        return ERR_OTHER;
+    }
+    if (!copy_adbd_backup(original_adbd, my_backup)) {
+        PLOGE("prepare original adbd backup %s", my_backup);
         return ERR_OTHER;
     }
 
@@ -410,6 +488,8 @@ failed:
     return ERR_OTHER;
 }
 
+// Only Android 11+ with dynamically linked APEX adbd needs to be supported; retain the legacy
+// non-APEX fallback.
 inline int setup_adb_root_non_apex(const char* root_path, const char* adbd_wrapper,
                                    const char* adbd_preload) {
     const char *file, *folder, *data_adb_folder;
@@ -441,13 +521,21 @@ inline int setup_adb_root_non_apex(const char* root_path, const char* adbd_wrapp
     char module_folder[PATH_MAX]{0};
     char target[PATH_MAX]{0};
 
+    // Fresh installs do not contain a system overlay directory.
+    if (!build_path(module_folder, sizeof(module_folder), "%s/system", root_path)) {
+        PLOGE("build_path %s/system", root_path);
+        return ERR_OTHER;
+    }
+    if (!ensure_module_directory(module_folder, 0755)) {
+        return ERR_OTHER;
+    }
+
     // mkdir $MODDIR/system/bin
     if (!build_path(module_folder, sizeof(module_folder), "%s/system/bin", root_path)) {
         PLOGE("build_path %s/system/bin", root_path);
         return ERR_OTHER;
     }
-    if (mkdir(module_folder, folder_attr.mode) == -1 && errno != EEXIST) {
-        PLOGE("mkdir %s", module_folder);
+    if (!ensure_module_directory(module_folder, folder_attr.mode)) {
         return ERR_OTHER;
     }
 
@@ -499,8 +587,7 @@ inline int setup_adb_root_non_apex(const char* root_path, const char* adbd_wrapp
         PLOGE("build_path %s/system/lib", root_path);
         return ERR_OTHER;
     }
-    if (mkdir(module_folder, folder_attr.mode) == -1 && errno != EEXIST) {
-        PLOGE("mkdir %s", module_folder);
+    if (!ensure_module_directory(module_folder, folder_attr.mode)) {
         return ERR_OTHER;
     }
 
@@ -522,7 +609,9 @@ inline int setup_adb_root_non_apex(const char* root_path, const char* adbd_wrapp
     return EXIT_SUCCESS;
 }
 
-static int setup_adb_root(const char* root_path, bool inject_mode) {
+static int setup_adb_root(const char* root_path, bool inject_mode, bool* already_prepared) {
+    if (already_prepared)
+        *already_prepared = false;
     if (selinux_check_access("u:r:adbd:s0", "u:r:adbd:s0", "process", "setcurrent", nullptr) != 0) {
         PLOGE("u:r:adbd:s0 u:r:adbd:s0 process setcurrent not allowed");
         return ERR_SELINUX;
@@ -559,6 +648,15 @@ static int setup_adb_root(const char* root_path, bool inject_mode) {
         return ERR_OTHER;
     }
     if (setattrs(sui_dir, &data_adb_attr) != 0) {
+        freecon(curr_con);
+        return ERR_OTHER;
+    }
+
+    // Serialize direct applet calls with supervisor-driven preparation.
+    ScopedFd setup_lock(
+        open("/data/adb/sui/adbd_setup.lock", O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW, 0600));
+    if (setup_lock.get() < 0 || flock(setup_lock.get(), LOCK_EX | LOCK_NB) != 0) {
+        LOGW("adbd setup is unavailable or already in progress");
         freecon(curr_con);
         return ERR_OTHER;
     }
@@ -621,6 +719,11 @@ static int setup_adb_root(const char* root_path, bool inject_mode) {
         }
 
         constexpr const char* marker = "/data/adb/sui/adbd_inject_prepared";
+        char marker_content[64]{};
+        if (!sui::adbd::CurrentBootMarker(marker_content, sizeof(marker_content))) {
+            LOGE("cannot determine the current boot ID for adbd injection");
+            return ERR_OTHER;
+        }
         attrs marker_attr{};
         if (getattrs("/data/adb/sui/seclabel", &marker_attr) != 0) {
             return ERR_OTHER;
@@ -628,7 +731,7 @@ static int setup_adb_root(const char* root_path, bool inject_mode) {
         marker_attr.mode = 0600;
         ScopedFd marker_fd(open(marker, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
         if (marker_fd.get() < 0 || setattrs(marker, &marker_attr) != 0 ||
-            write(marker_fd.get(), "v4\n", 3) != 3) {
+            write_full(marker_fd.get(), marker_content, strlen(marker_content)) != 0) {
             PLOGE("prepare %s", marker);
             unlink(marker);
             return ERR_OTHER;
@@ -650,12 +753,12 @@ static int setup_adb_root(const char* root_path, bool inject_mode) {
     }
 
     if (android_get_device_api_level() >= __ANDROID_API_R__) {
-        if (access("/apex/com.android.adbd/bin/adbd", F_OK) != 0) {
-            PLOGE("access /apex/com.android.adbd/bin/adbd");
+        if (access("/apex/com.android.adbd", F_OK) != 0) {
+            PLOGE("access /apex/com.android.adbd");
             LOGW("Apex not exists on API 31+ device");
         } else {
             LOGI("Use adbd from /apex");
-            return setup_adb_root_apex(root_path, adbd_wrapper, adbd_preload);
+            return setup_adb_root_apex(root_path, adbd_wrapper, adbd_preload, already_prepared);
         }
     }
 
@@ -669,7 +772,7 @@ static int setup_adb_root(const char* root_path, bool inject_mode) {
     return setup_adb_root_non_apex(root_path, adbd_wrapper, adbd_preload);
 }
 
-inline int adb_root_main(int argc, char** argv) {
+inline int adb_root_main(int argc, char** argv, bool* already_prepared = nullptr) {
     if (argc < 2)
         return ERR_OTHER;
     LOGI("Setup adb root support: %s", argv[1]);
@@ -678,7 +781,7 @@ inline int adb_root_main(int argc, char** argv) {
 
     if (init_selinux()) {
         auto root_path = argv[1];
-        return setup_adb_root(root_path, inject_mode);
+        return setup_adb_root(root_path, inject_mode, already_prepared);
     } else {
         LOGW("Cannot load libselinux");
         return 1;

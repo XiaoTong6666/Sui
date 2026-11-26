@@ -23,3 +23,20 @@
 int run_adb_root_main(int argc, char** argv) {
     return adb_root_main(argc, argv);
 }
+
+int prepare_adb_root_main(int argc, char** argv, bool* already_prepared) {
+    return adb_root_main(argc, argv, already_prepared);
+}
+
+bool adbd_apex_running_from_backup() {
+    char value[PROP_VALUE_MAX]{};
+    if (__system_property_get("init.svc_debug_pid.adbd", value) <= 0)
+        return false;
+    char* end = nullptr;
+    long pid = strtol(value, &end, 10);
+    if (!end || *end || pid <= 0)
+        return false;
+    char executable[64];
+    return build_path(executable, sizeof(executable), "/proc/%ld/exe", pid) &&
+           same_file_identity(executable, "/apex/com.android.adbd/bin/adbd_real");
+}
