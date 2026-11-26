@@ -93,7 +93,7 @@ Sui はオプションで `adb root` をサポートしています。ADB Root �
 この機能はデフォルトで無効です。Sui 管理 UI を開き、右上メニューから **ADB Root** を選び、次のいずれかを設定します。
 
 * **無効** `adb root` サポートを無効のままにします。
-* **次回起動時のみ有効** 次の 1 回の起動だけ有効化します。この一時設定は `post-fs-data` で消費されるため、その起動後は管理 UI の表示が自動的に **無効** に戻ります。
+* **次回起動時のみ有効** 次の 1 回の起動だけ有効化します。この一時設定は Supervisor の準備処理で消費されるため、その起動後は管理 UI の表示が自動的に **無効** に戻ります。
 * **常に有効** **無効** に戻すまで、毎回の起動で有効化します。
 
 モード変更後は端末を再起動してください。ADB Root が有効な状態で起動した後は、通常通り `adb root` を使用できます。
@@ -227,7 +227,7 @@ Sui は [Zygisk](https://github.com/topjohnwu/zygisk-module-sample) に依存し
 **全体で 5 つの主要パートに加え、`adb root` や KernelSU shell no-escape などのオプションのブート時パス** が存在します。
 
 * **Root プロセス**  
-  `post-fs-data` 段階で起動される root プロセスです。Java サーバーを起動し、Shizuku API とその他プライベート API を提供します。  
+  `service.sh` から Native Supervisor によって起動される root プロセスです。Java サーバーを起動し、Shizuku API とその他プライベート API を提供します。
   ルートサーバーは権限設定の中心で、UID の権限データベースを管理し、`system_server` に hidden / root allowed / shell allowed / denied / default mode の状態を同期します。
 
 * **Shell プロセス**  
@@ -254,7 +254,7 @@ Sui は [Zygisk](https://github.com/topjohnwu/zygisk-module-sample) に依存し
   * 対象 `Activity` の `Intent` に Sui の extra と token が含まれている場合、`SuiActivity` をインスタンス化して表示。
 
 * **adbd wrapper / preload（オプション）**  
-  * `adb root` が有効な場合、`post-fs-data` で `/apex/com.android.adbd/bin/adbd` または `/system/bin/adbd` 用のラッパーと preload ライブラリを準備。  
+  * `adb root` の Bind Mount 方式が有効な場合、Native Supervisor がサービス起動時に動的リンクされた `/apex/com.android.adbd/bin/adbd` 用のラッパーと preload ライブラリを準備します。従来の非 APEX 用互換コードは維持しますが、サポート対象外です。
   * ラッパーは `--root_seclabel=…` を現在の root 実装に対応した SELinux ドメインに書き換え、`LD_PRELOAD` を注入。  
   * preload フックは `selinux_android_setcon()`／`setcon()` を捕捉し、`adbd` が root ドメインに切り替わりつつ `sockcreate` ラベルは期待通りの `adbd` ラベルに復元されます。
 

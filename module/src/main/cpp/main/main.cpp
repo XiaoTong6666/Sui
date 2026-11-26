@@ -26,6 +26,7 @@ int run_sui_main(int argc, char** argv);
 int run_adb_root_main(int argc, char** argv);
 int run_uninstall_main(int argc, char** argv);
 int sui_logcat_main(int argc, char** argv);
+int run_sui_supervisor_main(int argc, char** argv);
 
 struct Applet {
     const char* name;
@@ -35,6 +36,7 @@ struct Applet {
 static constexpr Applet kApplets[] = {
     {"sui", run_sui_main},
     {"sui_logcat", sui_logcat_main},
+    {"sui_supervisor", run_sui_supervisor_main},
     {"adb_root", run_adb_root_main},
     {"uninstall", run_uninstall_main},
 };

@@ -122,6 +122,7 @@ struct DecodedEntry {
 // AndroidLogEntry layouts from AOSP log/logprint.h, not the on-wire logger
 // entry layout (whose hdr_size is supplied by liblog at runtime).
 // Android 6 / API 23: no uid, no tagLen.
+// https://android.googlesource.com/platform/system/core/+/android-6.0.1_r11/include/log/logprint.h#47
 struct DecodedEntryM {
     time_t tv_sec;
     long tv_nsec;
@@ -134,6 +135,9 @@ struct DecodedEntryM {
 };
 
 // Android 7 / API 24-25: uid added, but tagLen is not present yet.
+// https://android.googlesource.com/platform/system/core/+/android-7.0.0_r1/include/log/logprint.h#52
+// Android 8 adds tagLen to the decoded entry:
+// https://android.googlesource.com/platform/system/core/+/android-8.0.0_r1/liblog/include/log/logprint.h#56
 struct DecodedEntryN {
     time_t tv_sec;
     long tv_nsec;
@@ -334,6 +338,7 @@ void normalize_legacy_entry(const LegacyEntry& source, DecodedEntry& target) {
     target.tid = source.tid;
     target.tag = source.tag;
     // Legacy AOSP decoders provide NUL-terminated tags rather than tagLen.
+    // https://android.googlesource.com/platform/system/core/+/android-6.0.1_r11/liblog/logprint.c#418
     target.tagLen = source.tag ? strnlen(source.tag, kLogEntryMax) : 0;
     target.messageLen = source.messageLen;
     target.message = source.message;
@@ -375,9 +380,12 @@ int collect(const std::string& directory, LogApi& api, int sdk) {
     RotatingLog file(directory);
     if (!file.open_current())
         return 1;
-    // On M/N/O, AOSP logcat explicitly passes EVENT_TAG_MAP_FILE; the
-    // Marshmallow implementation even dereferences this path in open().
-    // Newer liblog versions accept null and load their platform tag maps.
+    // M/N logcat passes EVENT_TAG_MAP_FILE; M requires a path for open().
+    // https://android.googlesource.com/platform/system/core/+/android-6.0.1_r11/logcat/logcat.cpp#157
+    // https://android.googlesource.com/platform/system/core/+/android-6.0.1_r11/liblog/event_tag_map.c#74
+    // O already accepts null and loads platform tag maps. Keep the explicit
+    // path through API 27 for compatibility with the existing collector.
+    // https://android.googlesource.com/platform/system/core/+/android-8.0.0_r1/liblog/event_tag_map.cpp#404
     EventTagMap* event_tags = api.open_events(sdk <= 27 ? "/system/etc/event-log-tags" : nullptr);
     // A missing map is permitted: binary entries still receive numeric tags.
     unsigned int tail = 1;  // Preserve the previous logcat -T 1 start.
@@ -405,9 +413,11 @@ int collect(const std::string& directory, LogApi& api, int sdk) {
         char event_buffer[8192];
         while (api.read(readers, &msg) > 0) {
             DecodedEntry entry{};
-            // AOSP Marshmallow delivers a v3 (24-byte) raw header; newer
-            // systems deliver v4 (28 bytes). Never access uid in the raw
-            // header, which overlaps payload on M.
+            // M delivers a v3 (24-byte) raw header; N can deliver v4
+            // (28 bytes) to privileged readers, v3 otherwise. Never access
+            // raw uid unconditionally: it overlaps the payload with v3.
+            // https://android.googlesource.com/platform/system/core/+/android-6.0.1_r11/logd/LogBufferElement.cpp#193
+            // https://android.googlesource.com/platform/system/core/+/android-7.0.0_r1/logd/LogBufferElement.cpp#202
             if (msg.entry.hdr_size < 24 || msg.entry.hdr_size + msg.entry.len > sizeof(msg.buf))
                 continue;
             int rc = decode_entry(api, &msg.entry, sdk, event_tags, event_buffer,
@@ -438,7 +448,7 @@ int collect(const std::string& directory, LogApi& api, int sdk) {
     }
 }
 
-bool get_running_pid(const std::string& directory, pid_t& pid, bool require_current_binary) {
+bool get_running_pid(const std::string& directory, pid_t& pid) {
     std::string path = directory + "/logcat.pid";
     FILE* f = fopen(path.c_str(), "r");
     if (!f)
@@ -459,19 +469,8 @@ bool get_running_pid(const std::string& directory, pid_t& pid, bool require_curr
     fclose(f);
     if (!ok)
         return false;
-    // Status requires the current binary; on live upgrades a previous inode
-    // is deliberately not considered current. Stop may terminate the previous
-    // version, but only after validating its exact argv and private PID file.
-    if (require_current_binary) {
-        std::string exe_path = "/proc/" + std::to_string(pid) + "/exe";
-        struct stat mine{}, theirs{};
-        if (stat("/proc/self/exe", &mine) != 0 || stat(exe_path.c_str(), &theirs) != 0 ||
-            mine.st_dev != theirs.st_dev || mine.st_ino != theirs.st_ino) {
-            return false;
-        }
-    }
-    // Same binary and process name are not enough when the AVD runs two
-    // isolated collectors. Match the command and its exact log directory.
+    // Match the PID, process name and log directory, including across upgrades.
+    // The flock lock remains authoritative for preventing duplicate readers.
     std::string argv_path = "/proc/" + std::to_string(pid) + "/cmdline";
     f = fopen(argv_path.c_str(), "rb");
     if (!f)
@@ -549,7 +548,7 @@ int sui_logcat_main(int argc, char** argv) {
     }
     if (command == "status" || command == "stop") {
         pid_t pid = -1;
-        if (!get_running_pid(directory, pid, command == "status")) {
+        if (!get_running_pid(directory, pid)) {
             return command == "status" ? 1 : 0;
         }
         return command == "stop" ? (kill(pid, SIGTERM) == 0 ? 0 : 1) : 0;

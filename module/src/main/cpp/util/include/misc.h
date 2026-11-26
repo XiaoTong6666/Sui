@@ -20,6 +20,7 @@
 #ifndef _MISC_H
 #define _MISC_H
 
+#include <functional>
 #include <string>
 #include <sys/types.h>
 
@@ -31,7 +32,7 @@ ssize_t read_eintr(int fd, void* out, size_t len);
 int read_full(int fd, void* buf, size_t count);
 int write_full(int fd, const void* buf, size_t count);
 
-using foreach_proc_function = bool(pid_t);
-void foreach_proc(foreach_proc_function* func);
+// Return false when /proc cannot be scanned, including readdir errors.
+bool foreach_proc(const std::function<bool(pid_t)>& func);
 
 #endif  // _MISC_H

@@ -154,29 +154,27 @@ int write_full(int fd, const void* buf, size_t count) {
     return 0;
 }
 
-int is_num(const char* s) {
-    for (; *s; ++s)
-        if (*s < '0' || *s > '9')
-            return 0;
-    return 1;
-}
-
-void foreach_proc(foreach_proc_function* func) {
-    DIR* dir;
-    struct dirent* entry;
-
-    if (!(dir = opendir("/proc")))
-        return;
-
-    while ((entry = readdir(dir))) {
-        if (entry->d_type != DT_DIR)
+bool foreach_proc(const std::function<bool(pid_t)>& func) {
+    DIR* dir = opendir("/proc");
+    if (!dir)
+        return false;
+    bool ok = true;
+    for (;;) {
+        errno = 0;
+        auto* entry = readdir(dir);
+        if (!entry) {
+            ok = errno == 0;
+            break;
+        }
+        if (entry->d_type != DT_DIR && entry->d_type != DT_UNKNOWN)
             continue;
-        if (!is_num(entry->d_name))
+        char* end = nullptr;
+        long pid = strtol(entry->d_name, &end, 10);
+        if (pid <= 0 || *end || errno == ERANGE)
             continue;
-        pid_t pid = atoi(entry->d_name);
-        if (func(pid))
+        if (func(static_cast<pid_t>(pid)))
             break;
     }
-
     closedir(dir);
+    return ok;
 }

@@ -106,6 +106,7 @@ static int set_shell_supplementary_groups() {
     const int api = android_get_device_api_level();
 
     // Android 6 / API 23 baseline from AOSP adbd.
+    // https://android.googlesource.com/platform/system/core/+/android-6.0.1_r11/adb/adb_main.cpp#268
     groups[count++] = 1011;  // adb
     groups[count++] = 1007;  // log
     groups[count++] = 1004;  // input
@@ -195,6 +196,7 @@ static int write_text_atomic(const char* path, const std::string& content) {
 }
 
 static std::string generate_shell_dir_name() {
+    // Shell config directory is not suitable for system_server OAT ownership.
     unsigned char random_bytes[8]{0};
     int fd = open("/dev/urandom", O_RDONLY | O_CLOEXEC);
     if (fd >= 0) {
@@ -333,9 +335,16 @@ static bool build_module_path(char* buffer, size_t buffer_size, const char* root
  * argv[1]: path of the module, such as /data/adb/modules/zygisk-sui
  */
 static int sui_main(int argc, char** argv) {
+    if (argc < 2 || argv[1] == nullptr) {
+        LOGE("missing module directory");
+        return EXIT_FAILURE;
+    }
     LOGI("Sui starter begin: %s", argv[1]);
 
-    if (daemon(false, false) != 0) {
+    // The supervisor needs to own the root server PID. Keep the historical
+    // daemonizing CLI behavior for manual invocations.
+    const bool foreground = argc >= 3 && strcmp(argv[2], "--foreground") == 0;
+    if (!foreground && daemon(false, false) != 0) {
         PLOGE("daemon");
         return EXIT_FAILURE;
     }
@@ -353,7 +362,8 @@ static int sui_main(int argc, char** argv) {
         }
     }
 
-    wait_for_zygote();
+    if (!wait_for_zygote(foreground ? 90 : 0))
+        return EXIT_FAILURE;
 
     if (access(SUI_DATA_DIR, F_OK) != 0) {
         mkdir(SUI_DATA_DIR, 0700);
@@ -373,6 +383,7 @@ static int sui_main(int argc, char** argv) {
     // the same directory from the first startup tick.
     std::string shell_dir_path = resolve_shell_dir_path();
 
+    const pid_t parent_pid = getpid();
     pid_t pid = fork();
     if (pid < 0) {
         PLOGE("fork");
@@ -381,6 +392,9 @@ static int sui_main(int argc, char** argv) {
 
     if (pid == 0) {
         // Child process -> Shell Server
+        // Detect parent exit during setup, including reparenting to a subreaper.
+        if (prctl(PR_SET_PDEATHSIG, SIGKILL) != 0 || getppid() != parent_pid)
+            exit(EXIT_FAILURE);
         if (!init_selinux()) {
             LOGE("init_selinux failed");
             exit(EXIT_FAILURE);
@@ -481,8 +495,7 @@ static int sui_main(int argc, char** argv) {
             PLOGE("prctl PR_SET_PDEATHSIG");
             exit(EXIT_FAILURE);
         }
-        pid_t parent = getppid();
-        if (parent == 1) {
+        if (getppid() != parent_pid) {
             exit(EXIT_FAILURE);
         }
 

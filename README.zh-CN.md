@@ -96,7 +96,7 @@ Sui 还提供可选的 `adb root` 支持。ADB Root 仅需支持 **Android 11（
 该功能默认关闭。打开 Sui 管理界面，点击右上角菜单，进入 **ADB Root**，然后选择：
 
 * **关闭**：保持 `adb root` 支持关闭。
-* **下次启动启用一次**：只对下一次开机启用。一次性状态会在 `post-fs-data` 阶段被消费，因此本次开机完成后，管理界面中的状态会自动回落为 **关闭**。
+* **下次启动启用一次**：只对下一次开机启用。一次性状态会在 Supervisor 准备阶段被消费，因此本次开机完成后，管理界面中的状态会自动回落为 **关闭**。
 * **始终启用**：之后每次开机都启用，直到你重新改为 **关闭**。
 
 修改模式后请重启设备。设备以启用 ADB Root 的状态启动完成后，像平常一样使用 `adb root` 即可。
@@ -256,7 +256,7 @@ Sui 依赖 [Zygisk](https://github.com/topjohnwu/zygisk-module-sample)，它允�
 
 * **Root 进程（Root process）**
 
-  这是一个由 root 实现在 Post-fs-data 阶段启动的 root 进程。它会启动一个 Java server，实现 Shizuku API 以及其他部分所需的私有 API。
+  这是一个由 Native Supervisor 通过 `service.sh` 启动的 root 进程。它会启动一个 Java server，实现 Shizuku API 以及其他部分所需的私有 API。
   Root server 是权限配置的主要来源。它维护 UID 权限数据库，并将 hidden、root allowed、shell allowed、denied 和 default mode 等状态同步到 system_server。
 
 * **Shell 进程（Shell process）**
@@ -289,7 +289,7 @@ Sui 依赖 [Zygisk](https://github.com/topjohnwu/zygisk-module-sample)，它允�
 
 * **adbd wrapper / preload（可选）**
 
-    * 当启用了 `adb root` 支持时，Sui 会在 `post-fs-data` 阶段为 `/apex/com.android.adbd/bin/adbd` 或 `/system/bin/adbd` 准备 `adbd` wrapper 和 preload 库
+    * 启用 Bind Mount ADB Root 时，Native Supervisor 在服务启动阶段为动态链接的 `/apex/com.android.adbd/bin/adbd` 准备 wrapper 和 preload 库；保留历史非 APEX 兼容分支，但不属于支持范围
     * wrapper 会把 `--root_seclabel=...` 改写为当前 root 实现对应的 SELinux 域，并注入 `LD_PRELOAD`
     * preload hook 会拦截 `selinux_android_setcon()` / `setcon()`，让 `adbd` 切换到 root 域，同时把 `sockcreate` 恢复为预期的 `adbd` label
 

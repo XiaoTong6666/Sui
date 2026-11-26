@@ -2,3 +2,11 @@
 
 *.bat text eol=crlf
 *.jar binary
+
+# Module template
+template/module/META-INF/** text eol=lf
+template/module/**/*.prop text eol=lf
+template/module/**/*.sh text eol=lf
+template/module/**/*.md text eol=lf
+template/module/sepolicy.rule text eol=lf
+template/module/lib/** binary

@@ -23,6 +23,6 @@
 void app_process(const char* dex_path, const char* files_path, const char* main_class,
                  const char* process_name, const char* extra_arg = nullptr, bool log_exec = true);
 
-void wait_for_zygote();
+bool wait_for_zygote(unsigned timeout_seconds = 0);
 
 #endif  // APP_PROCESS_H

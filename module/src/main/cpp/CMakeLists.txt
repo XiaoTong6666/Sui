@@ -56,6 +56,7 @@ set_target_properties(sui PROPERTIES LINK_FLAGS_RELEASE -s)
 add_executable(libmain.so
         main/main.cpp
         main/daemon_main.cpp
+        main/supervisor_main.cpp
         main/adb_root_main.cpp
         main/uninstaller_main.cpp
         main/logcat_main.cpp)

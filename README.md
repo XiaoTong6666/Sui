@@ -96,7 +96,7 @@ When enabled, Sui uses the APEX wrapper and preload hook or optional ZN injectio
 This feature is disabled by default. Open the Sui management UI, tap the top-right menu, choose **ADB Root**, then select one of the following modes:
 
 * **Off**: keep `adb root` support disabled.
-* **Enable for next boot once**: enable the setup for the next boot only. The one-shot state is consumed during `post-fs-data`, so the UI falls back to **Off** after that boot.
+* **Enable for next boot once**: enable the setup for the next boot only. The one-shot state is consumed by the Supervisor during preparation, so the UI falls back to **Off** after that boot.
 * **Always enable**: enable the setup on every boot until you change the mode back to **Off**.
 
 Reboot after changing the mode. After the device boots with ADB Root enabled, use `adb root` normally.
@@ -256,7 +256,7 @@ Overall, there are five main parts, plus optional boot-time paths such as `adb r
 
 * **Root process**
 
-  This is a root process started by the root implementation during the post-fs-data stage. It starts a Java server that implements Shizuku API and private APIs used by other parts.
+  The native Supervisor starts this root process from `service.sh`. It starts a Java server that implements Shizuku API and private APIs used by other parts.
 
   The root server is the main source of permission configuration. It maintains the UID permission database and syncs hidden, root allowed, shell allowed, denied and default mode states to system_server.
 
@@ -291,7 +291,7 @@ Overall, there are five main parts, plus optional boot-time paths such as `adb r
 
 * **adbd wrapper / preload (optional)**
 
-  * During `post-fs-data`, when `adb root` support is enabled, Sui prepares an `adbd` wrapper and preload library for `/apex/com.android.adbd/bin/adbd` or `/system/bin/adbd`
+  * When Bind Mount ADB Root is enabled, the native Supervisor prepares the wrapper and preload library for the dynamically linked `/apex/com.android.adbd/bin/adbd` at service startup; the legacy non-APEX fallback is retained outside the supported range
   * The wrapper rewrites `--root_seclabel=...` to the current root implementation's SELinux domain and injects `LD_PRELOAD`
   * The preload hook intercepts `selinux_android_setcon()` / `setcon()` so `adbd` can switch into the root domain while restoring `sockcreate` to the expected `adbd` label
 

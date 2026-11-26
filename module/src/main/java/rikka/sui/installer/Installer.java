@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Locale;
+import rikka.sui.util.Log;
 import rikka.sui.util.SystemPackages;
 import rikka.sui.util.SystemPackages.SystemPackage;
 
@@ -32,14 +33,21 @@ public class Installer {
 
     private static final int PACKAGE_INFO_RETRY_COUNT = 120;
 
+    private static void info(String message) {
+        // The installer also runs from a native supervisor with stdio closed.
+        // Keep stdout for module installation and logcat for runtime diagnosis.
+        System.out.println(message);
+        Log.i("Installer", message);
+    }
+
     private static boolean saveApplicationInfoToFile(
             String path, String fileName, String name, SystemPackage systemPackage) throws IOException {
         if (systemPackage == null) {
-            System.out.println("! Can't resolve the " + name + " package");
+            info("! Can't resolve the " + name + " package");
             return false;
         }
 
-        System.out.println("- " + name + ": packageName=" + systemPackage.packageName + ", uid=" + systemPackage.uid
+        info("- " + name + ": packageName=" + systemPackage.packageName + ", uid=" + systemPackage.uid
                 + ", processName=" + systemPackage.processName);
 
         File file = new File(path, fileName);
@@ -87,8 +95,7 @@ public class Installer {
             }
 
             if (attempt == 0 || (attempt + 1) % 10 == 0) {
-                System.out.println(
-                        "- Waiting for PackageManager (" + (attempt + 1) + "/" + PACKAGE_INFO_RETRY_COUNT + ")");
+                info("- Waiting for PackageManager (" + (attempt + 1) + "/" + PACKAGE_INFO_RETRY_COUNT + ")");
             }
             Thread.sleep(1000);
         }
@@ -98,7 +105,7 @@ public class Installer {
 
     @SuppressWarnings("deprecation")
     public static void main(String[] args) throws IOException, InterruptedException {
-        System.out.println("- AppProcess: main");
+        info("- AppProcess: main");
 
         if (Looper.getMainLooper() == null) {
             Looper.prepareMainLooper();
@@ -107,17 +114,17 @@ public class Installer {
         SystemPackage[] packages = resolvePackages(context);
 
         if (packages[0] == null || packages[1] == null) {
-            System.out.println("! PackageManager did not resolve all required packages");
+            info("! PackageManager did not resolve all required packages");
             System.exit(1);
             return;
         }
 
         if (!saveApplicationInfoToFile(args[0], "system_ui", "SystemUI", packages[0])
                 || !saveApplicationInfoToFile(args[0], "settings", "Settings", packages[1])) {
-            System.out.println("! Failed to save package metadata");
+            info("! Failed to save package metadata");
             System.exit(1);
             return;
         }
-        System.out.println("- AppProcess: exit");
+        info("- AppProcess: exit");
     }
 }

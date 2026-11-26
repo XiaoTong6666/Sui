@@ -42,7 +42,7 @@ val moduleDescription = extra["moduleDescription"] as String
 val moduleUpdateJson = extra["moduleUpdateJson"] as String
 val uiProject = project(":ui")
 val outDir = rootProject.file("out")
-val magiskTemplateDir = rootProject.file("template/magisk_module")
+val magiskTemplateDir = rootProject.file("template/module")
 val modulePropValues = mapOf(
     "id" to moduleId,
     "name" to moduleName,

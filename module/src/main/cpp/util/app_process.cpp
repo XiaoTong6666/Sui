@@ -17,6 +17,7 @@
  * Copyright (c) 2022-2026 Sui Contributors
  */
 
+#include <chrono>
 #include <cstdlib>
 #include <cstring>
 #include <logging.h>
@@ -105,7 +106,8 @@ void app_process(const char* dex_path, const char* files_path, const char* main_
     }
 }
 
-void wait_for_zygote() {
+bool wait_for_zygote(unsigned timeout_seconds) {
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_seconds);
     while (true) {
         static pid_t zygote_pid;
 
@@ -135,9 +137,13 @@ void wait_for_zygote() {
 
         if (zygote_pid != -1) {
             LOGI("found zygote %d", zygote_pid);
-            break;
+            return true;
         }
 
+        if (timeout_seconds && std::chrono::steady_clock::now() >= deadline) {
+            LOGW("timed out waiting for zygote");
+            return false;
+        }
         LOGV("zygote not started, wait 1s...");
         sleep(1);
     }
