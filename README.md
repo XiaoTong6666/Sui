@@ -1,34 +1,24 @@
 # Nightly Build
 
 - **Version:** `v13.5.4.3`
-- **VersionCode:** `590`
-- **Commit:** [`6844d95`](https://github.com/XiaoTong6666/Sui/commit/6844d95bd44deb17c4bd0119c816908c421c3562)
-- **Build time:** `2m 38s`
-- **SHA256:** `fc7363c6815b3f76ac7b55c0fc0b4687a858cea72269e9193f44af6ae3741c25`
+- **VersionCode:** `595`
+- **Commit:** [`9857c07`](https://github.com/XiaoTong6666/Sui/commit/9857c07c5e21bc7c74ab20691d1e628393821ad2)
+- **Build time:** `4m 22s`
+- **SHA256:** `98529a5faab1fd4af2eeeb6f5ce44c416e30142a0fccc041f8920e205e305059`
 
 ## Message
 
 ```text
-build(deps): bump agp from 9.5.2 to 9.5.3 (#157)
+refactor(module): replace boot scripts with native supervisor, Meow
 
-Bumps `agp` from 9.5.2 to 9.5.3.
+把原来 Shell 脚本里的启动和监控逻辑迁移到 Native Supervisor 了喵，日志采集和应用信息刷新还有 ADB Root 准备也一起接管了喵~
 
-Updates `com.android.application` from 9.5.2 to 9.5.3
+移除了 post-fs-data.sh，service.sh 只保留启动入口喵（终于不用维护那么多 Shell 代码啦，开心地挥挥爪子）
 
-Updates `com.android.library` from 9.5.2 to 9.5.3
+Root 和 Shell Server 使用独立进程组管理，Supervisor 通过文件锁保证单实例运行喵，还加上了启动超时和退避重试喵，旧进程组没完全退出之前不会启动新的 Server Pair，也不会阻塞整个监控循环喵
 
----
-updated-dependencies:
-- dependency-name: com.android.application
-  dependency-version: 9.5.3
-  dependency-type: direct:production
-  update-type: version-update:semver-patch
-- dependency-name: com.android.library
-  dependency-version: 9.5.3
-  dependency-type: direct:production
-  update-type: version-update:semver-patch
-...
+顺便整理了进程扫描和子进程回收逻辑，复用已有的 Helper，SystemUI 和 Settings 的应用信息发生变化时也会分别处理喵
 
-Signed-off-by: dependabot[bot] <support@github.com>
-Co-authored-by: dependabot[bot] <xiaotong6666@users.noreply.github.com>
+另外...整理了模块安装和卸载流程，调整了 Root 实现识别逻辑，模块模板目录也改成了 module 喵（收拾完一大堆代码后软趴趴地摊成猫饼喵~）
+
 ```
